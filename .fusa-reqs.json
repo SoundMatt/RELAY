@@ -1,0 +1,156 @@
+[
+  {
+    "id": "REQ-RELAY-001",
+    "title": "Protocol integer type",
+    "text": "The system shall define Protocol as an integer type. The zero value shall be reserved and shall not equal any named protocol constant.",
+    "category": "functional",
+    "criticality": "high"
+  },
+  {
+    "id": "REQ-RELAY-002",
+    "title": "Protocol named constants",
+    "text": "The system shall define protocol constants CAN=1, DDS=2, LIN=3, MQTT=4, RCP=5, SOMEIP=6.",
+    "category": "functional",
+    "criticality": "high"
+  },
+  {
+    "id": "REQ-RELAY-003",
+    "title": "Protocol.String()",
+    "text": "The system shall implement Protocol.String() returning the canonical upper-case protocol name for each defined constant and \"unknown\" for any other value.",
+    "category": "functional",
+    "criticality": "medium"
+  },
+  {
+    "id": "REQ-RELAY-004",
+    "title": "Version struct",
+    "text": "The system shall define a Version struct with integer fields Major, Minor, and Patch, marshalled as JSON object with keys \"major\", \"minor\", \"patch\".",
+    "category": "functional",
+    "criticality": "medium"
+  },
+  {
+    "id": "REQ-RELAY-005",
+    "title": "Version.String()",
+    "text": "The system shall implement Version.String() returning the version in \"MAJOR.MINOR.PATCH\" format.",
+    "category": "functional",
+    "criticality": "medium"
+  },
+  {
+    "id": "REQ-RELAY-006",
+    "title": "Message universal envelope",
+    "text": "The system shall define a Message struct with fields Protocol, Version, ID (string), Payload ([]byte), Timestamp (time.Time), Seq (uint64, omitempty), and Meta (map[string]string, omitempty) marshalled as JSON.",
+    "category": "functional",
+    "criticality": "high"
+  },
+  {
+    "id": "REQ-RELAY-007",
+    "title": "Message JSON omitempty fields",
+    "text": "The system shall omit Seq from JSON output when its value is zero, and shall omit Meta from JSON output when nil.",
+    "category": "functional",
+    "criticality": "medium"
+  },
+  {
+    "id": "REQ-RELAY-008",
+    "title": "ErrClosed sentinel",
+    "text": "The system shall define ErrClosed as a non-nil error with message prefixed \"relay: \". Protocol-specific closed errors shall wrap ErrClosed such that errors.Is returns true.",
+    "category": "functional",
+    "criticality": "high"
+  },
+  {
+    "id": "REQ-RELAY-009",
+    "title": "ErrNotConnected sentinel",
+    "text": "The system shall define ErrNotConnected as a non-nil error with message prefixed \"relay: \". Protocol-specific not-connected errors shall wrap ErrNotConnected such that errors.Is returns true.",
+    "category": "functional",
+    "criticality": "high"
+  },
+  {
+    "id": "REQ-RELAY-010",
+    "title": "ErrTimeout sentinel",
+    "text": "The system shall define ErrTimeout as a non-nil error with message prefixed \"relay: \". Protocol-specific timeout errors shall wrap ErrTimeout such that errors.Is returns true.",
+    "category": "functional",
+    "criticality": "high"
+  },
+  {
+    "id": "REQ-RELAY-011",
+    "title": "ErrPayloadTooLarge sentinel",
+    "text": "The system shall define ErrPayloadTooLarge as a non-nil error with message prefixed \"relay: \". Protocol-specific oversized-payload errors shall wrap ErrPayloadTooLarge such that errors.Is returns true.",
+    "category": "functional",
+    "criticality": "high"
+  },
+  {
+    "id": "REQ-RELAY-012",
+    "title": "Error sentinel distinctness",
+    "text": "The four error sentinels ErrClosed, ErrNotConnected, ErrTimeout, and ErrPayloadTooLarge shall be mutually distinct such that errors.Is(a, b) returns false for any pair a != b.",
+    "category": "functional",
+    "criticality": "medium"
+  },
+  {
+    "id": "REQ-RELAY-013",
+    "title": "Node interface",
+    "text": "The system shall define a Node interface with methods Protocol() Protocol, Send(ctx context.Context, msg Message) error, Subscribe(opts ...SubscriberOption) (<-chan Message, error), and Close() error.",
+    "category": "functional",
+    "criticality": "high"
+  },
+  {
+    "id": "REQ-RELAY-014",
+    "title": "Caller interface extends Node",
+    "text": "The system shall define a Caller interface that embeds Node and adds Call(ctx context.Context, req Message) (Message, error). Any type satisfying Caller shall also satisfy Node.",
+    "category": "functional",
+    "criticality": "high"
+  },
+  {
+    "id": "REQ-RELAY-015",
+    "title": "BackPressurePolicy enum",
+    "text": "The system shall define BackPressurePolicy as an integer type with constants DropNewest=0, DropOldest=1, Block=2.",
+    "category": "functional",
+    "criticality": "medium"
+  },
+  {
+    "id": "REQ-RELAY-016",
+    "title": "SubscriberConfig struct",
+    "text": "The system shall define SubscriberConfig with integer field ChannelDepth (0 meaning use implementation default) and BackPressurePolicy field BackPressure.",
+    "category": "functional",
+    "criticality": "medium"
+  },
+  {
+    "id": "REQ-RELAY-017",
+    "title": "SubscriberOption functional option pattern",
+    "text": "The system shall define SubscriberOption as func(*SubscriberConfig) and export WithChannelDepth(int) SubscriberOption and WithBackPressure(BackPressurePolicy) SubscriberOption.",
+    "category": "functional",
+    "criticality": "medium"
+  },
+  {
+    "id": "REQ-RELAY-018",
+    "title": "ApplySubscriberOpts",
+    "text": "The system shall export ApplySubscriberOpts([]SubscriberOption) SubscriberConfig that applies all options in order to a zero SubscriberConfig and returns the result.",
+    "category": "functional",
+    "criticality": "medium"
+  },
+  {
+    "id": "REQ-RELAY-019",
+    "title": "ChanDepth helper",
+    "text": "The system shall export SubscriberConfig.ChanDepth(defaultDepth int) int that returns ChannelDepth if > 0, otherwise returns defaultDepth.",
+    "category": "functional",
+    "criticality": "medium"
+  },
+  {
+    "id": "REQ-RELAY-020",
+    "title": "SpecVersion constant",
+    "text": "The system shall export const SpecVersion = \"0.1\" identifying the implemented RELAY specification version.",
+    "category": "functional",
+    "criticality": "high"
+  },
+  {
+    "id": "REQ-RELAY-021",
+    "title": "relay version text output",
+    "text": "The relay CLI shall implement the version command that, with --format text (default), prints the tool version, spec version, and Go runtime version on a single line.",
+    "category": "functional",
+    "criticality": "medium"
+  },
+  {
+    "id": "REQ-RELAY-022",
+    "title": "relay version JSON output",
+    "text": "The relay CLI shall implement the version command that, with --format json, prints a JSON object with keys tool, spec_version, version, language, and runtime.",
+    "category": "functional",
+    "criticality": "medium"
+  }
+]

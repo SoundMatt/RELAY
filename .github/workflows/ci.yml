@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  dco:
+    name: DCO
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check DCO sign-off
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            COMMITS=$(git log --format="%H" origin/${{ github.base_ref }}..HEAD)
+          else
+            COMMITS=$(git log --format="%H" HEAD~1..HEAD)
+          fi
+          FAIL=0
+          for commit in $COMMITS; do
+            if ! git log -1 --format="%B" "$commit" | grep -qE "^Signed-off-by: .+ <.+>"; then
+              echo "FAIL: commit $commit is missing Signed-off-by"
+              git log -1 --oneline "$commit"
+              FAIL=1
+            fi
+          done
+          [ $FAIL -eq 0 ] && echo "All commits have DCO sign-off" || exit 1
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.0'
+          cache: true
+      - name: Build
+        run: go build ./...
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+      - name: Coverage gate (80%)
+        run: |
+          pct=$(go tool cover -func=coverage.out | awk '/^total:/{gsub(/%/,""); print $3}')
+          echo "Coverage: ${pct}%"
+          awk -v p="$pct" 'BEGIN { if (p+0 < 80) { print "FAIL: coverage " p "% < 80%"; exit 1 } }'
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.0'
+          cache: true
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
+  security:
+    name: Security
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.0'
+          cache: true
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: go
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3

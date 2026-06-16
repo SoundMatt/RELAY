@@ -1,0 +1,31 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+/dist/
+/relay
+
+# Module cache
+vendor/
+
+# Build
+/bin/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.cursor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/

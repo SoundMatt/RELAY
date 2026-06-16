@@ -1,0 +1,7 @@
+{
+  "version": "0.1",
+  "date": "2026-06-16",
+  "status": "draft",
+  "networks": ["CAN", "DDS", "LIN", "MQTT", "RCP", "SOMEIP"],
+  "languages": ["go", "cpp", "rust"]
+}

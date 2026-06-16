@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "project": {
+    "name": "RELAY",
+    "module": "github.com/SoundMatt/RELAY",
+    "standard": "ISO26262",
+    "asil": "ASIL-C"
+  },
+  "rules": {},
+  "report": {
+    "format": "text"
+  }
+}

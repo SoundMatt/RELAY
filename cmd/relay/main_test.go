@@ -14,6 +14,7 @@ import (
 	relay "github.com/SoundMatt/RELAY"
 )
 
+//fusa:test REQ-RELAY-021
 func TestVersionText(t *testing.T) {
 	var out bytes.Buffer
 	if err := runVersion(&out, nil); err != nil {
@@ -28,6 +29,7 @@ func TestVersionText(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-021
 func TestVersionTextExplicit(t *testing.T) {
 	var out bytes.Buffer
 	if err := runVersion(&out, []string{"--format", "text"}); err != nil {
@@ -38,6 +40,7 @@ func TestVersionTextExplicit(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-022
 func TestVersionJSON(t *testing.T) {
 	var out bytes.Buffer
 	if err := runVersion(&out, []string{"--format", "json"}); err != nil {
@@ -70,6 +73,7 @@ func TestVersionJSON(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-022
 func TestVersionUnknownFormat(t *testing.T) {
 	var out bytes.Buffer
 	err := runVersion(&out, []string{"--format", "xml"})
@@ -115,6 +119,7 @@ func TestRunUnknownCommand(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-021
 func TestRunVersion(t *testing.T) {
 	var out, errOut bytes.Buffer
 	if err := run(&out, &errOut, []string{"version"}); err != nil {

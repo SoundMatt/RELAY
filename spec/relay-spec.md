@@ -765,6 +765,39 @@ Implementations import:
 import relay "github.com/SoundMatt/RELAY"
 ```
 
+### 13.5 Docker image base
+
+All RELAY-conformant Docker images MUST use the following base:
+
+| Stage | Base |
+|---|---|
+| Build (Go) | `golang:1.25-alpine` |
+| Build (C++) | `alpine:3.20` with `build-base cmake` |
+| Build (Rust) | `rust:1.80-alpine` |
+| Runtime | `alpine:3.20` with `git ca-certificates` |
+
+`libstdc++` MUST be added to the runtime image for C++ implementations.
+
+LABEL requirements for all RELAY-conformant images:
+
+```dockerfile
+LABEL org.opencontainers.image.title="<tool>"
+LABEL org.opencontainers.image.source="https://github.com/SoundMatt/<repo>"
+LABEL org.opencontainers.image.licenses="MPL-2.0"
+LABEL io.relay.tool="<tool>"
+LABEL io.relay.language="go|cpp|rust"
+LABEL io.relay.binary="<binary>"
+LABEL io.relay.spec-version="0.1"
+```
+
+The project directory is mounted at `/project` by convention:
+
+```
+docker run --rm -v "$(pwd)":/project ghcr.io/soundmatt/<tool> version
+```
+
+Images MUST be published to `ghcr.io/soundmatt/<tool-lowercase>`.
+
 ---
 
 ## 14. Subscriber Defaults and Helpers

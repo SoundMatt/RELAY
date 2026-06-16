@@ -57,6 +57,10 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  version    Print tool and spec version")
 }
 
+// runVersion implements `relay version [--format text|json]`.
+//
+//fusa:req REQ-RELAY-021
+//fusa:req REQ-RELAY-022
 func runVersion(w io.Writer, args []string) error {
 	fs := flag.NewFlagSet("version", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)

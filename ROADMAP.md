@@ -50,8 +50,8 @@ enum, and application interfaces, and has CI running with quality gates.
 - ✅ DCO check, lint (golangci-lint), 80 %+ coverage gate, CodeQL
 - ✅ Requirements registry (`.fusa-reqs.json`, REQ-RELAY-001 … REQ-RELAY-022)
 - ✅ GitHub repo (`github.com/SoundMatt/RELAY`)
-- ⬜ go-FuSa self-check in CI — gates on ERROR findings
-- ⬜ Docker quickstart
+- ✅ go-FuSa self-check in CI — `gofusa check` gates on ERROR findings, `gofusa trace` reports matrix
+- ✅ Docker quickstart (`Dockerfile`, `alpine:3.20` runtime, smoke-tested in CI)
 
 Deliverables: `relay version`
 

@@ -8,9 +8,18 @@ import "errors"
 
 // Common error sentinels. Every RELAY-conformant implementation must define
 // these errors and wrap them so errors.Is returns true (see spec §5).
+//
+//fusa:req REQ-RELAY-012
 var (
-	ErrClosed          = errors.New("relay: closed")
-	ErrNotConnected    = errors.New("relay: not connected")
-	ErrTimeout         = errors.New("relay: timeout")
+	//fusa:req REQ-RELAY-008
+	ErrClosed = errors.New("relay: closed")
+
+	//fusa:req REQ-RELAY-009
+	ErrNotConnected = errors.New("relay: not connected")
+
+	//fusa:req REQ-RELAY-010
+	ErrTimeout = errors.New("relay: timeout")
+
+	//fusa:req REQ-RELAY-011
 	ErrPayloadTooLarge = errors.New("relay: payload too large")
 )

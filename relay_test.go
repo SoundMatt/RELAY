@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+//fusa:test REQ-RELAY-001
+//fusa:test REQ-RELAY-002
 func TestProtocolValues(t *testing.T) {
 	if Protocol(0) == CAN || Protocol(0) == DDS || Protocol(0) == LIN ||
 		Protocol(0) == MQTT || Protocol(0) == RCP || Protocol(0) == SOMEIP {
@@ -28,6 +30,7 @@ func TestProtocolValues(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-003
 func TestProtocolString(t *testing.T) {
 	cases := []struct {
 		p    Protocol
@@ -44,6 +47,8 @@ func TestProtocolString(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-004
+//fusa:test REQ-RELAY-005
 func TestVersionString(t *testing.T) {
 	cases := []struct {
 		v    Version
@@ -60,6 +65,7 @@ func TestVersionString(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-006
 func TestMessageJSONRoundTrip(t *testing.T) {
 	ts := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 	original := Message{
@@ -96,6 +102,7 @@ func TestMessageJSONRoundTrip(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-007
 func TestMessageSeqOmitempty(t *testing.T) {
 	m := Message{Protocol: CAN, ID: "1"}
 	b, _ := json.Marshal(m)
@@ -108,6 +115,7 @@ func TestMessageSeqOmitempty(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-007
 func TestMessageMetaOmitempty(t *testing.T) {
 	m := Message{Protocol: DDS, ID: "topic"}
 	b, _ := json.Marshal(m)

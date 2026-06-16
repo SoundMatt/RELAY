@@ -10,6 +10,10 @@ import (
 	"testing"
 )
 
+//fusa:test REQ-RELAY-008
+//fusa:test REQ-RELAY-009
+//fusa:test REQ-RELAY-010
+//fusa:test REQ-RELAY-011
 func TestSentinelsNotNil(t *testing.T) {
 	sentinels := []struct {
 		name string
@@ -30,6 +34,7 @@ func TestSentinelsNotNil(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-012
 func TestSentinelsDistinct(t *testing.T) {
 	all := []error{ErrClosed, ErrNotConnected, ErrTimeout, ErrPayloadTooLarge}
 	for i, a := range all {
@@ -41,6 +46,10 @@ func TestSentinelsDistinct(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-008
+//fusa:test REQ-RELAY-009
+//fusa:test REQ-RELAY-010
+//fusa:test REQ-RELAY-011
 func TestErrorWrapping(t *testing.T) {
 	cases := []error{ErrClosed, ErrNotConnected, ErrTimeout, ErrPayloadTooLarge}
 	for _, sentinel := range cases {
@@ -55,6 +64,10 @@ func TestErrorWrapping(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-008
+//fusa:test REQ-RELAY-009
+//fusa:test REQ-RELAY-010
+//fusa:test REQ-RELAY-011
 func TestSentinelMessagePrefix(t *testing.T) {
 	sentinels := []error{ErrClosed, ErrNotConnected, ErrTimeout, ErrPayloadTooLarge}
 	for _, s := range sentinels {

@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -13,26 +17,21 @@ jobs:
   dco:
     name: DCO
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Check DCO sign-off
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            COMMITS=$(git log --format="%H" origin/${{ github.base_ref }}..HEAD)
-          else
-            COMMITS=$(git log --format="%H" HEAD~1..HEAD)
-          fi
-          FAIL=0
-          for commit in $COMMITS; do
-            if ! git log -1 --format="%B" "$commit" | grep -qE "^Signed-off-by: .+ <.+>"; then
-              echo "FAIL: commit $commit is missing Signed-off-by"
-              git log -1 --oneline "$commit"
-              FAIL=1
+          git log --format="%H" ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | while read -r sha; do
+            if ! git log -1 --format="%B" "$sha" | grep -qE "^Signed-off-by: .+ <.+@.+>"; then
+              echo "FAIL: commit $sha is missing a Signed-off-by line"
+              git log -1 --oneline "$sha"
+              exit 1
             fi
           done
-          [ $FAIL -eq 0 ] && echo "All commits have DCO sign-off" || exit 1
+          echo "DCO check passed"
 
   test:
     name: Test
@@ -51,7 +50,7 @@ jobs:
         run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
       - name: Coverage gate (80%)
         run: |
-          pct=$(go tool cover -func=coverage.out | awk '/^total:/{gsub(/%/,""); print $3}')
+          pct=$(go tool cover -func=coverage.out | awk '/^total:/{gsub(/%/,"",$3); print $3}')
           echo "Coverage: ${pct}%"
           awk -v p="$pct" 'BEGIN { if (p+0 < 80) { print "FAIL: coverage " p "% < 80%"; exit 1 } }'
 
@@ -67,6 +66,33 @@ jobs:
       - uses: golangci/golangci-lint-action@v6
         with:
           version: latest
+
+  fusa:
+    name: go-FuSa safety checks
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.0'
+          cache: true
+      - name: Install gofusa
+        run: go install github.com/SoundMatt/go-FuSa/cmd/gofusa@latest
+      - name: gofusa check (gate on ERROR findings)
+        run: gofusa check
+      - name: gofusa trace (requirements traceability matrix)
+        run: gofusa trace
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build --tag relay:ci .
+      - name: Smoke-test binary in image
+        run: docker run --rm relay:ci version
 
   security:
     name: Security

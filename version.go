@@ -6,4 +6,6 @@ package relay
 
 // SpecVersion is the RELAY specification version this package implements.
 // Every RELAY-conformant implementation must export this constant (spec §17 req 12).
+//
+//fusa:req REQ-RELAY-020
 const SpecVersion = "0.1"

@@ -15,15 +15,16 @@ var _ Caller = (*callerStub)(nil)
 
 type nodeStub struct{}
 
-func (nodeStub) Protocol() Protocol                                  { return CAN }
-func (nodeStub) Send(_ context.Context, _ Message) error             { return nil }
+func (nodeStub) Protocol() Protocol                                   { return CAN }
+func (nodeStub) Send(_ context.Context, _ Message) error              { return nil }
 func (nodeStub) Subscribe(...SubscriberOption) (<-chan Message, error) { return nil, nil }
-func (nodeStub) Close() error                                        { return nil }
+func (nodeStub) Close() error                                         { return nil }
 
 type callerStub struct{ nodeStub }
 
 func (callerStub) Call(_ context.Context, _ Message) (Message, error) { return Message{}, nil }
 
+//fusa:test REQ-RELAY-015
 func TestBackPressurePolicyValues(t *testing.T) {
 	if int(DropNewest) != 0 {
 		t.Errorf("DropNewest = %d, want 0", DropNewest)
@@ -36,6 +37,8 @@ func TestBackPressurePolicyValues(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-016
+//fusa:test REQ-RELAY-018
 func TestApplySubscriberOptsDefaults(t *testing.T) {
 	cfg := ApplySubscriberOpts(nil)
 	if cfg.ChannelDepth != 0 {
@@ -46,6 +49,7 @@ func TestApplySubscriberOptsDefaults(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-017
 func TestWithChannelDepth(t *testing.T) {
 	cfg := ApplySubscriberOpts([]SubscriberOption{WithChannelDepth(128)})
 	if cfg.ChannelDepth != 128 {
@@ -53,6 +57,7 @@ func TestWithChannelDepth(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-017
 func TestWithBackPressure(t *testing.T) {
 	cfg := ApplySubscriberOpts([]SubscriberOption{WithBackPressure(Block)})
 	if cfg.BackPressure != Block {
@@ -60,6 +65,7 @@ func TestWithBackPressure(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-019
 func TestChanDepthDefault(t *testing.T) {
 	cfg := SubscriberConfig{}
 	if got := cfg.ChanDepth(64); got != 64 {
@@ -67,6 +73,7 @@ func TestChanDepthDefault(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-019
 func TestChanDepthOverride(t *testing.T) {
 	cfg := SubscriberConfig{ChannelDepth: 32}
 	if got := cfg.ChanDepth(64); got != 32 {
@@ -74,6 +81,8 @@ func TestChanDepthOverride(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-017
+//fusa:test REQ-RELAY-018
 func TestApplyMultipleOpts(t *testing.T) {
 	cfg := ApplySubscriberOpts([]SubscriberOption{
 		WithChannelDepth(10),
@@ -88,6 +97,8 @@ func TestApplyMultipleOpts(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-013
+//fusa:test REQ-RELAY-014
 func TestCallerEmbeddsNode(t *testing.T) {
 	var c Caller = callerStub{}
 	var n Node = c

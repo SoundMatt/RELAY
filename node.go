@@ -12,6 +12,8 @@ import "context"
 //
 // Lifecycle invariants (spec §6): Send after Close returns ErrClosed; Subscribe
 // after Close returns ErrClosed; Close is idempotent; concurrent Send is safe.
+//
+//fusa:req REQ-RELAY-013
 type Node interface {
 	// Protocol returns the network protocol this node speaks.
 	Protocol() Protocol
@@ -30,6 +32,8 @@ type Node interface {
 
 // Caller extends Node for protocols with request/response semantics (RCP, SOME/IP).
 // Applications can probe: if c, ok := node.(relay.Caller); ok { ... }
+//
+//fusa:req REQ-RELAY-014
 type Caller interface {
 	Node
 
@@ -39,6 +43,8 @@ type Caller interface {
 }
 
 // BackPressurePolicy controls what happens when a subscription channel is full.
+//
+//fusa:req REQ-RELAY-015
 type BackPressurePolicy int
 
 const (
@@ -48,25 +54,35 @@ const (
 )
 
 // SubscriberConfig holds resolved subscriber options.
+//
+//fusa:req REQ-RELAY-016
 type SubscriberConfig struct {
 	ChannelDepth int                // 0 means use implementation default (64)
 	BackPressure BackPressurePolicy // default: DropNewest
 }
 
 // SubscriberOption configures a subscription.
+//
+//fusa:req REQ-RELAY-017
 type SubscriberOption func(*SubscriberConfig)
 
 // WithChannelDepth sets the subscription channel buffer depth.
+//
+//fusa:req REQ-RELAY-017
 func WithChannelDepth(n int) SubscriberOption {
 	return func(c *SubscriberConfig) { c.ChannelDepth = n }
 }
 
 // WithBackPressure sets the back-pressure policy applied when the channel is full.
+//
+//fusa:req REQ-RELAY-017
 func WithBackPressure(p BackPressurePolicy) SubscriberOption {
 	return func(c *SubscriberConfig) { c.BackPressure = p }
 }
 
 // ApplySubscriberOpts applies opts in order to a zero SubscriberConfig and returns it.
+//
+//fusa:req REQ-RELAY-018
 func ApplySubscriberOpts(opts []SubscriberOption) SubscriberConfig {
 	var c SubscriberConfig
 	for _, o := range opts {
@@ -76,6 +92,8 @@ func ApplySubscriberOpts(opts []SubscriberOption) SubscriberConfig {
 }
 
 // ChanDepth returns c.ChannelDepth if explicitly set (> 0), otherwise defaultDepth.
+//
+//fusa:req REQ-RELAY-019
 func (c SubscriberConfig) ChanDepth(defaultDepth int) int {
 	if c.ChannelDepth > 0 {
 		return c.ChannelDepth

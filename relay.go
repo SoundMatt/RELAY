@@ -13,8 +13,11 @@ import (
 )
 
 // Protocol identifies a network protocol implementation. Zero is reserved.
+//
+//fusa:req REQ-RELAY-001
 type Protocol int
 
+//fusa:req REQ-RELAY-002
 const (
 	CAN    Protocol = 1
 	DDS    Protocol = 2
@@ -25,6 +28,8 @@ const (
 )
 
 // String returns the canonical upper-case name of the protocol.
+//
+//fusa:req REQ-RELAY-003
 func (p Protocol) String() string {
 	switch p {
 	case CAN:
@@ -45,6 +50,8 @@ func (p Protocol) String() string {
 }
 
 // Version is a semantic version triple.
+//
+//fusa:req REQ-RELAY-004
 type Version struct {
 	Major int `json:"major"`
 	Minor int `json:"minor"`
@@ -52,6 +59,8 @@ type Version struct {
 }
 
 // String returns the version in "MAJOR.MINOR.PATCH" form.
+//
+//fusa:req REQ-RELAY-005
 func (v Version) String() string {
 	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
 }
@@ -61,6 +70,10 @@ func (v Version) String() string {
 //
 // ID carries the protocol-specific routing key (see spec §4.2).
 // Meta carries optional protocol-specific fields (see spec §4.3).
+// Seq and Meta are omitted from JSON when zero/nil (REQ-RELAY-007).
+//
+//fusa:req REQ-RELAY-006
+//fusa:req REQ-RELAY-007
 type Message struct {
 	Protocol  Protocol          `json:"protocol"`
 	Version   Version           `json:"version"`

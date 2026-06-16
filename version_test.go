@@ -6,6 +6,7 @@ package relay
 
 import "testing"
 
+//fusa:test REQ-RELAY-020
 func TestSpecVersion(t *testing.T) {
 	if SpecVersion != "0.1" {
 		t.Errorf("SpecVersion = %q, want %q", SpecVersion, "0.1")

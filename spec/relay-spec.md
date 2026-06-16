@@ -391,8 +391,8 @@ Appendix A.
 
 ```go
 type Participant interface {
-    NewPublisher(topic string, opts ...PublisherOption) (Publisher, error)
-    NewSubscriber(topic string, opts ...SubscriberOption) (Subscriber, error)
+    NewPublisher(topic string, qos QoS) (Publisher, error)
+    NewSubscriber(topic string, qos QoS, opts ...SubscriberOption) (Subscriber, error)
     Domain() Domain
     Close() error
 }
@@ -419,6 +419,8 @@ type LoaningPublisher interface {
 
 type Domain int // MUST be 0–232 inclusive
 ```
+
+QoS is passed explicitly to `NewPublisher` and `NewSubscriber` because it is the primary DDS endpoint parameter — not a delivery-channel option. `SubscriberOption` (§14) is reserved for channel-level configuration (depth, back-pressure) that is orthogonal to QoS.
 
 ### 8.3 LIN
 

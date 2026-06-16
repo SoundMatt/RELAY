@@ -86,9 +86,8 @@ RELAY does **not** define:
 | Transport | A concrete network backend (socketcan, UDP, virtual, mock) |
 | Protocol | One of: CAN, DDS, LIN, MQTT, RCP, SOMEIP |
 | Node | A protocol endpoint wrapped at the `relay.Message` level |
-| MUST / MUST NOT | RFC 2119 mandatory |
-| SHOULD / SHOULD NOT | RFC 2119 recommended |
-| MAY | RFC 2119 optional |
+| MUST / MUST NOT | RFC 2119 mandatory — no discretion |
+| if implemented, MUST | Marks optional features: if a feature is present it MUST conform; absence is permitted |
 
 ---
 
@@ -254,30 +253,46 @@ In C++, protocol-specific codes MUST map to the canonical `relay::Errc` via
 In Rust, protocol-specific variants MUST implement `From<relay::Error>` or
 expose `.kind() -> relay::Error`.
 
-### 5.3 Protocol-specific errors
+### 5.3 Sentinel semantics per transport type
 
-Implementations MAY define additional errors. These are not checked by
-`relay conform` but are enumerated here for consistency across the ecosystem.
-
-| Protocol | Error | Condition |
+| Sentinel | Always-connected transport (virtual, mock) | Hardware transport (socketcan, UDP) |
 |---|---|---|
-| CAN | `ErrInvalidFrame` | Frame fails `ValidateFrame` |
-| DDS | `ErrTopicEmpty` | Topic string is empty |
-| DDS | `ErrQoSMismatch` | Publisher and subscriber QoS incompatible |
-| DDS | `ErrDeadlineMissed` | Sample not delivered before deadline |
-| DDS | `ErrSampleRejected` | Sample rejected due to resource limits |
-| DDS | `ErrResourceLimits` | Resource limit exceeded |
-| DDS | `ErrLoanBuffer` | Loaned buffer cannot be acquired |
-| LIN | `ErrNoResponse` | No slave responded within schedule window |
-| MQTT | `ErrTopicEmpty` | Topic string is empty |
-| MQTT | `ErrQoSUnsupported` | QoS level not supported by broker |
-| RCP | `ErrNotFound` | Zone not in registry |
-| RCP | `ErrAlreadyExists` | Zone already registered |
-| RCP | `ErrBusy` | Zone controller busy |
-| RCP | `ErrZoneMismatch` | Command zone ≠ controller zone |
-| SOMEIP | `ErrUnknownService` | Service ID not registered |
-| SOMEIP | `ErrUnknownMethod` | Method ID not registered |
-| SOMEIP | `ErrMalformedMessage` | Header or payload malformed |
+| `ErrClosed` | After `Close()` is called | After `Close()` is called |
+| `ErrNotConnected` | Never (omit or alias `ErrClosed`) | Before `New()` succeeds, or after transport drop |
+| `ErrTimeout` | When ctx deadline expires on a blocking `Send` | Same, plus hardware ACK timeout |
+| `ErrPayloadTooLarge` | When payload exceeds protocol max | Same |
+
+`ErrInvalidFrame` and `ErrPayloadTooLarge` are distinct. `ErrInvalidFrame` covers
+structural violations (bad ID bits, RTR+data, out-of-range ID). `ErrPayloadTooLarge`
+is returned by `Send` when the byte count of the payload field exceeds the protocol
+maximum. `ValidateFrame` MUST return `ErrInvalidFrame`; it MUST NOT return
+`ErrPayloadTooLarge`.
+
+### 5.4 Protocol-specific errors
+
+The following errors are enumerated for ecosystem consistency. Implementations
+that expose these conditions MUST use these exact names and MUST wrap the closest
+mandatory sentinel with `%w` so `errors.Is` reaches the RELAY sentinel.
+
+| Protocol | Error | Wraps | Condition |
+|---|---|---|---|
+| CAN | `ErrInvalidFrame` | — (not a relay sentinel) | Frame fails `ValidateFrame`; structural violation |
+| DDS | `ErrTopicEmpty` | `ErrNotConnected` | Topic string is empty |
+| DDS | `ErrQoSMismatch` | `ErrNotConnected` | Publisher and subscriber QoS incompatible |
+| DDS | `ErrDeadlineMissed` | `ErrTimeout` | Sample not delivered before deadline |
+| DDS | `ErrSampleRejected` | `ErrPayloadTooLarge` | Sample rejected due to resource limits |
+| DDS | `ErrResourceLimits` | `ErrPayloadTooLarge` | Resource limit exceeded |
+| DDS | `ErrLoanBuffer` | `ErrClosed` | Loaned buffer cannot be acquired |
+| LIN | `ErrNoResponse` | `ErrTimeout` | No slave responded within schedule window |
+| MQTT | `ErrTopicEmpty` | `ErrNotConnected` | Topic string is empty |
+| MQTT | `ErrQoSUnsupported` | `ErrNotConnected` | QoS level not supported by broker |
+| RCP | `ErrNotFound` | `ErrNotConnected` | Zone not in registry |
+| RCP | `ErrAlreadyExists` | `ErrClosed` | Zone already registered |
+| RCP | `ErrBusy` | `ErrTimeout` | Zone controller busy |
+| RCP | `ErrZoneMismatch` | `ErrNotConnected` | Command zone ≠ controller zone |
+| SOMEIP | `ErrUnknownService` | `ErrNotConnected` | Service ID not registered |
+| SOMEIP | `ErrUnknownMethod` | `ErrNotConnected` | Method ID not registered |
+| SOMEIP | `ErrMalformedMessage` | `ErrPayloadTooLarge` | Header or payload malformed |
 
 ---
 
@@ -288,13 +303,13 @@ Every RELAY-conformant implementation MUST satisfy all of the following.
 1. **Idempotent close.** `Close()` MUST be safe to call multiple times; subsequent calls MUST be no-ops and MUST NOT return an error.
 2. **Send after close.** Any send/publish/call after `Close()` MUST return `ErrClosed`.
 3. **Receive after close.** Subscribe calls after `Close()` MUST return `ErrClosed`. Channels already returned MUST be closed by the implementation.
-4. **Unsubscribe semantics.** After `Unsubscribe()` or `Subscription.Close()`: the channel MUST be closed; further sends to that subscription MUST be silently dropped; calling `Unsubscribe()` again MUST be a no-op.
+4. **Unsubscribe semantics.** After `Unsubscribe()` or `Subscription.Close()`: the channel MUST be closed; further sends to that subscription MUST be silently dropped; calling `Unsubscribe()` again MUST be a no-op. This requirement binds `relay.Node` adapters and protocol interfaces that expose a `Subscription` type (DDS, MQTT, SOMEIP). CAN and LIN `Bus.Subscribe()` return a raw channel — callers stop receiving by discarding the channel; a `Subscription` wrapper is not required at the `Bus` level.
 5. **Context cancellation.** Blocking operations MUST return within a reasonable scheduling interval after context cancellation. Deadline expiry MUST return `ErrTimeout`.
 6. **Concurrent close.** `Close()` MUST be safe to call concurrently with in-flight operations; in-flight operations MUST unblock and return `ErrClosed`.
 7. **Concurrent sends.** `Send` / `Publish` / `Call` / `Write` MUST be safe to call from multiple goroutines or threads concurrently without external synchronisation.
-8. **Multiple subscriptions.** `Subscribe()` MAY be called multiple times; each call MUST return an independent channel or `Subscription`. Closing one MUST NOT affect others.
+8. **Multiple subscriptions.** `Subscribe()` is safe to call multiple times; each call MUST return an independent channel or `Subscription`. Closing one MUST NOT affect others.
 9. **Zero-value safety.** A zero-value or uninitialised node MUST NOT panic; it MUST return `ErrNotConnected` for any operation.
-10. **Reconnection policy.** Implementations MUST NOT reconnect automatically after a transport drop. After the underlying transport fails, all subsequent operations MUST return `ErrNotConnected`. The application is responsible for calling `Close()` and creating a new instance. Implementations MAY expose an optional `Reconnect(ctx context.Context) error` method but MUST NOT make reconnection implicit.
+10. **Reconnection policy.** Implementations MUST NOT reconnect automatically after a transport drop. After the underlying transport fails, all subsequent operations MUST return `ErrNotConnected`. The application is responsible for calling `Close()` and creating a new instance. If an implementation exposes `Reconnect(ctx context.Context) error`, that method MUST perform only explicit reconnection — implicit background reconnection is never permitted.
 
 ---
 
@@ -325,6 +340,18 @@ Rules:
 2. A failed `New` MUST return a nil interface and non-nil error; it MUST NOT return a non-nil interface in a broken state.
 3. `New` MUST NOT block indefinitely; connection establishment MUST use Form 1 with `ctx`.
 4. Every implementation MUST ship a `mock` sub-package with a Form 2 `New` returning a fully functional in-process implementation. The mock MUST implement all mandatory and optional interfaces the primary implementation supports.
+
+### 7.1 Local development before RELAY is published
+
+Until `github.com/SoundMatt/RELAY` is published to the Go module proxy,
+implementations MUST use a `replace` directive in `go.mod`:
+
+```
+replace github.com/SoundMatt/RELAY => ../RELAY
+```
+
+Conformance CI MUST use the published module path and MUST NOT use a `replace`
+directive. The `replace` directive is local-development scaffolding only.
 
 ---
 
@@ -643,6 +670,15 @@ returned by `Node.Subscribe()` — MUST follow this model:
 5. **Error propagation.** If the underlying protocol subscription returns a
    permanent error, the goroutine closes the `relay.Message` channel and exits.
    The application detects closure by observing the closed channel.
+6. **Back-pressure scope.** The `BackPressurePolicy` governs the `relay.Message`
+   channel created by `Adapt()`, not the underlying protocol channel. Protocol
+   transports that apply their own drop policy (e.g. a virtual `Bus` with a full
+   internal channel) MUST be configured with a large internal buffer or blocking
+   behaviour so that the adapter's policy is the effective one. The adapter MUST
+   NOT rely on the protocol transport to enforce `DropOldest` or `Block` semantics.
+7. **Seq counter ownership.** The monotonic `Seq` counter is per subscription
+   goroutine — each call to `Node.Subscribe()` starts a new counter at 0.
+   Counters are not shared across goroutines or across `Adapt()` calls.
 
 **Go reference skeleton:**
 
@@ -650,7 +686,7 @@ returned by `Node.Subscribe()` — MUST follow this model:
 func (a *canAdapter) Subscribe(opts ...relay.SubscriberOption) (<-chan relay.Message, error) {
     cfg := relay.ApplySubscriberOpts(opts)
     ch := make(chan relay.Message, cfg.ChanDepth(64))
-    frames, err := a.bus.Subscribe(nil) // nil = all frames
+    frames, err := a.bus.Subscribe(nil) // nil filters = all frames
     if err != nil {
         return nil, err
     }
@@ -747,7 +783,10 @@ Exit: `0` success.
 Reports self-assessed health without a live network connection. JSON schema: §12.3.
 Exit: `0` healthy, `1` degraded.
 
-### 11.2 Recommended commands
+### 11.2 Optional commands
+
+If implemented, these commands MUST conform to the signatures below.
+`relay conform` does not gate on their presence but validates them when present.
 
 #### `connect <endpoint> [--timeout duration]`
 
@@ -828,6 +867,21 @@ Exit: `0` clean, `1` error.
 
 `adapt` MUST be `true` if the package exports `Adapt()` per §10.3.
 
+`features` lists protocol-specific capability strings compiled into the binary.
+Values are set at build time — they are not runtime-probed. Unknown strings MUST
+be ignored by `relay conform`. Defined values per protocol:
+
+| Protocol | Value | Meaning |
+|---|---|---|
+| CAN | `"fd"` | CAN FD frames supported |
+| CAN | `"isotp"` | ISO-TP fragmentation available |
+| CAN | `"j1939"` | J1939 layer available |
+| CAN | `"uds"` | UDS (ISO 14229) available |
+| CAN | `"obdii"` | OBD-II available |
+| DDS | `"loaning"` | `LoaningPublisher` exported |
+| DDS | `"tsn"` | TSN QoS fields supported |
+| RCP | `"loaning"` | `LoaningController` exported |
+
 ### 12.3 Status document
 
 `<binary> status --format json`:
@@ -900,6 +954,10 @@ LABEL io.relay.binary="<binary>"
 LABEL io.relay.spec-version="0.1"
 ```
 
+The `io.relay.spec-version` label MUST always match the value of `SpecVersion`
+exported by the package (§17.12 / §19.4). The `"0.1"` shown above is an example;
+update it on each spec minor release.
+
 The project directory is mounted at `/project` by convention:
 
 ```
@@ -935,8 +993,9 @@ re-export them. This keeps RELAY free of protocol-specific dependencies.
 
 The canonical frame types from §15 (`Frame`, `Sample`, `QoS`, …) also live
 in each x-Net package. RELAY holds only the field-mapping specification (§15),
-not the structs themselves. A future RELAY sub-package (`github.com/SoundMatt/RELAY/types`)
-MAY consolidate them, but is not required for v0.1.
+not the structs themselves. A future RELAY sub-package (`github.com/SoundMatt/RELAY/types`) is not required
+for v0.1. If created, it MUST consolidate all canonical frame types and MUST
+remain importable without pulling in protocol-specific dependencies.
 
 ---
 
@@ -980,6 +1039,11 @@ func (c SubscriberConfig) ChanDepth(defaultDepth int) int {
 ```
 
 The names `SubscriberConfig` and `SubscriberOption` MUST be used consistently across all protocols. (go-SOMEIP currently uses `SubscribeConfig`/`SubscribeOption` — tracked gap in Appendix A.)
+
+Until `github.com/SoundMatt/RELAY` is published (see §7.1), implementations that
+need these helpers MUST define them locally with identical signatures. When RELAY
+is published the local definitions are replaced by the import. Exported names MUST
+match exactly so call sites require no changes.
 
 ---
 
@@ -1037,11 +1101,16 @@ func MaxDataLen(fd bool) int {
 }
 ```
 
+Implementations construct `LoanedFrame` directly:
+`&LoanedFrame{Frame: f, release: releaseFn}`. No constructor function is required
+by the spec. The `release` field is unexported to prevent callers from bypassing
+`Return()`.
+
 **Constraints enforced by `ValidateFrame`:**
 - Standard ID (Ext=false): 0x000–0x7FF
 - Extended ID (Ext=true): 0x00000000–0x1FFFFFFF
 - BRS MUST be false when FD is false
-- RTR MUST be false when FD is true
+- RTR MUST be false when FD is true *(gap in existing go-CAN: this check is absent — see Appendix A)*
 - len(Data) ≤ 8 when FD is false; ≤ 64 when FD is true
 
 ---
@@ -1395,7 +1464,7 @@ An implementation is **RELAY-conformant** if and only if:
 1. **Protocol declaration.** Capabilities document (§12.2) declares a protocol from §3 and a `spec_version`.
 2. **Protocol interfaces.** All mandatory interfaces from §8 are implemented with exact method signatures.
 3. **Error sentinels.** All four sentinels in §5.1 are defined; protocol-specific errors wrap them per §5.2.
-4. **Lifecycle invariants.** All nine requirements in §6 are satisfied.
+4. **Lifecycle invariants.** All ten requirements in §6 are satisfied. Requirement §6.9 (zero-value safety) applies to `relay.Node` and `relay.Caller` adapters only, not to the underlying protocol interface types (`Bus`, `Participant`, etc.).
 5. **Constructor contract.** Each transport sub-package exports `New` per §7; a `mock` sub-package is present.
 6. **Application interface.** The root package exports `Adapt()` per §10.3; the capabilities document declares `"adapt": true`.
 7. **CLI mandatory commands.** `version`, `capabilities`, `status` per §11.1 with JSON schemas matching §12.
@@ -1438,8 +1507,8 @@ public:
 } // namespace relay
 ```
 
-Already implemented as `rcp::Context` in cpp-RCP; cpp-RCP SHOULD alias
-`rcp::Context = relay::Context`.
+Already implemented as `rcp::Context` in cpp-RCP. If cpp-RCP declares
+`relay::Context` conformance, it MUST alias `rcp::Context = relay::Context`.
 
 #### relay::Channel<T>
 
@@ -1458,8 +1527,8 @@ public:
 } // namespace relay
 ```
 
-Already implemented as `rcp::StatusChannel`; cpp-RCP SHOULD alias
-`StatusChannel = relay::Channel<Status>`.
+Already implemented as `rcp::StatusChannel`. If cpp-RCP declares
+`relay::Channel` conformance, it MUST alias `StatusChannel = relay::Channel<Status>`.
 
 #### relay::SubscriberOptions (C++)
 
@@ -1520,7 +1589,8 @@ Protocol-specific codes map to `relay::Errc` via `std::error_condition` equivale
 #### Async-primary model
 
 All blocking operations MUST be `async fn`. Required runtime: `tokio` or compatible.
-Sync wrappers MAY be provided in a `blocking` sub-module.
+If sync wrappers are provided, they MUST be in a `blocking` sub-module and MUST NOT
+be re-exported from the crate root.
 
 #### SubscriberOptions (Rust)
 
@@ -1636,6 +1706,8 @@ Current version: **v0.2**
 | BackPressurePolicy | ✗ | ✅ | ✗ | ✗ | ✗ | ✗ | n/a |
 | mock / virtual sub-package | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Subscribe(filters []Filter, opts …) signature (§8.1/8.3) | ⚠ breaking | n/a | ⚠ breaking | n/a | n/a | n/a | n/a |
+| ValidateFrame: RTR+FD check (§15.1) | ✗ | n/a | ✅ | n/a | n/a | n/a | n/a |
+| ErrInvalidFrame distinct from ErrPayloadTooLarge (§5.3) | ✗ | n/a | n/a | n/a | n/a | n/a | n/a |
 | MasterBus.SetSchedule() (§8.3) | n/a | n/a | ✗ | n/a | n/a | n/a | n/a |
 | Adapt() → relay.Node / relay.Caller | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | ToMessage / FromMessage | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
@@ -1646,7 +1718,7 @@ Current version: **v0.2**
 | HealthProvider | ✗ | ✅ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | MetricsProvider | ✗ | ✅ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | Drainer | ✗ | ✅ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| LoaningBus / LoaningPublisher / LoaningController | ? | ✅ | n/a | n/a | ✅ | n/a | ✅ |
+| LoaningBus / LoaningPublisher / LoaningController | ✗ | ✅ | n/a | n/a | ✅ | n/a | ✅ |
 | relay::Context (C++) | n/a | n/a | n/a | n/a | n/a | n/a | ✅ as rcp:: |
 
 **Legend:** ✅ conforms · ✗ missing · ⚠ breaking change required · ? unknown · n/a not applicable

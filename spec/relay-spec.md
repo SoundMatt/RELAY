@@ -1693,10 +1693,10 @@ Current version: **v0.2**
 | Requirement | go-CAN | go-DDS | go-LIN | go-mqtt | go-RCP | go-SOMEIP | cpp-RCP |
 |---|---|---|---|---|---|---|---|
 | Canonical frame type | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| JSON tags on structs | ✗ | ✅ | ✗ | ✅ | ✗ | ✅ | n/a |
+| JSON tags on structs | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | n/a |
 | ErrClosed | ✗ | ✅ | ✗ | ✅ | ✅ | ✅ | ✅ |
 | ErrNotConnected | ✗ | n/a | ✗ | ✅ | ✗ | ⚠ rename | ✗ |
-| ErrTimeout | ✗ | ✅ ctx | ✗ | ✗ | ✅ | ✅ | ✅ |
+| ErrTimeout | ✗ | ✗ | ✗ | ✗ | ✅ | ✅ | ✅ |
 | ErrPayloadTooLarge | ✗ | ✅ | ✗ | ✅ | ✗ | ✗ | ✗ |
 | Error wrapping (errors.Is) | ✗ | ✅ | ✗ | ✅ | partial | partial | n/a |
 | ValidateFrame | ✅ | n/a | ✅ | n/a | n/a | n/a | n/a |
@@ -1712,9 +1712,9 @@ Current version: **v0.2**
 | Adapt() → relay.Node / relay.Caller | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | ToMessage / FromMessage | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | SpecVersion constant | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| CLI: version --format json | ? | ? | ? | ? | ? | ? | ? |
-| CLI: capabilities | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| CLI binary name per §13.2 | ✗ cantool | ? | ✗ lintool | ? | ✗ rcptool | ? | ? |
+| CLI: version --format json | ✗ | ✗ | ✗ | ✗ no CLI | ✗ | ✗ no CLI | n/a |
+| CLI: capabilities | ✗ | ✗ | ✗ | ✗ no CLI | ✗ | ✗ no CLI | n/a |
+| CLI binary name per §13.2 | ✗ cantool | ✗ ddstool | ✗ lintool | ✗ no CLI | ✗ rcptool | ✗ no CLI | n/a |
 | HealthProvider | ✗ | ✅ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | MetricsProvider | ✗ | ✅ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | Drainer | ✗ | ✅ | ✗ | ✗ | ✗ | ✗ | ✗ |

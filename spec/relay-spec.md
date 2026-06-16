@@ -1,4 +1,4 @@
-# RELAY Specification — v0.1 (draft)
+# RELAY Specification — v0.2 (draft)
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -33,11 +33,45 @@ It covers:
 13. **Per-protocol defaults** — buffer sizes, address limits, timing constraints.
 14. **Language bindings** — Go canonical types, C++ abstract classes, Rust async traits.
 
+### 1.1 Scope boundary: RELAY vs x-Net implementations
+
+The table below defines what MUST live in RELAY vs what MUST live in each
+protocol implementation (collectively called **x-Net** — e.g. go-CAN, cpp-RCP).
+
+| Concern | Owner | Notes |
+|---|---|---|
+| Canonical frame struct | RELAY | Source of truth; x-Net imports it |
+| Protocol interface contract (Bus, Participant, …) | RELAY | Defined in §8; x-Net satisfies the interface |
+| `relay.Node` / `relay.Caller` | RELAY | Defined in §10 |
+| `Adapt()` implementation | x-Net | Wraps x-Net's interface; imports RELAY |
+| `ToMessage()` / `FromMessage()` | RELAY defines field mapping (§15); x-Net implements | x-Net may inline or call helpers from RELAY |
+| Error sentinels (4 mandatory) | RELAY | x-Net wraps them with `%w` |
+| Protocol-specific errors | x-Net | Enumerated in §5.3 for consistency |
+| Subscriber helpers (`SubscriberConfig`, etc.) | RELAY | x-Net imports and uses them |
+| Wire encoding / framing | x-Net only | CAN bit fields, SOME/IP header bytes, etc. |
+| Transport backend (socketcan, UDP, serial, …) | x-Net only | RELAY has no network dependency |
+| Service discovery (SOME/IP-SD, mDNS, …) | x-Net only | Protocol-specific; not portable across protocols |
+| Reconnection logic | x-Net only | RELAY specifies the policy (§6.10), x-Net enforces it |
+| Hardware HAL / driver | x-Net only | Entirely below the interface contract |
+| TLS / authentication | x-Net only | Out of scope for RELAY v0.1 |
+| `relay conform` CLI | RELAY | Specification deferred to v0.5 |
+| Docker image base | RELAY defines (§13.5); x-Net Dockerfiles follow it | |
+
 RELAY does **not** define:
 
-- Wire formats. Each protocol retains its own native wire encoding.
-- Transport selection. Implementations choose their transports.
-- Application-level data models or schemas.
+- **Wire formats.** Each protocol retains its own native wire encoding. RCP's binary
+  frame format, SOME/IP header layout, CAN bit timing, etc. are defined in each
+  x-Net implementation.
+- **Service discovery.** SOME/IP-SD (AUTOSAR multicast service discovery) is a
+  SOME/IP implementation concern, not a RELAY concern.
+- **Reconnection policy.** What happens after a transport drop is
+  implementation-defined (see §6.10).
+- **Transport selection.** Implementations choose their transports.
+- **Security.** TLS, authentication, and signing are out of scope for v0.1.
+- **Application-level data models or schemas.**
+- **`relay conform` CLI internals.** The specification of the `relay conform`
+  subcommand itself (flags, output schema, what it invokes) is deferred to v0.5
+  of the roadmap.
 
 ---
 
@@ -260,6 +294,7 @@ Every RELAY-conformant implementation MUST satisfy all of the following.
 7. **Concurrent sends.** `Send` / `Publish` / `Call` / `Write` MUST be safe to call from multiple goroutines or threads concurrently without external synchronisation.
 8. **Multiple subscriptions.** `Subscribe()` MAY be called multiple times; each call MUST return an independent channel or `Subscription`. Closing one MUST NOT affect others.
 9. **Zero-value safety.** A zero-value or uninitialised node MUST NOT panic; it MUST return `ErrNotConnected` for any operation.
+10. **Reconnection policy.** Implementations MUST NOT reconnect automatically after a transport drop. After the underlying transport fails, all subsequent operations MUST return `ErrNotConnected`. The application is responsible for calling `Close()` and creating a new instance. Implementations MAY expose an optional `Reconnect(ctx context.Context) error` method but MUST NOT make reconnection implicit.
 
 ---
 
@@ -303,7 +338,9 @@ expose. Go definitions are canonical; C++ and Rust equivalents are in §18.
 ```go
 type Bus interface {
     Send(ctx context.Context, f Frame) error
-    Subscribe(filters ...Filter) (<-chan Frame, error)
+    // filters is a content filter (nil or empty = receive all).
+    // opts configures channel delivery (depth, back-pressure per §14).
+    Subscribe(filters []Filter, opts ...SubscriberOption) (<-chan Frame, error)
     Close() error
 }
 
@@ -317,6 +354,11 @@ type LoaningBus interface {
 func ValidateFrame(f Frame) error
 func MaxDataLen(fd bool) int // 64 if fd, else 8
 ```
+
+Note: the `filters` parameter is a slice (not variadic) to avoid ambiguity with
+the variadic `opts`. Pass `nil` to receive all frames. This is a breaking change
+from go-CAN's current `Subscribe(filters ...Filter)` signature — tracked in
+Appendix A.
 
 ### 8.2 DDS
 
@@ -356,13 +398,18 @@ type Domain int // MUST be 0–232 inclusive
 ```go
 type Bus interface {
     Publish(id uint8, data []byte) error
-    Subscribe(filters ...Filter) (<-chan Frame, error)
+    // filters is a content filter (nil or empty = receive all).
+    // opts configures channel delivery (depth, back-pressure per §14).
+    Subscribe(filters []Filter, opts ...SubscriberOption) (<-chan Frame, error)
     Close() error
 }
 
 type MasterBus interface {
     Bus
     SendHeader(ctx context.Context, id uint8) (Frame, error)
+    // SetSchedule installs a new LIN schedule table. An empty table is valid
+    // and disables scheduled transmission. Safe to call while running.
+    SetSchedule(entries []ScheduleEntry) error
 }
 
 func ValidateFrame(f Frame) error
@@ -370,6 +417,9 @@ func ProtectID(id uint8) uint8
 func VerifyPID(pid uint8) (uint8, error)
 func CalcChecksum(pid uint8, data []byte, ct ChecksumType) uint8
 ```
+
+Note: same slice-not-variadic pattern as CAN (§8.1) for the same reason.
+`SetSchedule` is new — tracked as a gap in go-LIN (Appendix A).
 
 ### 8.4 MQTT
 
@@ -571,7 +621,66 @@ protocol. These rules define the mapping:
 | RCP | Zone name → `Zone` enum for `Controller.Send()` | `rcp.priority` → `Priority`; `rcp.cmd_type` → `CommandType` | `Status.ToMessage()` per §15.5 |
 | SOMEIP | `"svcID/methodID"` → parse to `ServiceID`/`MethodID` | `someip.msg_type` → selects `Call()` vs `CallNoReturn()` | `Message.ToMessage()` per §15.6 |
 
-### 10.5 What is intentionally not preserved at the Node level
+### 10.5 Adapt() goroutine model
+
+The inbound path — from the protocol subscription to the `relay.Message` channel
+returned by `Node.Subscribe()` — MUST follow this model:
+
+1. **One goroutine per subscription.** `Adapt()` starts a background goroutine
+   (Go) / thread (C++) / task (Rust) when `Node.Subscribe()` is first called on
+   the adapter. Each subsequent call to `Node.Subscribe()` starts an independent
+   goroutine.
+2. **Goroutine lifetime.** The goroutine runs until (a) `Node.Close()` is called,
+   (b) the underlying protocol subscription is closed, or (c) the adapter's context
+   (if any) is cancelled. On exit, the goroutine MUST close the `relay.Message` channel.
+3. **Back-pressure.** The goroutine applies the `BackPressurePolicy` from the
+   `SubscriberOption` supplied to `Node.Subscribe()`:
+   - `DropNewest` (default): if the channel is full, discard the arriving message and continue.
+   - `DropOldest`: drain one message from the channel, then enqueue the new one.
+   - `Block`: block in `channel <- msg` — the goroutine stalls; **use only when the subscriber drains the channel faster than the protocol produces**.
+4. **No shared mutable state.** Multiple subscription goroutines MUST NOT share
+   state without synchronisation. Each goroutine owns its own channel.
+5. **Error propagation.** If the underlying protocol subscription returns a
+   permanent error, the goroutine closes the `relay.Message` channel and exits.
+   The application detects closure by observing the closed channel.
+
+**Go reference skeleton:**
+
+```go
+func (a *canAdapter) Subscribe(opts ...relay.SubscriberOption) (<-chan relay.Message, error) {
+    cfg := relay.ApplySubscriberOpts(opts)
+    ch := make(chan relay.Message, cfg.ChanDepth(64))
+    frames, err := a.bus.Subscribe(nil) // nil = all frames
+    if err != nil {
+        return nil, err
+    }
+    go func() {
+        defer close(ch)
+        for f := range frames {
+            msg := f.ToMessage()
+            switch cfg.BackPressure {
+            case relay.DropNewest:
+                select {
+                case ch <- msg:
+                default: // full: drop arriving
+                }
+            case relay.DropOldest:
+                select {
+                case ch <- msg:
+                default:
+                    <-ch        // drain oldest
+                    ch <- msg
+                }
+            case relay.Block:
+                ch <- msg
+            }
+        }
+    }()
+    return ch, nil
+}
+```
+
+### 10.6 What is intentionally not preserved at the Node level
 
 Applications that need these features MUST use the protocol-specific interface directly.
 
@@ -583,8 +692,9 @@ Applications that need these features MUST use the protocol-specific interface d
 | Per-publish QoS | MQTT | Reads `mqtt.qos` from Meta; broker-enforced floor applies |
 | DDS `TryRead()` / `WaitSet` | DDS | Only the channel interface is exposed |
 | LIN `MasterBus.SendHeader()` | LIN | Master scheduling not available via Node |
+| LIN `MasterBus.SetSchedule()` | LIN | Schedule management not available via Node |
 
-### 10.6 Example
+### 10.7 Example
 
 ```go
 // Application code — protocol-agnostic:
@@ -797,6 +907,36 @@ docker run --rm -v "$(pwd)":/project ghcr.io/soundmatt/<tool> version
 ```
 
 Images MUST be published to `ghcr.io/soundmatt/<tool-lowercase>`.
+
+### 13.6 Package layout
+
+The RELAY Go module (`github.com/SoundMatt/RELAY`) is the **root package**. It
+exports only the types visible to both RELAY tooling and protocol implementations:
+
+```
+github.com/SoundMatt/RELAY          ← relay.Protocol, relay.Message, relay.Node,
+                                        relay.Caller, relay.ErrClosed etc., relay.SpecVersion,
+                                        relay.SubscriberConfig / SubscriberOption helpers
+```
+
+Protocol implementations are **separate modules** that import RELAY:
+
+```
+github.com/SoundMatt/go-CAN         ← package can — Bus, Frame, Filter, LoanedFrame,
+                                        Adapt(Bus) relay.Node
+github.com/SoundMatt/go-DDS         ← package dds — Participant, Publisher, Subscriber,
+                                        Sample, QoS, GUID, Adapt(Participant) relay.Node
+...
+```
+
+The interface types from §8 (`Bus`, `Participant`, `Client`, `Controller`,
+`Service`, …) live in each x-Net package, **not** in RELAY. RELAY does not
+re-export them. This keeps RELAY free of protocol-specific dependencies.
+
+The canonical frame types from §15 (`Frame`, `Sample`, `QoS`, …) also live
+in each x-Net package. RELAY holds only the field-mapping specification (§15),
+not the structs themselves. A future RELAY sub-package (`github.com/SoundMatt/RELAY/types`)
+MAY consolidate them, but is not required for v0.1.
 
 ---
 
@@ -1128,6 +1268,110 @@ const SOMEIPProtocolVersion uint8 = 0x01
 **Constraint:** `ProtocolVersion` MUST equal `SOMEIPProtocolVersion` (0x01).
 Implementations MUST reject inbound messages where this field is not 0x01.
 
+### 15.7 ToMessage() / FromMessage() field mappings
+
+These tables define the canonical field-level mapping for every protocol.
+`ToMessage()` converts a native frame to `relay.Message`; `FromMessage()` is the
+inverse. Both MUST be lossless for all mandatory fields.
+
+**15.7.1 CAN `Frame.ToMessage()` / `FromMessage()`**
+
+| relay.Message field | Frame field | Notes |
+|---|---|---|
+| `Protocol` | — | Always `relay.CAN` |
+| `ID` | `Frame.ID` | `strconv.FormatUint(uint64(f.ID), 10)` |
+| `Payload` | `Frame.Data` | Direct copy |
+| `Timestamp` | — | `time.Now()` on receive; ignored on `FromMessage` |
+| `Seq` | — | Monotonic counter maintained by adapter; 0 on `FromMessage` |
+| `Meta["can.ext"]` | `Frame.Ext` | `"true"` / `"false"` |
+| `Meta["can.fd"]` | `Frame.FD` | `"true"` / `"false"` |
+| `Meta["can.rtr"]` | `Frame.RTR` | `"true"` / `"false"` |
+| `Meta["can.brs"]` | `Frame.BRS` | `"true"` / `"false"` |
+
+`FromMessage`: parse `msg.ID` as decimal uint32 → `Frame.ID`; parse Meta flags;
+copy `Payload` → `Data`. If `msg.ID` is not a valid uint32, return `ErrInvalidFrame`.
+
+**15.7.2 DDS `Sample.ToMessage()` / `FromMessage()`**
+
+| relay.Message field | Sample field | Notes |
+|---|---|---|
+| `Protocol` | — | Always `relay.DDS` |
+| `ID` | `Sample.Topic` | Direct string copy |
+| `Payload` | `Sample.Payload` | Direct copy |
+| `Timestamp` | `Sample.Timestamp` | Direct copy |
+| `Seq` | `Sample.SequenceNumber` | Direct copy |
+| `Meta["dds.writer_guid"]` | `Sample.WriterGUID` | `hex.EncodeToString(guid[:])` |
+
+`FromMessage`: `msg.ID` → `Topic`; `msg.Payload` → `Payload`. `WriterGUID` decoded from hex if present.
+
+**15.7.3 LIN `Frame.ToMessage()` / `FromMessage()`**
+
+| relay.Message field | Frame field | Notes |
+|---|---|---|
+| `Protocol` | — | Always `relay.LIN` |
+| `ID` | `Frame.ID` | `strconv.FormatUint(uint64(f.ID), 10)` |
+| `Payload` | `Frame.Data` | Direct copy |
+| `Timestamp` | — | `time.Now()` on receive |
+| `Meta["lin.checksum_type"]` | `Frame.ChecksumType` | `"classic"` / `"enhanced"` |
+| `Meta["lin.checksum"]` | `Frame.Checksum` | Decimal uint8 string |
+
+`FromMessage`: parse `msg.ID` as decimal uint8 (0–63) → `Frame.ID`; if out of range return `ErrInvalidFrame`.
+
+**15.7.4 MQTT `Message.ToMessage()` / `FromMessage()`**
+
+| relay.Message field | mqtt.Message field | Notes |
+|---|---|---|
+| `Protocol` | — | Always `relay.MQTT` |
+| `ID` | `Message.Topic` | Direct string copy |
+| `Payload` | `Message.Payload` | Direct copy |
+| `Timestamp` | — | `time.Now()` on receive |
+| `Meta["mqtt.qos"]` | `Message.QoS` | `"0"` / `"1"` / `"2"` |
+| `Meta["mqtt.retained"]` | `Message.Retained` | `"true"` / `"false"` |
+
+`FromMessage`: `msg.ID` → `Topic`; `msg.Payload` → `Payload`. Parse `mqtt.qos` meta if present.
+
+**15.7.5 RCP `Status.ToMessage()` / `FromMessage()`** (Subscribe direction)
+
+| relay.Message field | Status field | Notes |
+|---|---|---|
+| `Protocol` | — | Always `relay.RCP` |
+| `ID` | `Status.Zone.String()` | Zone name, e.g. `"FrontLeft"` |
+| `Payload` | `Status.Payload` | Direct copy |
+| `Timestamp` | — | `time.Now()` on receive |
+| `Seq` | `Status.Seq` | Direct copy |
+| `Meta["rcp.healthy"]` | `Status.Healthy` | `"true"` / `"false"` |
+
+For `Caller.Call()` direction, `relay.Message` → `rcp.Command`:
+
+| relay.Message field | Command field | Notes |
+|---|---|---|
+| `ID` | `Zone` | Parse via `ZoneFromString(msg.ID)` |
+| `Payload` | `Payload` | Direct copy |
+| `Meta["rcp.priority"]` | `Priority` | `"normal"` / `"high"` / `"critical"` |
+| `Meta["rcp.cmd_type"]` | `Type` | `"noop"` / `"set"` / `"get"` etc. |
+
+Response `*rcp.Response` → `relay.Message`:
+
+| relay.Message field | Response field | Notes |
+|---|---|---|
+| `ID` | `Response.Zone.String()` | Zone name |
+| `Payload` | `Response.Payload` | Direct copy |
+| `Meta["rcp.status"]` | `Response.Status` | Decimal uint8 string |
+
+**15.7.6 SOME/IP `Message.ToMessage()` / `FromMessage()`**
+
+| relay.Message field | someip.Message field | Notes |
+|---|---|---|
+| `Protocol` | — | Always `relay.SOMEIP` |
+| `ID` | `fmt.Sprintf("%d/%d", ServiceID, MethodID)` | Decimal `"svcID/methodID"` |
+| `Payload` | `Message.Payload` | Direct copy |
+| `Timestamp` | — | `time.Now()` on receive |
+| `Meta["someip.msg_type"]` | `MessageType` | String name, e.g. `"request"` |
+| `Meta["someip.return_code"]` | `ReturnCode` | Decimal uint8 string |
+| `Meta["someip.interface_version"]` | `InterfaceVersion` | Decimal uint8 string |
+
+`FromMessage`: parse `msg.ID` as `"serviceID/methodID"` decimal pair; if malformed return `ErrMalformedMessage`.
+
 ---
 
 ## 16. Per-Protocol Defaults
@@ -1217,6 +1461,25 @@ public:
 Already implemented as `rcp::StatusChannel`; cpp-RCP SHOULD alias
 `StatusChannel = relay::Channel<Status>`.
 
+#### relay::SubscriberOptions (C++)
+
+```cpp
+namespace relay {
+
+enum class BackPressurePolicy { drop_newest = 0, drop_oldest = 1, block = 2 };
+
+struct SubscriberOptions {
+    std::size_t       channel_depth  = 64;
+    BackPressurePolicy back_pressure = BackPressurePolicy::drop_newest;
+};
+
+} // namespace relay
+```
+
+`SubscriberOptions` is the C++ equivalent of Go's `relay.SubscriberConfig` (§14.1).
+Concurrency guarantee: `Channel<T>::push()` is safe to call from a single writer
+thread. Multiple concurrent writers MUST be serialised with a `std::mutex`.
+
 #### relay::Node and relay::Caller (C++)
 
 ```cpp
@@ -1258,6 +1521,25 @@ Protocol-specific codes map to `relay::Errc` via `std::error_condition` equivale
 
 All blocking operations MUST be `async fn`. Required runtime: `tokio` or compatible.
 Sync wrappers MAY be provided in a `blocking` sub-module.
+
+#### SubscriberOptions (Rust)
+
+```rust
+#[derive(Clone, Debug)]
+pub enum BackPressurePolicy { DropNewest, DropOldest, Block }
+
+impl Default for BackPressurePolicy {
+    fn default() -> Self { BackPressurePolicy::DropNewest }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct SubscriberOptions {
+    pub channel_depth:  usize,              // 0 = use default (64)
+    pub back_pressure:  BackPressurePolicy,
+}
+```
+
+`SubscriberOptions` is the Rust equivalent of Go's `relay.SubscriberConfig` (§14.1).
 
 #### relay::Node and relay::Caller (Rust)
 
@@ -1328,11 +1610,11 @@ the current MAJOR.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v0.1**
+Current version: **v0.2**
 
-**Go:** `const SpecVersion = "0.1"`  
-**C++:** `constexpr std::string_view kRelaySpecVersion = "0.1";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "0.1";`
+**Go:** `const SpecVersion = "0.2"` (update in implementations targeting v0.2)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "0.2";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "0.2";`
 
 ---
 
@@ -1353,6 +1635,8 @@ Current version: **v0.1**
 | ApplySubscriberOpts / ChanDepth | ✗ | ✅ | ✗ | ✅ | ✗ | ⚠ rename | n/a |
 | BackPressurePolicy | ✗ | ✅ | ✗ | ✗ | ✗ | ✗ | n/a |
 | mock / virtual sub-package | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Subscribe(filters []Filter, opts …) signature (§8.1/8.3) | ⚠ breaking | n/a | ⚠ breaking | n/a | n/a | n/a | n/a |
+| MasterBus.SetSchedule() (§8.3) | n/a | n/a | ✗ | n/a | n/a | n/a | n/a |
 | Adapt() → relay.Node / relay.Caller | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | ToMessage / FromMessage | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | SpecVersion constant | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
@@ -1365,4 +1649,4 @@ Current version: **v0.1**
 | LoaningBus / LoaningPublisher / LoaningController | ? | ✅ | n/a | n/a | ✅ | n/a | ✅ |
 | relay::Context (C++) | n/a | n/a | n/a | n/a | n/a | n/a | ✅ as rcp:: |
 
-**Legend:** ✅ conforms · ✗ missing · ⚠ partial/rename · ? unknown · n/a not applicable
+**Legend:** ✅ conforms · ✗ missing · ⚠ breaking change required · ? unknown · n/a not applicable

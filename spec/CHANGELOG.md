@@ -1,5 +1,33 @@
 # RELAY Spec Changelog
 
+## v0.2 — 2026-06-16 (draft)
+
+Incremented from v0.1. Contains breaking changes to CAN and LIN interface
+signatures; additive changes elsewhere. Implementations targeting v0.1 MUST
+update their `Subscribe` signatures before declaring `"spec_version": "0.2"`.
+
+**Breaking changes:**
+- CAN `Bus.Subscribe` signature changed from `Subscribe(filters ...Filter)` to
+  `Subscribe(filters []Filter, opts ...SubscriberOption)` — separates content
+  filtering from channel delivery configuration (§8.1)
+- LIN `Bus.Subscribe` signature changed identically (§8.3)
+
+**Additive changes:**
+- §1.1: Scope boundary table — what belongs in RELAY vs each x-Net implementation
+- §6.10: Reconnection policy — implementations MUST NOT reconnect automatically
+- §8.3: `MasterBus.SetSchedule(entries []ScheduleEntry) error` added to LIN
+- §10.5: `Adapt()` goroutine model — lifecycle, back-pressure, channel ownership
+- §13.5: Docker image base standardised (`golang:1.25-alpine` / `alpine:3.20`)
+- §13.6: Package layout — interface types live in x-Net, not re-exported from RELAY
+- §15.7: Complete `ToMessage()` / `FromMessage()` field mappings for all 6 protocols
+- §18.2: `relay::SubscriberOptions` C++ type defined with concurrency note
+- §18.3: `SubscriberOptions` Rust type defined
+- Appendix A: CAN/LIN Subscribe breaking-change rows added; SetSchedule gap tracked
+- Out-of-scope items explicitly listed in §1: wire formats, SOME/IP-SD, security,
+  `relay conform` CLI internals
+
+---
+
 ## v0.1 — 2026-06-16 (draft)
 
 Initial draft. Derived from go-CAN, go-DDS, go-LIN, go-mqtt, go-RCP,
@@ -30,3 +58,13 @@ go-SOMEIP, and cpp-RCP at their current HEAD revisions.
   with `Adapt()` contract and routing rules per protocol (§10)
 - Cross-language binding for `relay.Node` and `relay.Caller` in C++ and Rust (§18)
 - `"adapt": true` conformance flag in capabilities document (§12.2, §17 req 6)
+- RELAY vs x-Net scope boundary table (§1.1)
+- Reconnection policy: no automatic reconnect; return `ErrNotConnected` (§6.10)
+- CAN/LIN `Subscribe` signature resolved: `Subscribe(filters []Filter, opts ...SubscriberOption)` — breaking change from current go-CAN/go-LIN (Appendix A)
+- LIN `MasterBus.SetSchedule(entries []ScheduleEntry) error` added (§8.3)
+- `Adapt()` goroutine model: lifecycle, back-pressure, channel ownership (§10.5)
+- Complete `ToMessage()` / `FromMessage()` field mappings for all 6 protocols (§15.7)
+- `relay::SubscriberOptions` type defined for C++ and Rust (§18.2, §18.3)
+- Package layout clarified: interface types live in x-Net, not re-exported from RELAY (§13.6)
+- Docker image base standardised: `golang:1.25-alpine` build, `alpine:3.20` runtime (§13.5)
+- Out-of-scope items explicitly listed: wire formats, SOME/IP-SD, reconnection, security, `relay conform` CLI internals

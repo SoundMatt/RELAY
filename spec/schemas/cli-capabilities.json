@@ -14,6 +14,15 @@
             "type": "string",
             "description": "Binary name."
         },
+        "protocol": {
+            "type": ["string", "null"],
+            "description": "Protocol name (e.g. \"CAN\"). Present for single-protocol implementations; null or omitted for multi-protocol tooling (spec §12.2)."
+        },
+        "protocol_int": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "description": "Protocol integer constant matching relay.Protocol. Present for single-protocol implementations; null or omitted for multi-protocol tooling (spec §12.2)."
+        },
         "version": {
             "type": "string",
             "description": "Semantic version of the binary."

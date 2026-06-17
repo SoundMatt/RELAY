@@ -96,6 +96,25 @@ func TestValidateCapabilitiesDocValid(t *testing.T) {
 }
 
 //fusa:test REQ-RELAY-054
+func TestValidateCapabilitiesDocWithProtocol(t *testing.T) {
+	// A single-protocol implementation includes protocol/protocol_int in its
+	// capabilities document (spec §12.2). These MUST be accepted.
+	data := []byte(`{
+		"kind":"capabilities","tool":"go-can","protocol":"CAN","protocol_int":1,
+		"version":"1.0.0","spec_version":"0.3",
+		"commands":["version","capabilities","status"],
+		"transports":["socketcan"],"features":["fd"],"interfaces":["Bus"],
+		"optional_interfaces":["HealthProvider"],"adapt":true
+	}`)
+	fs := validateCapabilitiesDoc(data)
+	for _, f := range fs {
+		if f.Severity == sevFail {
+			t.Errorf("single-protocol capabilities doc must not FAIL: %s %s", f.Req, f.Message)
+		}
+	}
+}
+
+//fusa:test REQ-RELAY-054
 func TestValidateCapabilitiesDocWrongKind(t *testing.T) {
 	data := []byte(`{
 		"kind":"version","tool":"t","version":"1.0","spec_version":"0.2",

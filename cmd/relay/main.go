@@ -40,6 +40,8 @@ func run(stdout, stderr io.Writer, args []string) error {
 	switch args[0] {
 	case "version":
 		return runVersion(stdout, args[1:])
+	case "capabilities":
+		return runCapabilities(stdout, args[1:])
 	case "--help", "-h", "help":
 		printUsage(stdout)
 		return nil
@@ -54,7 +56,8 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage: relay <command> [flags]")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Commands:")
-	fmt.Fprintln(w, "  version    Print tool and spec version")
+	fmt.Fprintln(w, "  version       Print tool and spec version")
+	fmt.Fprintln(w, "  capabilities  Print RELAY tooling capabilities document")
 }
 
 // runVersion implements `relay version [--format text|json]`.
@@ -92,6 +95,40 @@ func runVersion(w io.Writer, args []string) error {
 		return fmt.Errorf("relay version: unknown format %q: must be text or json", *format)
 	}
 	return nil
+}
+
+// runCapabilities implements `relay capabilities`.
+// RELAY is a multi-protocol spec and tooling layer, not a protocol implementation,
+// so protocol and protocol_int are omitted and adapt is false.
+//
+//fusa:req REQ-RELAY-029
+func runCapabilities(w io.Writer, _ []string) error {
+	doc := struct {
+		Kind               string   `json:"kind"`
+		Tool               string   `json:"tool"`
+		Version            string   `json:"version"`
+		SpecVersion        string   `json:"spec_version"`
+		Commands           []string `json:"commands"`
+		Transports         []string `json:"transports"`
+		Features           []string `json:"features"`
+		Interfaces         []string `json:"interfaces"`
+		OptionalInterfaces []string `json:"optional_interfaces"`
+		Adapt              bool     `json:"adapt"`
+	}{
+		Kind:               "capabilities",
+		Tool:               "relay",
+		Version:            toolVersion,
+		SpecVersion:        relay.SpecVersion,
+		Commands:           []string{"version", "capabilities"},
+		Transports:         []string{},
+		Features:           []string{},
+		Interfaces:         []string{},
+		OptionalInterfaces: []string{},
+		Adapt:              false,
+	}
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "    ")
+	return enc.Encode(doc)
 }
 
 // exitCode is a sentinel error that carries a process exit code.

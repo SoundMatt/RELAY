@@ -57,20 +57,22 @@ Deliverables: `relay version`
 
 ---
 
-### v0.2 — Interface contracts
+### v0.2 — Interface contracts ✦ in progress
 
-**Goal:** Every protocol interface from §7 is defined as a Go interface in the
-RELAY module. Implementations can declare conformance by satisfying the interface.
+**Goal:** Optional interfaces defined in RELAY; x-Net compile-time assertions
+filed as issues; `relay capabilities` CLI command shipping.
 
-- `relay.Bus` (CAN), `relay.MasterBus` (LIN)
-- `relay.Participant`, `relay.Publisher`, `relay.Subscriber` (DDS)
-- `relay.Client`, `relay.Subscription` (MQTT, SOMEIP)
-- `relay.Controller`, `relay.Registry`, `relay.LoaningController` (RCP)
-- `relay.Service`, `relay.Server` (SOMEIP)
-- Optional interfaces: `relay.LoaningPublisher`, `relay.HealthProvider`,
-  `relay.MetricsProvider`, `relay.Drainer`
-- Interface compile-time assertions for all existing Go protocol packages
-- `relay capabilities` CLI command (§9.2)
+Per §13.6, the protocol-specific interface types (`Bus`, `Participant`, etc.)
+live in each x-Net package — not in RELAY — to avoid circular imports. RELAY
+defines the interfaces whose types are entirely within RELAY or stdlib.
+
+- ✅ Optional interfaces: `relay.HealthProvider`, `relay.MetricsProvider`, `relay.Drainer`
+- ✅ Supporting types: `relay.Health`, `relay.HealthStatus`, `relay.Metrics`
+- ✅ `relay capabilities` CLI command
+- ✅ REQ-RELAY-023 … REQ-RELAY-029 added to requirements registry
+- ✅ SpecVersion bumped to `"0.2"`; spec issues #2–#9 fixed
+- ⬜ Protocol-specific interface compile-time assertions — tracked as x-Net issues
+  (go-CAN#15, go-DDS#54, go-LIN#17, go-mqtt#21, go-RCP#51, go-SOMEIP#31, cpp-RCP#5)
 
 Deliverables: `relay version`, `relay capabilities`
 

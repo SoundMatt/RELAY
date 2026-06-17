@@ -153,6 +153,55 @@
       "text": "The relay CLI shall implement the version command that, with --format json, prints a JSON object with keys tool, spec_version, version, language, and runtime.",
       "category": "functional",
       "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-023",
+      "title": "HealthStatus enum",
+      "text": "The system shall define HealthStatus as an integer type with constants HealthOK=0, HealthDegraded=1, HealthDown=2.",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-024",
+      "title": "Health struct",
+      "text": "The system shall define a Health struct with HealthStatus field Status and optional string field Details, marshalled as JSON with keys status and details.",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-025",
+      "title": "HealthProvider interface",
+      "text": "The system shall define a HealthProvider interface with method Health() Health. Any protocol node that exposes health information MUST implement this interface and declare it in the capabilities document.",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-026",
+      "title": "Metrics struct",
+      "text": "The system shall define a Metrics struct with uint64 fields WriteCount, DeliverCount, DropCount, BytesWritten, BytesDelivered, ErrorCount, marshalled as JSON with snake_case keys.",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-027",
+      "title": "MetricsProvider interface",
+      "text": "The system shall define a MetricsProvider interface with method Metrics() Metrics. Any protocol node that exposes runtime counters MUST implement this interface and declare it in the capabilities document.",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-028",
+      "title": "Drainer interface",
+      "text": "The system shall define a Drainer interface with method CloseWithDrain(ctx context.Context) error. Implementations MUST flush in-flight messages before closing, returning ErrTimeout if ctx expires.",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-029",
+      "title": "relay capabilities command",
+      "text": "The relay CLI shall implement the capabilities command that prints a JSON capabilities document with kind, tool, version, spec_version, commands, transports, features, interfaces, optional_interfaces, and adapt fields.",
+      "category": "functional",
+      "criticality": "medium"
     }
   ]
 }

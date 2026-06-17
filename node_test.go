@@ -97,6 +97,19 @@ func TestApplyMultipleOpts(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-051
+func TestWithEventID(t *testing.T) {
+	cfg := ApplySubscriberOpts([]SubscriberOption{WithEventID(42)})
+	if cfg.EventID != 42 {
+		t.Errorf("EventID = %d, want 42", cfg.EventID)
+	}
+	// Default EventID is zero.
+	dflt := ApplySubscriberOpts(nil)
+	if dflt.EventID != 0 {
+		t.Errorf("default EventID = %d, want 0", dflt.EventID)
+	}
+}
+
 //fusa:test REQ-RELAY-013
 //fusa:test REQ-RELAY-014
 func TestCallerEmbeddsNode(t *testing.T) {

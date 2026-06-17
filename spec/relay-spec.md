@@ -1087,6 +1087,11 @@ remain importable without pulling in protocol-specific dependencies.
 
 Every implementation accepting subscription options MUST export these:
 
+> **Protocol-specific routing key:** `SubscriberConfig` carries an `EventID uint32` field.
+> `WithEventID(id uint32) SubscriberOption` sets it. SOMEIP adapters (`Adapt(Service).Subscribe`)
+> MUST read `cfg.EventID` to determine which event group to subscribe to and MUST return
+> `ErrNotConnected` if `EventID` is zero. All other protocol adapters MUST ignore `EventID`.
+
 ```go
 type SubscriberConfig struct {
     ChannelDepth int                // 0 = use default (64)

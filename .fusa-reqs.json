@@ -349,6 +349,13 @@
       "text": "The RELAY project shall maintain a HARA (.fusa-hara.json) identifying all tool-failure hazards, their ASIL ratings, and the safety goals that mitigate them. The HARA shall be reviewed before each MINOR spec release.",
       "category": "safety",
       "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-051",
+      "title": "WithEventID subscriber option",
+      "text": "The system shall export WithEventID(id uint32) SubscriberOption that sets SubscriberConfig.EventID. SOMEIP adapters MUST read this field to determine the target event group; all other protocol adapters MUST ignore it. A SOMEIP adapter MUST return ErrNotConnected if EventID is zero.",
+      "category": "functional",
+      "criticality": "high"
     }
   ]
 }

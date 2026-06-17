@@ -59,6 +59,11 @@ const (
 type SubscriberConfig struct {
 	ChannelDepth int                // 0 means use implementation default (64)
 	BackPressure BackPressurePolicy // default: DropNewest
+	// EventID carries a protocol-specific subscription routing key.
+	// Required by SOMEIP adapters (Adapt(Service).Subscribe must know which
+	// event group to subscribe to). Set via WithEventID; ignored by all other
+	// protocols. Zero means "not set".
+	EventID uint32
 }
 
 // SubscriberOption configures a subscription.
@@ -78,6 +83,17 @@ func WithChannelDepth(n int) SubscriberOption {
 //fusa:req REQ-RELAY-017
 func WithBackPressure(p BackPressurePolicy) SubscriberOption {
 	return func(c *SubscriberConfig) { c.BackPressure = p }
+}
+
+// WithEventID sets the protocol-specific subscription routing key.
+// SOMEIP adapters (Adapt(Service).Subscribe) MUST read this option to
+// determine which event group to subscribe to. All other protocol adapters
+// ignore it. Returns ErrNotConnected if EventID is zero and the protocol
+// requires it.
+//
+//fusa:req REQ-RELAY-051
+func WithEventID(id uint32) SubscriberOption {
+	return func(c *SubscriberConfig) { c.EventID = id }
 }
 
 // ApplySubscriberOpts applies opts in order to a zero SubscriberConfig and returns it.

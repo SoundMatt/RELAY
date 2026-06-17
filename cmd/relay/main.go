@@ -58,6 +58,10 @@ func run(stdout, stderr io.Writer, args []string) error {
 		return runSafetyCase(stdout, stderr, args[1:])
 	case "audit-pack":
 		return runAuditPack(stdout, stderr, args[1:])
+	case "compare":
+		return runCompare(stdout, stderr, args[1:])
+	case "versions":
+		return runVersions(stdout, stderr, args[1:])
 	case "--help", "-h", "help":
 		printUsage(stdout)
 		return nil
@@ -82,6 +86,8 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  sbom            Print the software bill of materials")
 	fmt.Fprintln(w, "  safety-case     Summarise the safety evidence set")
 	fmt.Fprintln(w, "  audit-pack      Bundle all safety evidence into a zip")
+	fmt.Fprintln(w, "  compare         Compare two implementations for interchangeability")
+	fmt.Fprintln(w, "  versions        List implementations and their spec alignment")
 }
 
 // runVersion implements `relay version [--format text|json]`.
@@ -143,7 +149,7 @@ func runCapabilities(w io.Writer, _ []string) error {
 		Tool:               "relay",
 		Version:            toolVersion,
 		SpecVersion:        relay.SpecVersion,
-		Commands:           []string{"version", "capabilities", "status", "conform", "probe", "trace", "report", "sbom", "safety-case", "audit-pack"},
+		Commands:           []string{"version", "capabilities", "status", "conform", "probe", "trace", "report", "sbom", "safety-case", "audit-pack", "compare", "versions"},
 		Transports:         []string{},
 		Features:           []string{},
 		Interfaces:         []string{},

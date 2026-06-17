@@ -454,6 +454,20 @@
       "text": "The system shall provide `relay audit-pack [--output FILE]` that bundles every embedded evidence artifact and JSON schema into a zip archive containing a manifest.json with a SHA-256 hash and byte count for every other entry, so that any post-generation alteration of the evidence is detectable.",
       "category": "safety",
       "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-066",
+      "title": "relay compare command",
+      "text": "The system shall provide `relay compare [--format text|json] <binaryA> <binaryB>` that fetches both implementations' capabilities documents and reports whether they are interchangeable. Two implementations are compatible only if they share the same protocol, the same spec_version, and identical command, feature, and interface sets; otherwise the command MUST list the differences and exit 1. A wrong argument count MUST exit 2.",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-067",
+      "title": "relay versions command",
+      "text": "The system shall provide `relay versions [--scan] [--match glob] [--format text|json] [binary...]` that lists each implementation's tool, protocol, version, and spec_version, and whether its spec_version is aligned with the spec version this relay tool implements (relay.SpecVersion). With no candidates it MUST exit 2.",
+      "category": "functional",
+      "criticality": "medium"
     }
   ]
 }

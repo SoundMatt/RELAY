@@ -234,14 +234,18 @@ Deliverables: `relay report` ✅
 **Goal:** Machine-checked interchangeability between implementations of the
 same protocol.
 
-- `relay compare <binaryA> <binaryB>` — determines whether two implementations
-  expose the same capabilities, support the same features, and produce
-  compatible `relay.Message` output for equivalent inputs
-- Version compatibility matrix per protocol (which versions are interchangeable)
-- `relay compare --format json` — machine-readable delta report
-- `relay versions` — list all known implementations and their spec alignment
+- ✅ `relay compare <binaryA> <binaryB>` — determines whether two
+  implementations are interchangeable: same protocol, same spec version, and
+  identical command/feature/interface sets; lists the deltas otherwise
+- ✅ `relay compare --format json` — machine-readable delta report; exit 1 when
+  incompatible
+- ✅ `relay versions [--scan] [--match] [binary...]` — lists implementations and
+  whether each is aligned with the spec version this relay tool implements
+- ✅ REQ-RELAY-066/067, traced and tested
+- ⬜ Live `relay.Message` equivalence for identical inputs — deferred (needs
+  running x-Net binaries; capability/feature interchangeability covered here)
 
-Deliverables: `relay compare`, `relay versions`
+Deliverables: `relay compare`, `relay versions` ✅
 
 ---
 

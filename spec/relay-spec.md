@@ -985,6 +985,19 @@ Bundles every embedded evidence artifact and JSON schema into a zip archive
 containing a `manifest.json` with a SHA-256 hash and byte count for every other
 entry, so any post-generation alteration of the evidence is detectable.
 
+#### `compare [--format text|json] <binaryA> <binaryB>`
+
+Determines whether two implementations are interchangeable. They are compatible
+only if they share the same `protocol`, the same `spec_version`, and identical
+command, feature, and interface sets; otherwise the difference list is reported.
+Exit: `0` compatible, `1` incompatible, `2` invalid args.
+
+#### `versions [--scan] [--match glob] [--format text|json] [binary...]`
+
+Lists each implementation's tool, protocol, version, and spec version, and
+whether it is aligned with the spec version this `relay` tool implements
+(`relay.SpecVersion`). Exit: `0` success, `2` no candidates.
+
 ### 11.3 Exit codes
 
 | Code | Meaning |

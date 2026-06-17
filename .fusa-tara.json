@@ -1,0 +1,96 @@
+{
+  "project": "RELAY",
+  "standard": "ISO/SAE 21434",
+  "createdAt": "2026-06-17T00:00:00Z",
+  "scope": "RELAY is a development-time specification and tooling layer (spec, canonical Go types, and the relay CLI). It does not route messages at runtime and holds no secrets. The threat model covers the integrity and authenticity of the tool and the evidence it produces, since downstream safety arguments depend on them.",
+  "assets": [
+    {
+      "id": "AS-001",
+      "name": "relay binary",
+      "description": "The relay CLI used as a CI conformance and reporting gate",
+      "properties": ["integrity", "authenticity"]
+    },
+    {
+      "id": "AS-002",
+      "name": "RELAY specification and canonical types",
+      "description": "spec/relay-spec.md, the embedded JSON schemas, and the Go canonical type packages that downstream implementations build against",
+      "properties": ["integrity", "authenticity"]
+    },
+    {
+      "id": "AS-003",
+      "name": "Conformance and safety evidence",
+      "description": "Outputs of relay conform/report and the safety evidence set (.fusa-reqs.json, .fusa-hara.json, .fusa-tara.json, audit pack)",
+      "properties": ["integrity", "authenticity"]
+    }
+  ],
+  "threats": [
+    {
+      "id": "T-001",
+      "asset": "AS-001",
+      "description": "Tampered relay binary — a modified build reports PASS for a non-conformant x-Net implementation, defeating the CI release gate",
+      "attackVector": "Supply-chain modification of the binary or its build, or a PATH-shadowing binary substituted for relay",
+      "stride": ["Tampering", "Spoofing"],
+      "impact": "A non-conformant or unsafe implementation is released as conformant",
+      "risk": { "impact": "severe", "feasibility": "medium", "level": "high" },
+      "mitigations": ["M-001", "M-002"],
+      "controls": ["CT-001"]
+    },
+    {
+      "id": "T-002",
+      "asset": "AS-002",
+      "description": "Spoofed capabilities/version document — a binary under test emits a forged document to pass conformance without implementing the contract",
+      "attackVector": "A malicious or buggy binary returns crafted JSON to relay conform/probe",
+      "stride": ["Spoofing", "Tampering"],
+      "impact": "False conformance verdict",
+      "risk": { "impact": "moderate", "feasibility": "medium", "level": "medium" },
+      "mitigations": ["M-003"],
+      "controls": ["CT-002"]
+    },
+    {
+      "id": "T-003",
+      "asset": "AS-002",
+      "description": "Altered specification or schema — a modified spec or embedded schema changes the conformance criteria silently",
+      "attackVector": "Unauthorised commit to the spec/schemas, or a modified module dependency",
+      "stride": ["Tampering"],
+      "impact": "Conformance is measured against the wrong contract; safety argument invalidated",
+      "risk": { "impact": "severe", "feasibility": "low", "level": "medium" },
+      "mitigations": ["M-001", "M-004"],
+      "controls": ["CT-001", "CT-003"]
+    },
+    {
+      "id": "T-004",
+      "asset": "AS-003",
+      "description": "Forged audit pack — evidence is altered after generation so an auditor certifies against tampered artifacts",
+      "attackVector": "Modification of audit-pack contents in transit or at rest",
+      "stride": ["Tampering", "Repudiation"],
+      "impact": "Certification based on inauthentic evidence",
+      "risk": { "impact": "severe", "feasibility": "low", "level": "medium" },
+      "mitigations": ["M-004"],
+      "controls": ["CT-003"]
+    },
+    {
+      "id": "T-005",
+      "asset": "AS-001",
+      "description": "Arbitrary binary execution via probe scan — relay probe --scan executes binaries on PATH, which could run an attacker-planted executable",
+      "attackVector": "Attacker-controlled PATH entry combined with a permissive --match",
+      "stride": ["Elevation of Privilege", "Tampering"],
+      "impact": "Code execution in the developer/CI environment",
+      "risk": { "impact": "moderate", "feasibility": "low", "level": "low" },
+      "mitigations": ["M-005"],
+      "controls": ["CT-004"]
+    }
+  ],
+  "mitigations": [
+    { "id": "M-001", "description": "Build provenance: relay reports its VCS revision and build settings (runtime/debug.BuildInfo) so the running binary can be tied back to a reviewed commit", "addresses": ["T-001", "T-003"] },
+    { "id": "M-002", "description": "Reproducible, dependency-free build (pure Go standard library) reduces supply-chain attack surface; SBOM (relay sbom) enumerates the module and toolchain", "addresses": ["T-001"] },
+    { "id": "M-003", "description": "relay conform validates documents structurally against embedded schemas and exercises sentinel errors via golden vectors, so a forged document must actually satisfy the contract, not just look plausible", "addresses": ["T-002"] },
+    { "id": "M-004", "description": "Audit pack carries a SHA-256 manifest over every bundled artifact, so any post-generation alteration is detectable", "addresses": ["T-003", "T-004"] },
+    { "id": "M-005", "description": "relay probe takes explicit binaries by default; --scan is opt-in and constrained by --match, and probing only runs the read-only version/capabilities commands", "addresses": ["T-005"] }
+  ],
+  "controls": [
+    { "id": "CT-001", "description": "Signed commits and protected main branch; releases tagged from reviewed commits with green CI (Lint, Test, DCO, CodeQL, Security, go-FuSa)" },
+    { "id": "CT-002", "description": "CI runs relay conform as a release gate for every x-Net implementation" },
+    { "id": "CT-003", "description": "CodeQL and dependency/security scanning run on every PR" },
+    { "id": "CT-004", "description": "Document in the tool safety manual that relay probe --scan must only be used against trusted PATH directories" }
+  ]
+}

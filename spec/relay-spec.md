@@ -966,6 +966,25 @@ for PRs/wikis), `html` (self-contained dashboard). Exit: `0` if no
 implementation FAILs (`--strict` escalates WARN to FAIL), `1` otherwise, `2`
 with no candidates.
 
+#### `sbom [--format json|text]`
+
+Emits a software bill of materials derived from the embedded build information:
+module path, version, Go toolchain, VCS revision/time/modified (when built from
+a repository), and dependency components. The JSON form carries a `format`
+discriminator (`relay-sbom/1`).
+
+#### `safety-case [--format text|json|markdown]`
+
+Assembles the embedded safety-evidence set (requirements, HARA, TARA) into a
+summary: requirement count, hazard count and worst ASIL, safety-goal count,
+threat count and worst risk level, and mitigation count.
+
+#### `audit-pack [--output FILE]`
+
+Bundles every embedded evidence artifact and JSON schema into a zip archive
+containing a `manifest.json` with a SHA-256 hash and byte count for every other
+entry, so any post-generation alteration of the evidence is detectable.
+
 ### 11.3 Exit codes
 
 | Code | Meaning |

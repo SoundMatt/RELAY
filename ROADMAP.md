@@ -211,13 +211,19 @@ Deliverables: `relay report` ✅
 
 **Goal:** RELAY carries the same safety evidence as go-FuSa and FuSaOps.
 
-- TARA (`.fusa-tara.json`) — cybersecurity threat analysis (ISO 21434)
-- SBOM (`sbom.json`) — software bill of materials
-- Build provenance (`provenance.json`)
-- Qualification report (TCL2)
-- Audit pack (`audit-pack.zip`) — all evidence bundled with hashed manifest
-- `relay audit-pack`, `relay sbom`, `relay safety-case`
-- All requirements at 100 % trace + test coverage
+- ✅ TARA (`.fusa-tara.json`) — cybersecurity threat analysis (ISO/SAE 21434):
+  3 assets, 5 threats, 5 mitigations, 4 controls
+- ✅ SBOM — `relay sbom` derives it from build info (module, Go toolchain, VCS
+  revision, dependency components); JSON `relay-sbom/1` or text
+- ✅ Build provenance — VCS revision/time/modified surfaced via `relay sbom`
+  (full SLSA attestation remains a CI concern)
+- ✅ Audit pack — `relay audit-pack` bundles all embedded evidence + schemas
+  into a zip with a SHA-256 `manifest.json`
+- ✅ `relay safety-case` — assembles requirements + HARA + TARA into a summary
+  (text/json/markdown)
+- ✅ Evidence embedded in the binary (`relay.Evidence`/`EvidenceNames`)
+- ✅ REQ-RELAY-063..065, traced and tested
+- ⬜ TCL2 qualification report — narrative document, deferred to the v1.0 docs pass
 
 ---
 

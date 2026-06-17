@@ -433,6 +433,27 @@
       "text": "The system shall provide `relay report [--scan] [--match glob] [--strict] [--format text|json|markdown|html] [binary...]` that runs the conformance checks (REQ-RELAY-052) across every discovered implementation and produces a unified report with a per-implementation result (PASS/WARN/FAIL) and pass/warn/fail counts, plus an overall result. It MUST support text, json, markdown (GFM), and html (self-contained) output. With --scan it MUST discover implementations on PATH and skip non-conformant ones. The process MUST exit 1 if any implementation's result is FAIL, and with --strict WARN escalates to FAIL. With no candidates it MUST exit 2.",
       "category": "functional",
       "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-063",
+      "title": "relay sbom command",
+      "text": "The system shall provide `relay sbom [--format json|text]` that emits a software bill of materials derived from the embedded build information (runtime/debug.BuildInfo): module path, version, Go toolchain version, VCS revision/time/modified when available, and the list of dependency components. The JSON output MUST carry a format discriminator.",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-064",
+      "title": "Embedded safety evidence and relay safety-case",
+      "text": "The system shall embed the safety-evidence artifacts (.fusa-reqs.json, .fusa-hara.json, .fusa-tara.json, spec/version.json, docs/tool-safety-manual.md) and expose them via relay.Evidence(name) and relay.EvidenceNames(). It shall provide `relay safety-case [--format text|json|markdown]` that assembles them into a summary reporting the requirement count, hazard count and worst ASIL, safety-goal count, threat count and worst risk level, and mitigation count.",
+      "category": "safety",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-065",
+      "title": "relay audit-pack command",
+      "text": "The system shall provide `relay audit-pack [--output FILE]` that bundles every embedded evidence artifact and JSON schema into a zip archive containing a manifest.json with a SHA-256 hash and byte count for every other entry, so that any post-generation alteration of the evidence is detectable.",
+      "category": "safety",
+      "criticality": "high"
     }
   ]
 }

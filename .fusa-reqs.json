@@ -136,7 +136,7 @@
     {
       "id": "REQ-RELAY-020",
       "title": "SpecVersion constant",
-      "text": "The system shall export const SpecVersion identifying the implemented RELAY specification version. The value MUST equal the spec version declared in spec/version.json (currently \"0.2\").",
+      "text": "The system shall export const SpecVersion identifying the implemented RELAY specification version. The value MUST equal the spec version declared in spec/version.json (currently \"0.3\").",
       "category": "functional",
       "criticality": "high"
     },
@@ -389,6 +389,20 @@
       "id": "REQ-RELAY-056",
       "title": "WithTopic subscriber option",
       "text": "The system shall export WithTopic(name string) SubscriberOption that sets SubscriberConfig.TopicName. DDS adapters (Adapt(Participant).Subscribe) MUST read this field to determine which topic to create a subscriber for; all other protocol adapters MUST ignore it. A DDS adapter MUST return ErrNotConnected if TopicName is empty.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-057",
+      "title": "Golden reference vectors",
+      "text": "The project shall maintain golden reference vectors under spec/vectors/ — at least one per canonical type capturing its deterministic ToMessage() output, and at least one per error condition under spec/vectors/errors/ naming the expected error sentinel. A CI-tested check MUST verify that every value vector round-trips losslessly through ToMessage()/FromMessage() and that every error vector is rejected by its validator with the named sentinel (errors.Is). The SOME/IP ToMessage()/FromMessage() conversion MUST be lossless, preserving ClientID, SessionID, and MessageType.",
+      "category": "safety",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-058",
+      "title": "JSON Schemas and schema-driven conformance",
+      "text": "The project shall publish JSON Schema (draft 2020-12) documents under spec/schemas/ for every canonical type (§15) and every CLI document (§12.1 version, §12.2 capabilities, §12.3 status). The schemas MUST be embedded in the relay binary and exposed via relay.Schema(name). relay conform MUST validate each target document against the relevant embedded schema and report any structural violation as a FAIL. A CI-tested check MUST verify that every golden vector value conforms to its published schema.",
       "category": "functional",
       "criticality": "high"
     }

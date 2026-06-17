@@ -1,4 +1,4 @@
-# RELAY Specification — v0.2 (draft)
+# RELAY Specification — v0.3 (draft)
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -197,7 +197,10 @@ The canonical routing key serialised as a string:
 | RCP | `rcp.cmd_type` | `noop` \| `set` \| `get` \| `reset` \| `watchdog` \| `sleep` \| `wake` |
 | RCP | `rcp.healthy` | `true` \| `false` |
 | RCP | `rcp.status` | Decimal uint8 (ResponseStatus) |
-| SOMEIP | `someip.msg_type` | `request` \| `request_no_return` \| `notification` \| `response` \| `error` |
+| SOMEIP | `someip.client_id` | Decimal uint16 |
+| SOMEIP | `someip.session_id` | Decimal uint16 |
+| SOMEIP | `someip.msg_type` | Decimal uint8 (numeric MessageType, for lossless round-trip) |
+| SOMEIP | `someip.msg_type_name` | `request` \| `request_no_return` \| `notification` \| `response` \| `error` … (diagnostic label) |
 | SOMEIP | `someip.return_code` | Decimal uint8 |
 | SOMEIP | `someip.interface_version` | Decimal uint8 |
 
@@ -1534,9 +1537,14 @@ Response `*rcp.Response` → `relay.Message`:
 | `ID` | `fmt.Sprintf("%d/%d", ServiceID, MethodID)` | Decimal `"svcID/methodID"` |
 | `Payload` | `Message.Payload` | Direct copy |
 | `Timestamp` | — | `time.Now()` on receive |
-| `Meta["someip.msg_type"]` | `MessageType` | String name, e.g. `"request"` |
+| `Meta["someip.client_id"]` | `ClientID` | Decimal uint16 string |
+| `Meta["someip.session_id"]` | `SessionID` | Decimal uint16 string |
+| `Meta["someip.msg_type"]` | `MessageType` | Decimal uint8 string (numeric, for lossless round-trip) |
+| `Meta["someip.msg_type_name"]` | — | Human-readable label, e.g. `"request"`. Diagnostic only; ignored by `FromMessage` |
 | `Meta["someip.return_code"]` | `ReturnCode` | Decimal uint8 string |
 | `Meta["someip.interface_version"]` | `InterfaceVersion` | Decimal uint8 string |
+
+The conversion MUST be lossless (§15.7): every SOME/IP header field is preserved across `ToMessage()` / `FromMessage()`. `someip.msg_type` carries the numeric message type so the round-trip is exact; `someip.msg_type_name` is a derived diagnostic label and MUST be ignored by `FromMessage`.
 
 `FromMessage`: parse `msg.ID` as `"serviceID/methodID"` decimal pair; if malformed return `ErrMalformedMessage`.
 
@@ -1790,7 +1798,7 @@ Before a MUST requirement is removed or inverted:
 
 ### 19.3 Compatibility
 
-An implementation declares `"spec_version": "<targeted-version>"` (e.g. `"0.2"`) in
+An implementation declares `"spec_version": "<targeted-version>"` (e.g. `"0.3"`) in
 its capabilities document. `relay conform` MUST accept implementations targeting
 any MINOR version within the current MAJOR.
 
@@ -1798,11 +1806,11 @@ any MINOR version within the current MAJOR.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v0.2**
+Current version: **v0.3**
 
-**Go:** `const SpecVersion = "0.2"` (update in implementations targeting v0.2)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "0.2";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "0.2";`
+**Go:** `const SpecVersion = "0.3"` (update in implementations targeting v0.3)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "0.3";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "0.3";`
 
 ---
 

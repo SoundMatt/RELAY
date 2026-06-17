@@ -1,5 +1,34 @@
 # RELAY Spec Changelog
 
+## v0.3 — 2026-06-16 (draft)
+
+Incremented from v0.2. Contains a breaking change to the SOME/IP `Message`
+`Meta` format; additive changes elsewhere. SOME/IP implementations MUST update
+their `ToMessage()` / `FromMessage()` mappings before declaring
+`"spec_version": "0.3"`.
+
+**Breaking changes:**
+- §15.7.6 / §4.3: SOME/IP `Meta["someip.msg_type"]` now carries the **numeric**
+  `MessageType` (decimal uint8) instead of the string name, so the round-trip is
+  lossless. The human-readable label moves to `Meta["someip.msg_type_name"]`
+  (diagnostic only; ignored by `FromMessage`). `ToMessage()` now also emits
+  `someip.client_id` and `someip.session_id`, and `FromMessage()` restores
+  `ClientID`, `SessionID`, and `MessageType`. The conversion is now lossless per
+  §15.7 (hazard H-002).
+
+**Additive changes:**
+- §14.1: `WithTopic(name string) SubscriberOption` and `SubscriberConfig.TopicName`
+  added — DDS adapters read it to route subscriptions to a topic; all other
+  adapters ignore it (resolves RELAY issue #13)
+- `spec/schemas/`: JSON Schema (draft 2020-12) published for every canonical type
+  (§15) and every CLI document (§12.1 version, §12.2 capabilities, §12.3 status,
+  conform-result). Embedded in the `relay` binary and exposed via `relay.Schema`
+- `spec/vectors/`: golden reference vectors for every canonical type (deterministic
+  `ToMessage()` output) and error-condition vectors under `spec/vectors/errors/`
+- `relay conform` now validates target output against the embedded §12 schemas
+
+---
+
 ## v0.2 — 2026-06-16 (draft)
 
 Incremented from v0.1. Contains breaking changes to CAN and LIN interface

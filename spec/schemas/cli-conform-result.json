@@ -1,0 +1,43 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/cli-conform-result.json",
+    "title": "RELAY conform result",
+    "description": "JSON output of `relay conform --format json <binary>` (spec §17).",
+    "type": "object",
+    "properties": {
+        "binary": {
+            "type": "string",
+            "description": "Path or name of the binary that was tested."
+        },
+        "result": {
+            "type": "string",
+            "enum": ["PASS", "WARN", "FAIL"],
+            "description": "Overall conformance result. PASS = all checks pass; WARN = at least one warning, no failures; FAIL = at least one failure."
+        },
+        "findings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "severity": {
+                        "type": "string",
+                        "enum": ["PASS", "WARN", "FAIL"]
+                    },
+                    "req": {
+                        "type": "string",
+                        "description": "Spec section reference (e.g. \"§12.1\")."
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable description of the finding."
+                    }
+                },
+                "required": ["severity", "req", "message"],
+                "additionalProperties": false
+            },
+            "description": "Per-check results, in check order."
+        }
+    },
+    "required": ["binary", "result", "findings"],
+    "additionalProperties": false
+}

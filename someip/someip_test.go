@@ -6,6 +6,7 @@ package someip
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	relay "github.com/SoundMatt/RELAY"
@@ -47,9 +48,11 @@ func TestMessageRoundTrip(t *testing.T) {
 	orig := Message{
 		ServiceID:        0x1234,
 		MethodID:         0x5678,
+		ClientID:         0x0009,
+		SessionID:        0x00AB,
 		ProtocolVersion:  SOMEIPProtocolVersion,
 		InterfaceVersion: 2,
-		MessageType:      MsgTypeRequest,
+		MessageType:      MsgTypeNotification,
 		ReturnCode:       RetOK,
 		Payload:          []byte{0xCA, 0xFE},
 	}
@@ -60,19 +63,22 @@ func TestMessageRoundTrip(t *testing.T) {
 	if msg.ID != "4660/22136" { // 0x1234=4660, 0x5678=22136
 		t.Errorf("ID = %q, want %q", msg.ID, "4660/22136")
 	}
-	if msg.Meta["someip.msg_type"] != "request" {
-		t.Errorf("msg_type = %q", msg.Meta["someip.msg_type"])
+	// someip.msg_type carries the numeric value for lossless round-trip;
+	// someip.msg_type_name carries the diagnostic label.
+	if msg.Meta["someip.msg_type"] != "2" {
+		t.Errorf("msg_type = %q, want \"2\"", msg.Meta["someip.msg_type"])
+	}
+	if msg.Meta["someip.msg_type_name"] != "notification" {
+		t.Errorf("msg_type_name = %q, want \"notification\"", msg.Meta["someip.msg_type_name"])
 	}
 
 	got, err := FromMessage(msg)
 	if err != nil {
 		t.Fatalf("FromMessage: %v", err)
 	}
-	if got.ServiceID != orig.ServiceID || got.MethodID != orig.MethodID {
-		t.Errorf("round-trip IDs mismatch: svc=%d meth=%d", got.ServiceID, got.MethodID)
-	}
-	if got.InterfaceVersion != orig.InterfaceVersion {
-		t.Errorf("InterfaceVersion = %d, want %d", got.InterfaceVersion, orig.InterfaceVersion)
+	// The conversion MUST be lossless (§15.7, hazard H-002).
+	if !reflect.DeepEqual(got, orig) {
+		t.Errorf("round-trip not lossless:\n got: %+v\nwant: %+v", got, orig)
 	}
 }
 

@@ -129,8 +129,13 @@ func (m Message) Validate() error {
 }
 
 // ToMessage converts m to a relay.Message per §15.7.6.
+// The conversion is lossless: every SOME/IP header field is carried either in
+// the ID ("serviceID/methodID") or in Meta. someip.msg_type carries the numeric
+// message type for round-trip fidelity; someip.msg_type_name carries the
+// human-readable label for diagnostics.
 //
 //fusa:req REQ-RELAY-043
+//fusa:req REQ-RELAY-057
 func (m Message) ToMessage() relay.Message {
 	return relay.Message{
 		Protocol:  relay.SOMEIP,
@@ -138,7 +143,10 @@ func (m Message) ToMessage() relay.Message {
 		Payload:   m.Payload,
 		Timestamp: time.Now(),
 		Meta: map[string]string{
-			"someip.msg_type":          m.MessageType.String(),
+			"someip.client_id":         strconv.FormatUint(uint64(m.ClientID), 10),
+			"someip.session_id":        strconv.FormatUint(uint64(m.SessionID), 10),
+			"someip.msg_type":          strconv.FormatUint(uint64(m.MessageType), 10),
+			"someip.msg_type_name":     m.MessageType.String(),
 			"someip.return_code":       strconv.FormatUint(uint64(m.ReturnCode), 10),
 			"someip.interface_version": strconv.FormatUint(uint64(m.InterfaceVersion), 10),
 		},
@@ -164,6 +172,18 @@ func FromMessage(msg relay.Message) (Message, error) {
 		MethodID:        uint16(meth),
 		Payload:         msg.Payload,
 		ProtocolVersion: SOMEIPProtocolVersion,
+	}
+	if cid := msg.Meta["someip.client_id"]; cid != "" {
+		v, _ := strconv.ParseUint(cid, 10, 16)
+		m.ClientID = uint16(v)
+	}
+	if sid := msg.Meta["someip.session_id"]; sid != "" {
+		v, _ := strconv.ParseUint(sid, 10, 16)
+		m.SessionID = uint16(v)
+	}
+	if mt := msg.Meta["someip.msg_type"]; mt != "" {
+		v, _ := strconv.ParseUint(mt, 10, 8)
+		m.MessageType = MessageType(v)
 	}
 	if rc := msg.Meta["someip.return_code"]; rc != "" {
 		v, _ := strconv.ParseUint(rc, 10, 8)

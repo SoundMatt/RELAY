@@ -14,6 +14,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	relay "github.com/SoundMatt/RELAY"
 )
 
 // conformSeverity is the severity of a conformance finding.
@@ -155,36 +157,44 @@ func runBinaryCommand(binary string, args []string) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
+// schemaCheck validates raw JSON output against the named embedded schema and
+// returns one finding per result: a single FAIL for malformed JSON or a missing
+// schema, one FAIL per schema violation, or a single PASS when the document
+// conforms. ref is the spec section to attribute findings to.
+//
+//fusa:req REQ-RELAY-058
+func schemaCheck(name, ref string, data []byte) (doc map[string]interface{}, findings []conformFinding) {
+	if err := json.Unmarshal(data, &doc); err != nil {
+		return nil, []conformFinding{fail(ref, "%s output is not valid JSON: %v", name, err)}
+	}
+	schemaJSON, err := relay.Schema(name)
+	if err != nil {
+		return doc, []conformFinding{fail(ref, "no embedded schema %q: %v", name, err)}
+	}
+	var asAny interface{}
+	_ = json.Unmarshal(data, &asAny)
+	violations := validateSchema(schemaJSON, asAny)
+	if len(violations) == 0 {
+		return doc, []conformFinding{pass(ref, fmt.Sprintf("conforms to %s schema", schemaTitle(schemaJSON)))}
+	}
+	for _, v := range violations {
+		findings = append(findings, fail(ref, "%s schema: %s", schemaTitle(schemaJSON), v))
+	}
+	return doc, findings
+}
+
 // validateVersionDoc validates a version --format json response per §12.1.
 //
 //fusa:req REQ-RELAY-053
 func validateVersionDoc(data []byte) []conformFinding {
-	var doc map[string]interface{}
-	if err := json.Unmarshal(data, &doc); err != nil {
-		return []conformFinding{fail("§12.1", "version output is not valid JSON: %v", err)}
-	}
-	var fs []conformFinding
-	for _, field := range []string{"tool", "version", "spec_version", "language", "runtime"} {
-		if v, ok := doc[field]; !ok || v == nil || v == "" {
-			fs = append(fs, fail("§12.1", "version doc missing required field %q", field))
-		} else {
-			fs = append(fs, pass("§12.1", fmt.Sprintf("version doc: %s=%v", field, v)))
-		}
+	doc, fs := schemaCheck("cli-version", "§12.1", data)
+	if doc == nil {
+		return fs
 	}
 	// protocol / protocol_int are required for single-protocol implementations;
-	// null is acceptable for multi-protocol tooling (WARN not FAIL).
+	// null or absent is acceptable for multi-protocol tooling (WARN not FAIL).
 	if doc["protocol"] == nil {
 		fs = append(fs, warn("§12.1", "version doc: protocol is null (acceptable for multi-protocol tools)"))
-	} else {
-		fs = append(fs, pass("§12.1", fmt.Sprintf("version doc: protocol=%v", doc["protocol"])))
-	}
-	if lang, ok := doc["language"].(string); ok {
-		switch lang {
-		case "go", "cpp", "rust":
-			fs = append(fs, pass("§12.1", "version doc: language is a recognised value"))
-		default:
-			fs = append(fs, fail("§12.1", "version doc: language %q not in {go, cpp, rust}", lang))
-		}
 	}
 	return fs
 }
@@ -193,63 +203,30 @@ func validateVersionDoc(data []byte) []conformFinding {
 //
 //fusa:req REQ-RELAY-054
 func validateCapabilitiesDoc(data []byte) []conformFinding {
-	var doc map[string]interface{}
-	if err := json.Unmarshal(data, &doc); err != nil {
-		return []conformFinding{fail("§12.2", "capabilities output is not valid JSON: %v", err)}
-	}
-	var fs []conformFinding
-
-	// kind must be "capabilities"
-	if doc["kind"] != "capabilities" {
-		fs = append(fs, fail("§12.2", "capabilities doc: kind=%v, want \"capabilities\"", doc["kind"]))
-	} else {
-		fs = append(fs, pass("§12.2", "capabilities doc: kind=capabilities"))
+	doc, fs := schemaCheck("cli-capabilities", "§12.2", data)
+	if doc == nil {
+		return fs
 	}
 
-	for _, field := range []string{"tool", "version", "spec_version"} {
-		if v, ok := doc[field]; !ok || v == nil || v == "" {
-			fs = append(fs, fail("§12.2", "capabilities doc missing required field %q", field))
-		} else {
-			fs = append(fs, pass("§12.2", fmt.Sprintf("capabilities doc: %s=%v", field, v)))
-		}
-	}
-
-	// commands must include version, capabilities, status.
-	cmds, _ := doc["commands"].([]interface{})
-	if cmds == nil {
-		fs = append(fs, fail("§12.2", "capabilities doc: commands is missing or not an array"))
-	} else {
+	// The schema only asserts that commands contains "version"; §17.7 also
+	// requires "capabilities" and "status".
+	if cmds, ok := doc["commands"].([]interface{}); ok {
 		cmdSet := map[string]bool{}
 		for _, c := range cmds {
 			if s, ok := c.(string); ok {
 				cmdSet[s] = true
 			}
 		}
-		for _, required := range []string{"version", "capabilities", "status"} {
-			if cmdSet[required] {
-				fs = append(fs, pass("§17.7", fmt.Sprintf("capabilities doc: commands includes %q", required)))
-			} else {
+		for _, required := range []string{"capabilities", "status"} {
+			if !cmdSet[required] {
 				fs = append(fs, fail("§17.7", "capabilities doc: commands does not include %q", required))
 			}
 		}
 	}
 
-	// adapt field (§10.3)
-	if adapt, ok := doc["adapt"].(bool); ok {
-		if adapt {
-			fs = append(fs, pass("§17.6", "capabilities doc: adapt=true"))
-		} else {
-			fs = append(fs, warn("§17.6", "capabilities doc: adapt=false (Adapt() not exported)"))
-		}
-	} else {
-		fs = append(fs, fail("§17.6", "capabilities doc: adapt field missing or wrong type"))
-	}
-
-	// spec_version must be non-empty (§17.12)
-	if sv, ok := doc["spec_version"].(string); ok && sv != "" {
-		fs = append(fs, pass("§17.12", fmt.Sprintf("spec_version=%q declared", sv)))
-	} else {
-		fs = append(fs, fail("§17.12", "capabilities doc: spec_version missing or empty"))
+	// adapt=false is valid (no Adapt() exported) but worth flagging (§10.3).
+	if adapt, ok := doc["adapt"].(bool); ok && !adapt {
+		fs = append(fs, warn("§17.6", "capabilities doc: adapt=false (Adapt() not exported)"))
 	}
 
 	return fs
@@ -259,29 +236,6 @@ func validateCapabilitiesDoc(data []byte) []conformFinding {
 //
 //fusa:req REQ-RELAY-055
 func validateStatusDoc(data []byte) []conformFinding {
-	var doc map[string]interface{}
-	if err := json.Unmarshal(data, &doc); err != nil {
-		return []conformFinding{fail("§12.3", "status output is not valid JSON: %v", err)}
-	}
-	var fs []conformFinding
-	for _, field := range []string{"tool", "version"} {
-		if v, ok := doc[field]; !ok || v == nil || v == "" {
-			fs = append(fs, fail("§12.3", "status doc missing required field %q", field))
-		} else {
-			fs = append(fs, pass("§12.3", fmt.Sprintf("status doc: %s=%v", field, v)))
-		}
-	}
-	// healthy is a bool field.
-	if _, ok := doc["healthy"].(bool); !ok {
-		fs = append(fs, fail("§12.3", "status doc: healthy field missing or not a bool"))
-	} else {
-		fs = append(fs, pass("§12.3", "status doc: healthy field present"))
-	}
-	// connected is a bool field.
-	if _, ok := doc["connected"].(bool); !ok {
-		fs = append(fs, fail("§12.3", "status doc: connected field missing or not a bool"))
-	} else {
-		fs = append(fs, pass("§12.3", "status doc: connected field present"))
-	}
+	_, fs := schemaCheck("cli-status", "§12.3", data)
 	return fs
 }

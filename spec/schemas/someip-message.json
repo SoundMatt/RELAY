@@ -1,0 +1,65 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/someip-message.json",
+    "title": "someip.Message",
+    "description": "SOME/IP canonical message type (spec §15.6).",
+    "type": "object",
+    "properties": {
+        "service_id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535,
+            "description": "SOME/IP ServiceID (uint16)."
+        },
+        "method_id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535,
+            "description": "SOME/IP MethodID (uint16)."
+        },
+        "client_id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535,
+            "description": "SOME/IP ClientID (uint16)."
+        },
+        "session_id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535,
+            "description": "SOME/IP SessionID (uint16)."
+        },
+        "protocol_version": {
+            "type": "integer",
+            "const": 1,
+            "description": "SOME/IP protocol version. Must be 0x01."
+        },
+        "interface_version": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
+            "description": "Interface version (uint8)."
+        },
+        "message_type": {
+            "type": "integer",
+            "enum": [0, 1, 2, 64, 65, 128, 129, 130],
+            "description": "SOME/IP MessageType: MsgTypeRequest=0, MsgTypeRequestNoReturn=1, MsgTypeNotification=2, MsgTypeRequestAck=64, MsgTypeRequestNoReturnAck=65, MsgTypeResponse=128, MsgTypeError=129, MsgTypeResponseAck=130."
+        },
+        "return_code": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
+            "description": "SOME/IP ReturnCode (RetOK=0, RetErrNotOk=1, etc.)."
+        },
+        "payload": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "description": "SOME/IP message payload bytes, base64-encoded. Omitted from JSON when empty."
+        }
+    },
+    "required": [
+        "service_id", "method_id", "client_id", "session_id",
+        "protocol_version", "interface_version", "message_type", "return_code"
+    ],
+    "additionalProperties": false
+}

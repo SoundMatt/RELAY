@@ -1,0 +1,39 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/cli-status.json",
+    "title": "RELAY status document",
+    "description": "JSON output of `<binary> status [--format json]` (spec §12.3).",
+    "type": "object",
+    "properties": {
+        "protocol": {
+            "type": ["string", "null"],
+            "description": "Protocol name. Null for multi-protocol tooling."
+        },
+        "tool": {
+            "type": "string",
+            "description": "Binary name."
+        },
+        "version": {
+            "type": "string",
+            "description": "Semantic version of the binary."
+        },
+        "healthy": {
+            "type": "boolean",
+            "description": "True when the tool is operating normally."
+        },
+        "connected": {
+            "type": "boolean",
+            "description": "True when the tool has an active network connection to the underlying bus/broker."
+        },
+        "endpoint": {
+            "type": "string",
+            "description": "Address or device path of the current connection. Empty string when not connected."
+        },
+        "details": {
+            "type": "object",
+            "description": "Protocol-specific status details (arbitrary key-value pairs)."
+        }
+    },
+    "required": ["tool", "version", "healthy", "connected", "endpoint", "details"],
+    "additionalProperties": false
+}

@@ -99,7 +99,9 @@ func TestValidateCapabilitiesDocValid(t *testing.T) {
 func TestValidateCapabilitiesDocWrongKind(t *testing.T) {
 	data := []byte(`{
 		"kind":"version","tool":"t","version":"1.0","spec_version":"0.2",
-		"commands":["version","capabilities","status"],"adapt":false
+		"commands":["version","capabilities","status"],
+		"transports":[],"features":[],"interfaces":[],"optional_interfaces":[],
+		"adapt":false
 	}`)
 	fs := validateCapabilitiesDoc(data)
 	hasFail := false
@@ -118,6 +120,7 @@ func TestValidateCapabilitiesDocMissingCommand(t *testing.T) {
 	data := []byte(`{
 		"kind":"capabilities","tool":"t","version":"1.0","spec_version":"0.2",
 		"commands":["version","capabilities"],
+		"transports":[],"features":[],"interfaces":[],"optional_interfaces":[],
 		"adapt":false
 	}`)
 	fs := validateCapabilitiesDoc(data)
@@ -136,17 +139,26 @@ func TestValidateCapabilitiesDocMissingCommand(t *testing.T) {
 func TestValidateCapabilitiesDocAdaptWarn(t *testing.T) {
 	data := []byte(`{
 		"kind":"capabilities","tool":"relay","version":"0.1.0","spec_version":"0.2",
-		"commands":["version","capabilities","status"],"adapt":false
+		"commands":["version","capabilities","status"],
+		"transports":[],"features":[],"interfaces":[],"optional_interfaces":[],
+		"adapt":false
 	}`)
 	fs := validateCapabilitiesDoc(data)
 	hasWarn := false
+	hasFail := false
 	for _, f := range fs {
 		if f.Severity == sevWarn && strings.Contains(f.Message, "adapt") {
 			hasWarn = true
 		}
+		if f.Severity == sevFail {
+			hasFail = true
+		}
 	}
 	if !hasWarn {
 		t.Error("expected WARN for adapt=false, got none")
+	}
+	if hasFail {
+		t.Errorf("complete adapt=false doc should not FAIL: %+v", fs)
 	}
 }
 

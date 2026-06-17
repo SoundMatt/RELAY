@@ -1,0 +1,31 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/rcp-status.json",
+    "title": "rcp.Status",
+    "description": "RCP canonical status type (spec §15.5).",
+    "type": "object",
+    "properties": {
+        "zone": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5,
+            "description": "Reporting zone: 0=Unknown, 1=FrontLeft, 2=FrontRight, 3=RearLeft, 4=RearRight, 5=Central."
+        },
+        "seq": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Status sequence number."
+        },
+        "healthy": {
+            "type": "boolean",
+            "description": "True when the RCP node is operating normally."
+        },
+        "payload": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "description": "Status-specific payload bytes, base64-encoded. Omitted from JSON when empty."
+        }
+    },
+    "required": ["zone", "seq", "healthy"],
+    "additionalProperties": false
+}

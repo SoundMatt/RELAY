@@ -1,5 +1,5 @@
 {
-  "version": "0.2",
+  "version": "0.3",
   "date": "2026-06-16",
   "status": "draft",
   "networks": ["CAN", "DDS", "LIN", "MQTT", "RCP", "SOMEIP"],

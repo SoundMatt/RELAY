@@ -97,7 +97,7 @@ Bus/Participant/etc. types which RELAY cannot import.
 - ✅ `relay status` CLI command; REQ-RELAY-044
 - ✅ REQ-RELAY-030 … REQ-RELAY-044 added to requirements registry
 - ⬜ `Adapt()` in each x-Net package — tracked as x-Net issues
-- ⬜ JSON schemas for canonical types in `spec/schemas/`
+- ✅ JSON schemas for canonical types in `spec/schemas/` — delivered in v0.6
 - ⬜ C++ and Rust type implementations — tracked as x-Net issues
 
 Deliverables: `relay version`, `relay capabilities`, `relay status`
@@ -125,17 +125,20 @@ and hazard analysis in place before conformance tooling ships.
 
 **Goal:** Any RELAY-conformant binary can be verified without source access.
 
-- `relay conform <binary>` — invokes `version --format json`, `capabilities`,
-  `status --format json`; validates schemas against §9
-- Synthesises protocol-specific frames, sends them via `send`, reads them
-  back via `subscribe` using known endpoints where available
-- Validates sentinel errors via intentional misuse (`send` after `close`,
-  invalid frame IDs, oversized payloads)
-- Conformance report: text / JSON / HTML
-- Exit 0 on PASS, exit 1 on any FAIL
-- `relay conform --strict` — also fails on WARN
+- ✅ `relay conform <binary>` — invokes `version --format json`, `capabilities`,
+  `status --format json`; validates each document against §12 schemas
+- ✅ Validates sentinel errors via golden error vectors (`spec/vectors/errors/`)
+  exercised by `TestErrorVectors` (invalid frame IDs, RTR+FD, wrong protocol
+  version, domain out of range)
+- ✅ Conformance report: text and JSON (`--format`)
+- ✅ Exit 0 on PASS/WARN, exit 1 on any FAIL
+- ✅ `relay conform --strict` — also fails on WARN
+- ✅ REQ-RELAY-052 … REQ-RELAY-055 added to requirements registry
+- ⬜ HTML report renderer — deferred to v0.7 alongside `relay trace` renderers
+- ⬜ Live send/subscribe round-trip via known endpoints — deferred (needs
+  running x-Net binaries; covered by golden vectors in the interim)
 
-Deliverables: `relay conform`
+Deliverables: `relay conform` ✅
 
 ---
 
@@ -144,12 +147,22 @@ Deliverables: `relay conform`
 **Goal:** Machine-readable spec artifacts that conformance tooling and test
 suites can consume directly.
 
-- JSON Schema (draft 2020-12) for every canonical type in §12
-- JSON Schema for capability (§9.2) and version (§9.1) documents
-- Golden reference vectors — one per canonical type, one per error condition,
-  with pre-computed `ToMessage()` outputs
-- `relay conform` updated to validate against schemas
-- `spec/schemas/` and `spec/vectors/` committed and CI-tested
+- ✅ JSON Schema (draft 2020-12) for every canonical type (§15): can-frame,
+  dds-sample, lin-frame, mqtt-message, rcp-command, rcp-status, someip-message,
+  relay-message
+- ✅ JSON Schema for version (§12.1), capabilities (§12.2), status (§12.3), and
+  conform-result CLI documents
+- ✅ Golden reference vectors — one per canonical type with deterministic
+  `ToMessage()` output, plus error-condition vectors under `spec/vectors/errors/`
+- ✅ Schemas embedded in the binary (`relay.Schema`) and `relay conform`
+  validates live output against them via a dependency-free draft-2020-12 subset
+  validator
+- ✅ `spec/schemas/` and `spec/vectors/` committed and CI-tested
+  (`TestGoldenVectorsRoundTrip`, `TestErrorVectors`, `TestGoldenVectorsConformToSchemas`)
+- ✅ Fixed SOME/IP `ToMessage`/`FromMessage` lossiness (client_id, session_id,
+  message_type now preserved); REQ-RELAY-056 … REQ-RELAY-058 added
+
+Deliverables: `spec/schemas/`, `spec/vectors/` ✅
 
 ---
 

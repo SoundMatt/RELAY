@@ -1,0 +1,41 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/cli-version.json",
+    "title": "RELAY version document",
+    "description": "JSON output of `<binary> version --format json` (spec §12.1).",
+    "type": "object",
+    "properties": {
+        "tool": {
+            "type": "string",
+            "description": "Binary name (e.g. \"go-can\", \"relay\")."
+        },
+        "protocol": {
+            "type": ["string", "null"],
+            "description": "Protocol name (e.g. \"CAN\"). Null for multi-protocol tooling."
+        },
+        "protocol_int": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "description": "Protocol integer constant matching relay.Protocol. Null for multi-protocol tooling."
+        },
+        "version": {
+            "type": "string",
+            "description": "Semantic version of the binary (e.g. \"1.2.3\")."
+        },
+        "spec_version": {
+            "type": "string",
+            "description": "RELAY spec version this binary targets (e.g. \"0.2\")."
+        },
+        "language": {
+            "type": "string",
+            "enum": ["go", "cpp", "rust"],
+            "description": "Implementation language."
+        },
+        "runtime": {
+            "type": "string",
+            "description": "Runtime version (e.g. \"go1.25.0\", \"clang-18\")."
+        }
+    },
+    "required": ["tool", "version", "spec_version", "language", "runtime"],
+    "additionalProperties": false
+}

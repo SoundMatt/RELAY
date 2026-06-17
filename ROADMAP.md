@@ -256,12 +256,14 @@ Deliverables: `relay compare`, `relay versions` ✅
 **Goal:** Real-time observability dashboard for systems using multiple
 RELAY-conformant implementations.
 
-- `relay serve [--addr :8080]` — web dashboard
-- Per-implementation status cards (protocol, version, conformance level)
-- Live message rate and error counters from running `relay trace` sessions
-- `/api/v1/status`, `/api/v1/implementations`, `/api/v1/trace`
-- SVG status badge at `/badge/status.svg`
-- Webhook on conformance status transitions
+- ✅ `relay serve [--addr :8080] [--scan] [--match] [--strict] [binary...]` — web dashboard
+- ✅ Per-implementation status cards (tool, protocol, version, conformance level)
+- ✅ `/api/v1/status`, `/api/v1/implementations` (JSON)
+- ✅ SVG status badge at `/badge/status.svg` (green PASS / amber WARN / red FAIL)
+- ✅ REQ-RELAY-068/069, traced and tested
+- ⬜ Live message-rate/error counters and `/api/v1/trace` — deferred (need
+  long-running trace sessions against live x-Net binaries)
+- ⬜ Webhook on conformance status transitions — deferred (outbound integration)
 
 Deliverables: `relay serve`
 

@@ -998,6 +998,19 @@ Lists each implementation's tool, protocol, version, and spec version, and
 whether it is aligned with the spec version this `relay` tool implements
 (`relay.SpecVersion`). Exit: `0` success, `2` no candidates.
 
+#### `serve [--addr :8080] [--scan] [--match glob] [--strict] [binary...]`
+
+Serves a web dashboard and JSON API for the configured implementations:
+
+| Route | Returns |
+|---|---|
+| `GET /` | HTML dashboard with per-implementation status cards |
+| `GET /api/v1/implementations` | probe results (JSON array) |
+| `GET /api/v1/status` | aggregated conformance report (JSON) |
+| `GET /badge/status.svg` | `image/svg+xml` status badge (green PASS / amber WARN / red FAIL) |
+
+Unknown paths return `404`. Exit: `2` with no candidates.
+
 ### 11.3 Exit codes
 
 | Code | Meaning |

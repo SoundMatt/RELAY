@@ -136,7 +136,7 @@
     {
       "id": "REQ-RELAY-020",
       "title": "SpecVersion constant",
-      "text": "The system shall export const SpecVersion = \"0.1\" identifying the implemented RELAY specification version.",
+      "text": "The system shall export const SpecVersion identifying the implemented RELAY specification version. The value MUST equal the spec version declared in spec/version.json (currently \"0.2\").",
       "category": "functional",
       "criticality": "high"
     },

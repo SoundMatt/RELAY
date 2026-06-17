@@ -195,6 +195,8 @@ The canonical routing key serialised as a string:
 | MQTT | `mqtt.retained` | `true` \| `false` |
 | RCP | `rcp.priority` | `normal` \| `high` \| `critical` |
 | RCP | `rcp.cmd_type` | `noop` \| `set` \| `get` \| `reset` \| `watchdog` \| `sleep` \| `wake` |
+| RCP | `rcp.healthy` | `true` \| `false` |
+| RCP | `rcp.status` | Decimal uint8 (ResponseStatus) |
 | SOMEIP | `someip.msg_type` | `request` \| `request_no_return` \| `notification` \| `response` \| `error` |
 | SOMEIP | `someip.return_code` | Decimal uint8 |
 | SOMEIP | `someip.interface_version` | Decimal uint8 |
@@ -248,7 +250,67 @@ return fmt.Errorf("rcp: zone gone: %w", relay.ErrClosed)  // correct
 ```
 
 In C++, protocol-specific codes MUST map to the canonical `relay::Errc` via
-`std::error_condition` equivalence.
+`std::error_condition` equivalence. The required boilerplate is:
+
+```cpp
+// relay/errc.hpp — canonical relay error category and condition enum
+
+namespace relay {
+
+inline const std::error_category& relay_category() noexcept {
+    struct Cat : std::error_category {
+        const char* name() const noexcept override { return "relay"; }
+        std::string message(int ev) const override {
+            switch (static_cast<Errc>(ev)) {
+            case Errc::closed:            return "relay: closed";
+            case Errc::not_connected:     return "relay: not connected";
+            case Errc::timeout:           return "relay: timeout";
+            case Errc::payload_too_large: return "relay: payload too large";
+            default:                      return "relay: unknown";
+            }
+        }
+        bool equivalent(const std::error_code& ec, int condition) const noexcept override {
+            // Protocol categories implement this for their own codes.
+            return std::error_category::equivalent(ec, condition);
+        }
+    };
+    static Cat inst;
+    return inst;
+}
+
+inline std::error_condition make_error_condition(Errc e) noexcept {
+    return {static_cast<int>(e), relay_category()};
+}
+
+} // namespace relay
+
+namespace std {
+template<> struct is_error_condition_enum<relay::Errc> : true_type {};
+}
+```
+
+A protocol category (e.g. `rcp`) maps its codes by overriding `equivalent()`:
+
+```cpp
+// rcp/errc.hpp — protocol error category mapping
+bool rcp_category_t::equivalent(int code,
+                                const std::error_condition& cond) const noexcept {
+    if (cond.category() == relay::relay_category()) {
+        auto rc = static_cast<rcp::Errc>(code);
+        auto re = static_cast<relay::Errc>(cond.value());
+        switch (rc) {
+        case rcp::Errc::closed:         return re == relay::Errc::closed;
+        case rcp::Errc::timeout:        return re == relay::Errc::timeout;
+        case rcp::Errc::not_found:      return re == relay::Errc::not_connected;
+        case rcp::Errc::zone_mismatch:  return re == relay::Errc::not_connected;
+        case rcp::Errc::busy:           return re == relay::Errc::timeout;
+        case rcp::Errc::already_exists: return false; // not a relay sentinel
+        default:                        return false;
+        }
+    }
+    return false;
+}
+```
 
 In Rust, protocol-specific variants MUST implement `From<relay::Error>` or
 expose `.kind() -> relay::Error`.
@@ -287,7 +349,7 @@ mandatory sentinel with `%w` so `errors.Is` reaches the RELAY sentinel.
 | MQTT | `ErrTopicEmpty` | `ErrNotConnected` | Topic string is empty |
 | MQTT | `ErrQoSUnsupported` | `ErrNotConnected` | QoS level not supported by broker |
 | RCP | `ErrNotFound` | `ErrNotConnected` | Zone not in registry |
-| RCP | `ErrAlreadyExists` | `ErrClosed` | Zone already registered |
+| RCP | `ErrAlreadyExists` | — (not a relay sentinel) | Zone already registered; uniqueness violation |
 | RCP | `ErrBusy` | `ErrTimeout` | Zone controller busy |
 | RCP | `ErrZoneMismatch` | `ErrNotConnected` | Command zone ≠ controller zone |
 | SOMEIP | `ErrUnknownService` | `ErrNotConnected` | Service ID not registered |
@@ -625,6 +687,8 @@ root package that wraps the primary protocol interface as the appropriate
 application interface. `Adapt()` uses `ToMessage()` / `FromMessage()` (§14) for
 all conversions.
 
+**Go:**
+
 | Protocol | Signature | Returns |
 |---|---|---|
 | CAN | `func Adapt(bus Bus) relay.Node` | `relay.Node` |
@@ -633,6 +697,17 @@ all conversions.
 | MQTT | `func Adapt(c Client) relay.Node` | `relay.Node` |
 | RCP | `func Adapt(c Controller) relay.Caller` | `relay.Caller` (also satisfies `relay.Node`) |
 | SOMEIP | `func Adapt(s Service) relay.Caller` | `relay.Caller` (also satisfies `relay.Node`) |
+
+**C++:** `Adapt()` lives in the protocol namespace (e.g. `rcp::`). The adapter takes shared ownership of the protocol interface; the caller has exclusive ownership of the returned adapter:
+
+| Protocol | Signature | Returns |
+|---|---|---|
+| CAN | `std::unique_ptr<relay::Node> Adapt(std::shared_ptr<Bus> bus)` | `relay::Node*` (unique) |
+| DDS | `std::unique_ptr<relay::Node> Adapt(std::shared_ptr<Participant> p)` | `relay::Node*` (unique) |
+| LIN | `std::unique_ptr<relay::Node> Adapt(std::shared_ptr<Bus> bus)` | `relay::Node*` (unique) |
+| MQTT | `std::unique_ptr<relay::Node> Adapt(std::shared_ptr<Client> c)` | `relay::Node*` (unique) |
+| RCP | `std::unique_ptr<relay::Caller> Adapt(std::shared_ptr<Controller> c)` | `relay::Caller*` (unique) |
+| SOMEIP | `std::unique_ptr<relay::Caller> Adapt(std::shared_ptr<Service> s)` | `relay::Caller*` (unique) |
 
 `Adapt()` MUST NOT block. It wraps the given implementation; it does not connect.
 
@@ -1469,7 +1544,7 @@ An implementation is **RELAY-conformant** if and only if:
 4. **Lifecycle invariants.** All ten requirements in §6 are satisfied. Requirement §6.9 (zero-value safety) applies to `relay.Node` and `relay.Caller` adapters only, not to the underlying protocol interface types (`Bus`, `Participant`, etc.).
 5. **Constructor contract.** Each transport sub-package exports `New` per §7; a `mock` sub-package is present.
 6. **Application interface.** The root package exports `Adapt()` per §10.3; the capabilities document declares `"adapt": true`.
-7. **CLI mandatory commands.** `version`, `capabilities`, `status` per §11.1 with JSON schemas matching §12.
+7. **CLI mandatory commands.** `version`, `capabilities`, `status` per §11.1 with JSON schemas matching §12. For C++ library implementations that do not ship a standalone binary by default, CLI conformance MUST be satisfiable by building the CMake target enabled by `-DRELAY_BUILD_CLI=ON`. If no such target is provided, CLI requirements are assessed as "not applicable" in conformance reports and §17.7 is considered waived for that implementation.
 8. **Frame constraints.** `ValidateFrame` rejects all frames violating §15 constraints.
 9. **Envelope conversion.** `ToMessage()` and `FromMessage()` are lossless for mandatory fields.
 10. **Subscriber helpers.** `SubscriberConfig`, `SubscriberOption`, `ApplySubscriberOpts`, `ChanDepth` exported per §14.1; default depth is 64.
@@ -1478,7 +1553,7 @@ An implementation is **RELAY-conformant** if and only if:
     - DDS: `Domain` MUST be validated as 0–232.
     - LIN: `ValidateFrame` enforces diagnostic checksum rule.
     - SOMEIP: `ProtocolVersion` MUST be validated as 0x01 on send and receive.
-12. **SpecVersion constant.** Package exports `SpecVersion = "0.1"`.
+12. **SpecVersion constant.** Package exports `SpecVersion` equal to the spec version being targeted. The authoritative current value is defined in §19.4 (`spec/version.json`).
 
 `relay conform <binary>` verifies requirements 1, 3, 5 (mock presence), 6, 7, 8, and 12.
 Requirements 2, 4, 9, 10, and 11 are verified by the implementation's own test suite.
@@ -1560,7 +1635,9 @@ class Node {
 public:
     virtual Protocol protocol() const noexcept = 0;
     virtual std::error_code send(Context ctx, const Message& msg) = 0;
-    virtual std::pair<Channel<Message>, std::error_code>
+    // Channel<Message> is non-movable (contains mutex/cv); return via shared_ptr.
+    // Ownership is shared between the adapter's writer thread and the caller.
+    virtual std::pair<std::shared_ptr<Channel<Message>>, std::error_code>
         subscribe(SubscriberOptions opts = {}) = 0;
     virtual std::error_code close() noexcept = 0;
     virtual ~Node() = default;
@@ -1584,7 +1661,24 @@ enum class Errc { closed, not_connected, timeout, payload_too_large };
 // Registered as std::error_category "relay".
 ```
 
-Protocol-specific codes map to `relay::Errc` via `std::error_condition` equivalence.
+Protocol-specific codes map to `relay::Errc` via `std::error_condition` equivalence. See §5.2 for the required boilerplate.
+
+#### ToMessage / FromMessage (C++)
+
+Every canonical frame type MUST expose:
+
+```cpp
+// Member function — lossless conversion to relay::Message.
+relay::Message to_message() const;
+
+// Free function (C++17) — lossless conversion from relay::Message.
+std::pair<T, std::error_code> from_message(const relay::Message& m);
+
+// Free function (C++23, preferred where available) — same semantics.
+std::expected<T, std::error_code> from_message(const relay::Message& m);
+```
+
+The C++23 form MUST be guarded by `#if __cpp_lib_expected >= 202202L`. Implementations targeting C++17 MUST provide the pair form. Timestamp MUST use `std::chrono::system_clock::now()` when constructing from an external source without a wire timestamp.
 
 ### 18.3 Rust
 
@@ -1674,9 +1768,9 @@ Before a MUST requirement is removed or inverted:
 
 ### 19.3 Compatibility
 
-An implementation declares `"spec_version": "0.1"` in its capabilities document.
-`relay conform` MUST accept implementations targeting any MINOR version within
-the current MAJOR.
+An implementation declares `"spec_version": "<targeted-version>"` (e.g. `"0.2"`) in
+its capabilities document. `relay conform` MUST accept implementations targeting
+any MINOR version within the current MAJOR.
 
 ### 19.4 Machine-readable version
 

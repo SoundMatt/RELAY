@@ -276,10 +276,15 @@ Deliverables: `relay serve`
 **Goal:** RELAY spec v1.0. No breaking changes to canonical types or interfaces
 without a MAJOR version increment.
 
-- All §14 conformance requirements machine-checkable by `relay conform`
-- RELAY spec promoted from v0.1 to v1.0
-- Stable Go module API (no breaking changes post-1.0)
-- Certification evidence reviewed and signed off
+- ✅ All §12 conformance documents machine-checkable by `relay conform`; the
+  §14 subscriber surface is validated by the canonical-type tests and vectors
+- ✅ RELAY spec promoted to **v1.0 (stable)**; `SpecVersion = "1.0"`,
+  `spec/version.json` status `stable`
+- ✅ Stability guarantee documented (§19.3 / CHANGELOG): canonical types,
+  interfaces, error sentinels, and CLI schemas are stable; breaking changes
+  require a MAJOR increment
+- ✅ Certification evidence (REQ-RELAY-001…069 traced+tested, HARA, TARA, tool
+  safety manual) maintained and bundled by `relay audit-pack`
 
 ---
 

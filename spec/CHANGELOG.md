@@ -1,5 +1,26 @@
 # RELAY Spec Changelog
 
+## v1.0 — 2026-06-17 (stable)
+
+First **stable** release. No normative changes from v0.3; this release promotes
+the specification and the Go module API to v1.0 and establishes the stability
+guarantee.
+
+**Stability guarantee:**
+- The canonical types (§15), application interfaces (§10), error sentinels (§5),
+  and CLI document schemas (§12) are now stable. Breaking changes to any of them
+  require a MAJOR version increment (v2.0).
+- Additive changes (new optional fields, new protocols, new CLI commands) ship in
+  MINOR releases; clarifications and fixes in PATCH releases.
+- `relay conform` validates any binary against the §12 schemas without source
+  access; the full conformance surface is machine-checkable.
+
+**Evidence:** requirements REQ-RELAY-001…069 are traced and tested; HARA
+(`.fusa-hara.json`), TARA (`.fusa-tara.json`), and the tool safety manual are
+maintained and bundled by `relay audit-pack`.
+
+---
+
 ## v0.3 — 2026-06-16 (draft)
 
 Incremented from v0.2. Contains a breaking change to the SOME/IP `Message`

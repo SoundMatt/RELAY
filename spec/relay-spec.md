@@ -1,4 +1,4 @@
-# RELAY Specification — v0.3 (draft)
+# RELAY Specification — v1.0
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -1915,19 +1915,25 @@ Before a MUST requirement is removed or inverted:
 
 ### 19.3 Compatibility
 
-An implementation declares `"spec_version": "<targeted-version>"` (e.g. `"0.3"`) in
+An implementation declares `"spec_version": "<targeted-version>"` (e.g. `"1.0"`) in
 its capabilities document. `relay conform` MUST accept implementations targeting
 any MINOR version within the current MAJOR.
+
+As of **v1.0**, the canonical types (§15), application interfaces (§10), error
+sentinels (§5), and CLI document schemas (§12) are stable: a breaking change to
+any of them requires a MAJOR version increment (v2.0). Additive changes (new
+optional fields, protocols, or CLI commands) ship in MINOR releases;
+clarifications and fixes in PATCH releases.
 
 ### 19.4 Machine-readable version
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v0.3**
+Current version: **v1.0**
 
-**Go:** `const SpecVersion = "0.3"` (update in implementations targeting v0.3)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "0.3";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "0.3";`
+**Go:** `const SpecVersion = "1.0"` (update in implementations targeting v1.0)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "1.0";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.0";`
 
 ---
 

@@ -192,13 +192,16 @@ Deliverables: `relay probe`, `relay trace` ✅
 
 **Goal:** Cross-protocol conformance and interchangeability report.
 
-- `relay report` — runs `relay conform` across all discovered implementations
-  and produces a unified PASS/WARN/FAIL report
-- Per-protocol conformance table (which implementations pass, which gap)
-- `relay report --format html` — self-contained HTML dashboard
-- `relay report --format markdown` — GFM for PR comments and wikis
+- ✅ `relay report [--scan] [--match glob] [--strict] [binary...]` — runs the
+  conformance checks across all discovered implementations and produces a
+  unified PASS/WARN/FAIL report with per-implementation pass/warn/fail counts
+- ✅ Per-implementation conformance table (tool, protocol, result)
+- ✅ `relay report --format html` — self-contained HTML dashboard
+- ✅ `relay report --format markdown` — GFM for PR comments and wikis
+- ✅ `--format text|json` as well; `--strict` escalates WARN to FAIL
+- ✅ REQ-RELAY-062; refactored shared `conformBinary` out of `relay conform`
 
-Deliverables: `relay report`
+Deliverables: `relay report` ✅
 
 ---
 

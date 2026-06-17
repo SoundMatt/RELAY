@@ -68,8 +68,31 @@ func runConform(stdout, stderr io.Writer, args []string) error {
 		fmt.Fprintln(stderr, "Usage: relay conform [--format text|json] [--strict] <binary>")
 		return exitCode(2)
 	}
-	binary := fs.Arg(0)
 
+	cr := conformBinary(fs.Arg(0), *strict)
+
+	switch *format {
+	case "json":
+		enc := json.NewEncoder(stdout)
+		enc.SetIndent("", "    ")
+		return enc.Encode(cr)
+	case "text":
+		printConformText(stdout, cr)
+	default:
+		return fmt.Errorf("relay conform: unknown format %q", *format)
+	}
+
+	if cr.Result == sevFail {
+		return exitCode(1)
+	}
+	return nil
+}
+
+// conformBinary runs the §12 schema checks against one binary and returns the
+// aggregated result. With strict, WARN findings escalate the result to FAIL.
+//
+//fusa:req REQ-RELAY-052
+func conformBinary(binary string, strict bool) conformResult {
 	var all []conformFinding
 
 	// --- §17.7 / §12.1 version --format json ---
@@ -109,30 +132,13 @@ func runConform(stdout, stderr io.Writer, args []string) error {
 			result = sevFail
 			break
 		}
-		if f.Severity == sevWarn && *strict {
+		if f.Severity == sevWarn && strict {
 			result = sevFail
 		} else if f.Severity == sevWarn && result == sevPass {
 			result = sevWarn
 		}
 	}
-
-	cr := conformResult{Binary: binary, Result: result, Findings: all}
-
-	switch *format {
-	case "json":
-		enc := json.NewEncoder(stdout)
-		enc.SetIndent("", "    ")
-		return enc.Encode(cr)
-	case "text":
-		printConformText(stdout, cr)
-	default:
-		return fmt.Errorf("relay conform: unknown format %q", *format)
-	}
-
-	if result == sevFail {
-		return exitCode(1)
-	}
-	return nil
+	return conformResult{Binary: binary, Result: result, Findings: all}
 }
 
 func printConformText(w io.Writer, cr conformResult) {

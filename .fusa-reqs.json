@@ -426,6 +426,13 @@
       "text": "The system shall provide `relay trace` which (live) spawns `<binary> subscribe --format json` and captures the relay.Message NDJSON stream, or (--replay --from FILE) renders a captured file. It MUST support --format ndjson|json|text, --count N to stop after N messages, --output FILE, and --protocol P to include only messages from protocol P. Malformed message lines MUST produce an error; blank lines MUST be ignored; an unknown protocol or --replay without --from MUST exit 2.",
       "category": "functional",
       "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-062",
+      "title": "relay report command",
+      "text": "The system shall provide `relay report [--scan] [--match glob] [--strict] [--format text|json|markdown|html] [binary...]` that runs the conformance checks (REQ-RELAY-052) across every discovered implementation and produces a unified report with a per-implementation result (PASS/WARN/FAIL) and pass/warn/fail counts, plus an overall result. It MUST support text, json, markdown (GFM), and html (self-contained) output. With --scan it MUST discover implementations on PATH and skip non-conformant ones. The process MUST exit 1 if any implementation's result is FAIL, and with --strict WARN escalates to FAIL. With no candidates it MUST exit 2.",
+      "category": "functional",
+      "criticality": "medium"
     }
   ]
 }

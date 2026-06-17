@@ -955,6 +955,17 @@ includes only messages from protocol `P`; `--count N` stops after N messages;
 message per line, streamed), `json` (a single array), `text` (a human-readable
 summary). Exit: `0` clean, `1` error, `2` invalid args.
 
+#### `report [--scan] [--match glob] [--strict] [--format text|json|markdown|html] [binary...]`
+
+Runs the conformance checks (same as `conform`) across every discovered
+implementation and produces a unified report: a per-implementation result
+(PASS/WARN/FAIL) with pass/warn/fail counts plus an overall result. `--scan`
+discovers implementations on `PATH` (skipping non-conformant ones); explicit
+binaries are reported as given. Formats: `text`, `json`, `markdown` (GFM table
+for PRs/wikis), `html` (self-contained dashboard). Exit: `0` if no
+implementation FAILs (`--strict` escalates WARN to FAIL), `1` otherwise, `2`
+with no candidates.
+
 ### 11.3 Exit codes
 
 | Code | Meaning |

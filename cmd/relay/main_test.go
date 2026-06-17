@@ -130,6 +130,27 @@ func TestRunVersion(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-044
+func TestRunStatus(t *testing.T) {
+	var out, errOut bytes.Buffer
+	if err := run(&out, &errOut, []string{"status"}); err != nil {
+		t.Fatalf("run status: %v", err)
+	}
+	var doc struct {
+		Tool    string `json:"tool"`
+		Healthy bool   `json:"healthy"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &doc); err != nil {
+		t.Fatalf("json.Unmarshal: %v\noutput: %s", err, out.String())
+	}
+	if doc.Tool != "relay" {
+		t.Errorf("tool = %q, want relay", doc.Tool)
+	}
+	if !doc.Healthy {
+		t.Error("relay status must report healthy=true")
+	}
+}
+
 //fusa:test REQ-RELAY-029
 func TestRunCapabilities(t *testing.T) {
 	var out, errOut bytes.Buffer

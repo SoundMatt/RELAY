@@ -42,6 +42,8 @@ func run(stdout, stderr io.Writer, args []string) error {
 		return runVersion(stdout, args[1:])
 	case "capabilities":
 		return runCapabilities(stdout, args[1:])
+	case "status":
+		return runStatus(stdout, args[1:])
 	case "--help", "-h", "help":
 		printUsage(stdout)
 		return nil
@@ -58,6 +60,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "Commands:")
 	fmt.Fprintln(w, "  version       Print tool and spec version")
 	fmt.Fprintln(w, "  capabilities  Print RELAY tooling capabilities document")
+	fmt.Fprintln(w, "  status        Print RELAY tooling status document")
 }
 
 // runVersion implements `relay version [--format text|json]`.
@@ -125,6 +128,32 @@ func runCapabilities(w io.Writer, _ []string) error {
 		Interfaces:         []string{},
 		OptionalInterfaces: []string{},
 		Adapt:              false,
+	}
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "    ")
+	return enc.Encode(doc)
+}
+
+// runStatus implements `relay status`. RELAY itself is always healthy and
+// has no network connection to report (it is a spec/tooling layer).
+//
+//fusa:req REQ-RELAY-044
+func runStatus(w io.Writer, _ []string) error {
+	doc := struct {
+		Protocol  interface{} `json:"protocol"`
+		Tool      string      `json:"tool"`
+		Version   string      `json:"version"`
+		Healthy   bool        `json:"healthy"`
+		Connected bool        `json:"connected"`
+		Endpoint  string      `json:"endpoint"`
+		Details   struct{}    `json:"details"`
+	}{
+		Protocol:  nil,
+		Tool:      "relay",
+		Version:   toolVersion,
+		Healthy:   true,
+		Connected: false,
+		Endpoint:  "",
 	}
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "    ")

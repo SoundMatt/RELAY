@@ -202,6 +202,111 @@
       "text": "The relay CLI shall implement the capabilities command that prints a JSON capabilities document with kind, tool, version, spec_version, commands, transports, features, interfaces, optional_interfaces, and adapt fields.",
       "category": "functional",
       "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-030",
+      "title": "CAN canonical types",
+      "text": "The can sub-package shall define Frame, Filter, LoanedFrame, the constants CANMaxDataLen, CANFDMaxDataLen, CANMaxStdID, CANMaxExtID, and MaxDataLen(fd bool) int per spec §15.1.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-031",
+      "title": "CAN ValidateFrame",
+      "text": "The can sub-package shall implement ValidateFrame(f Frame) error that enforces all §15.1 constraints. It shall return ErrInvalidFrame (not relay.ErrPayloadTooLarge) for structural violations.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-032",
+      "title": "CAN ToMessage and FromMessage",
+      "text": "Frame.ToMessage() shall produce a relay.Message per §15.7.1. FromMessage(relay.Message) shall invert the conversion; if msg.ID is not a valid uint32 it shall return ErrInvalidFrame.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-033",
+      "title": "DDS canonical types",
+      "text": "The dds sub-package shall define GUID, Sample, QoS, ReliabilityKind, DurabilityKind, Domain, and ValidateDomain per spec §15.2. DefaultQoS() shall return a QoS with HistoryDepth=1.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-034",
+      "title": "DDS ToMessage and FromMessage",
+      "text": "Sample.ToMessage() shall produce a relay.Message per §15.7.2. FromMessage(relay.Message) shall invert the conversion, decoding WriterGUID from hex if present.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-035",
+      "title": "LIN canonical types",
+      "text": "The lin sub-package shall define Frame, Filter, ScheduleEntry, ChecksumType, and constants LINMaxDataLen, LINMaxID, LINDiagRequestID, LINDiagResponseID per spec §15.3.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-036",
+      "title": "LIN validation helpers",
+      "text": "The lin sub-package shall implement ValidateFrame, ProtectID, VerifyPID, and CalcChecksum per spec §8.3 and §15.3. ValidateFrame shall return ErrInvalidFrame for all constraint violations.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-037",
+      "title": "LIN ToMessage and FromMessage",
+      "text": "Frame.ToMessage() shall produce a relay.Message per §15.7.3. FromMessage shall parse msg.ID as decimal uint8 in 0–63; if out of range it shall return ErrInvalidFrame.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-038",
+      "title": "MQTT canonical types",
+      "text": "The mqtt sub-package shall define Message, UserProperty, QoS (AtMostOnce, AtLeastOnce, ExactlyOnce), and MatchTopic per spec §15.4. MatchTopic shall implement MQTT §4.7 wildcards; topics starting with '$' must not match wildcard subscriptions.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-039",
+      "title": "MQTT ToMessage and FromMessage",
+      "text": "Message.ToMessage() shall produce a relay.Message per §15.7.4. FromMessage shall invert the conversion, parsing mqtt.qos and mqtt.retained from Meta.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-040",
+      "title": "RCP canonical types",
+      "text": "The rcp sub-package shall define Command, Response, Status, Loan, Zone (with PascalCase String() and ZoneFromString), Priority, CommandType, ResponseStatus per spec §15.5.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-041",
+      "title": "RCP conversion functions",
+      "text": "Status.ToMessage() and Response.ToMessage() shall produce relay.Messages per §15.7.5. CommandFromMessage and StatusFromMessage shall invert the conversions.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-042",
+      "title": "SOMEIP canonical types",
+      "text": "The someip sub-package shall define Message, MessageType constants (MsgType* prefix), ReturnCode constants (Ret* prefix), type aliases, SOMEIPProtocolVersion=0x01, and Validate() per spec §15.6.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-043",
+      "title": "SOMEIP ToMessage and FromMessage",
+      "text": "Message.ToMessage() shall produce a relay.Message per §15.7.6. FromMessage shall parse msg.ID as 'svcID/methodID' decimal pair; if malformed it shall return ErrInvalidID.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-044",
+      "title": "relay status command",
+      "text": "The relay CLI shall implement the status command that prints a JSON status document with protocol, tool, version, healthy, connected, endpoint, and details fields per spec §12.3.",
+      "category": "functional",
+      "criticality": "medium"
     }
   ]
 }

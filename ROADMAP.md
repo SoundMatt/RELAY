@@ -78,26 +78,27 @@ Deliverables: `relay version`, `relay capabilities`
 
 ---
 
-### v0.3 — Canonical frame types and application interface
+### v0.3 — Canonical frame types and application interface ✦ in progress
 
-**Goal:** All six protocol canonical types are defined in the RELAY module with
-validation and envelope conversion, and `relay.Node` / `relay.Caller` are
-implemented so applications can program protocol-agnostically.
+**Goal:** All six protocol canonical types defined in RELAY sub-packages with
+validation and envelope conversion; `relay status` CLI command shipping.
 
-- `relay.Frame` (CAN), `relay.Filter` (CAN, LIN), `relay.Sample` (DDS),
-  `relay.QoS` (DDS), `relay.LINFrame`, `relay.MQTTMessage`, `relay.UserProperty`,
-  `relay.RCPCommand`, `relay.RCPResponse`, `relay.RCPStatus`, `relay.SOMEIPMessage`
-- All enum types and constants
-- `ValidateCANFrame`, `ValidateLINFrame` with full constraint enforcement (§15)
-- `ToMessage()` and `FromMessage()` for all six protocols (§15)
-- `relay.Node` interface — pub/sub protocols (§10.1)
-- `relay.Caller` interface — request/response protocols (§10.2)
-- `Adapt()` in each protocol package: `can.Adapt`, `dds.Adapt`, `lin.Adapt`,
-  `mqtt.Adapt`, `rcp.Adapt`, `someip.Adapt` (§10.3)
-- `relay.Node` and `relay.Caller` C++ abstract base classes (§18.2)
-- `relay::Node` and `relay::Caller` Rust traits (§18.3)
-- JSON schemas for all canonical types in `spec/schemas/`
-- `relay status` CLI command (§11.1)
+Types live in sub-packages (`github.com/SoundMatt/RELAY/can` etc.) so x-Net
+packages can import them without circular dependencies. `Adapt()` functions
+live in x-Net packages (tracked as issues there) because they wrap x-Net's
+Bus/Participant/etc. types which RELAY cannot import.
+
+- ✅ `github.com/SoundMatt/RELAY/can` — Frame, Filter, LoanedFrame, ValidateFrame, MaxDataLen, ToMessage/FromMessage; REQ-RELAY-030..032
+- ✅ `github.com/SoundMatt/RELAY/dds` — Sample, QoS, GUID, enums, ValidateDomain, ToMessage/FromMessage; REQ-RELAY-033..034
+- ✅ `github.com/SoundMatt/RELAY/lin` — Frame, Filter, ScheduleEntry, ValidateFrame, ProtectID, VerifyPID, CalcChecksum, ToMessage/FromMessage; REQ-RELAY-035..037
+- ✅ `github.com/SoundMatt/RELAY/mqtt` — Message, UserProperty, QoS, MatchTopic, ToMessage/FromMessage; REQ-RELAY-038..039
+- ✅ `github.com/SoundMatt/RELAY/rcp` — Command, Response, Status, Loan, Zone (PascalCase String()), Priority, CommandType, ResponseStatus, ToMessage/FromMessage; REQ-RELAY-040..041
+- ✅ `github.com/SoundMatt/RELAY/someip` — Message, MessageType (MsgType* prefix), ReturnCode (Ret* prefix), SOMEIPProtocolVersion, Validate(), ToMessage/FromMessage; REQ-RELAY-042..043
+- ✅ `relay status` CLI command; REQ-RELAY-044
+- ✅ REQ-RELAY-030 … REQ-RELAY-044 added to requirements registry
+- ⬜ `Adapt()` in each x-Net package — tracked as x-Net issues
+- ⬜ JSON schemas for canonical types in `spec/schemas/`
+- ⬜ C++ and Rust type implementations — tracked as x-Net issues
 
 Deliverables: `relay version`, `relay capabilities`, `relay status`
 

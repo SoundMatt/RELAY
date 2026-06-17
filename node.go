@@ -64,6 +64,11 @@ type SubscriberConfig struct {
 	// event group to subscribe to). Set via WithEventID; ignored by all other
 	// protocols. Zero means "not set".
 	EventID uint32
+	// TopicName carries the DDS topic name for a subscription.
+	// Required by DDS adapters (Adapt(Participant).Subscribe must know which
+	// topic to create a subscriber for). Set via WithTopic; ignored by all
+	// other protocols. Empty string means "not set".
+	TopicName string
 }
 
 // SubscriberOption configures a subscription.
@@ -94,6 +99,16 @@ func WithBackPressure(p BackPressurePolicy) SubscriberOption {
 //fusa:req REQ-RELAY-051
 func WithEventID(id uint32) SubscriberOption {
 	return func(c *SubscriberConfig) { c.EventID = id }
+}
+
+// WithTopic sets the DDS topic name for a subscription.
+// DDS adapters (Adapt(Participant).Subscribe) MUST read this option to
+// determine which topic to subscribe to. All other protocol adapters ignore it.
+// A DDS adapter MUST return ErrNotConnected if TopicName is empty.
+//
+//fusa:req REQ-RELAY-056
+func WithTopic(name string) SubscriberOption {
+	return func(c *SubscriberConfig) { c.TopicName = name }
 }
 
 // ApplySubscriberOpts applies opts in order to a zero SubscriberConfig and returns it.

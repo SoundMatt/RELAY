@@ -110,6 +110,19 @@ func TestWithEventID(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-056
+func TestWithTopic(t *testing.T) {
+	cfg := ApplySubscriberOpts([]SubscriberOption{WithTopic("sensors/temperature")})
+	if cfg.TopicName != "sensors/temperature" {
+		t.Errorf("TopicName = %q, want %q", cfg.TopicName, "sensors/temperature")
+	}
+	// Default TopicName is empty.
+	dflt := ApplySubscriberOpts(nil)
+	if dflt.TopicName != "" {
+		t.Errorf("default TopicName = %q, want empty", dflt.TopicName)
+	}
+}
+
 //fusa:test REQ-RELAY-013
 //fusa:test REQ-RELAY-014
 func TestCallerEmbeddsNode(t *testing.T) {

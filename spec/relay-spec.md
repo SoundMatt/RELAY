@@ -1087,15 +1087,24 @@ remain importable without pulling in protocol-specific dependencies.
 
 Every implementation accepting subscription options MUST export these:
 
-> **Protocol-specific routing key:** `SubscriberConfig` carries an `EventID uint32` field.
-> `WithEventID(id uint32) SubscriberOption` sets it. SOMEIP adapters (`Adapt(Service).Subscribe`)
-> MUST read `cfg.EventID` to determine which event group to subscribe to and MUST return
-> `ErrNotConnected` if `EventID` is zero. All other protocol adapters MUST ignore `EventID`.
+> **Protocol-specific routing keys:** `SubscriberConfig` carries two optional routing fields:
+>
+> - `EventID uint32` — SOMEIP adapters (`Adapt(Service).Subscribe`) MUST read `cfg.EventID`
+>   to determine which event group to subscribe to and MUST return `ErrNotConnected` if
+>   `EventID` is zero. All other protocol adapters MUST ignore `EventID`.
+>   Set via `WithEventID(id uint32) SubscriberOption`.
+>
+> - `TopicName string` — DDS adapters (`Adapt(Participant).Subscribe`) MUST read
+>   `cfg.TopicName` to determine which topic to create a subscriber for and MUST return
+>   `ErrNotConnected` if `TopicName` is empty. All other protocol adapters MUST ignore
+>   `TopicName`. Set via `WithTopic(name string) SubscriberOption`.
 
 ```go
 type SubscriberConfig struct {
     ChannelDepth int                // 0 = use default (64)
     BackPressure BackPressurePolicy // 0 = DropNewest
+    EventID      uint32             // SOMEIP event group; ignored by all other adapters
+    TopicName    string             // DDS topic name; ignored by all other adapters
 }
 
 type SubscriberOption func(*SubscriberConfig)
@@ -1106,6 +1115,14 @@ func WithChannelDepth(n int) SubscriberOption {
 
 func WithBackPressure(p BackPressurePolicy) SubscriberOption {
     return func(c *SubscriberConfig) { c.BackPressure = p }
+}
+
+func WithEventID(id uint32) SubscriberOption {
+    return func(c *SubscriberConfig) { c.EventID = id }
+}
+
+func WithTopic(name string) SubscriberOption {
+    return func(c *SubscriberConfig) { c.TopicName = name }
 }
 
 func ApplySubscriberOpts(opts []SubscriberOption) SubscriberConfig {

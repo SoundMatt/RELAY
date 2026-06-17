@@ -1,0 +1,37 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/rcp-command.json",
+    "title": "rcp.Command",
+    "description": "RCP canonical command type (spec §15.5).",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Command sequence identifier."
+        },
+        "zone": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5,
+            "description": "Target zone: 0=Unknown, 1=FrontLeft, 2=FrontRight, 3=RearLeft, 4=RearRight, 5=Central."
+        },
+        "type": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "CommandType integer value (CmdNoop=0, CmdSeat=1, CmdMirror=2, CmdWindow=3, CmdClimate=4, CmdLight=5, CmdWake=6)."
+        },
+        "priority": {
+            "type": "integer",
+            "enum": [0, 1, 2],
+            "description": "0=Normal, 1=High, 2=Critical."
+        },
+        "payload": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "description": "Command-specific payload bytes, base64-encoded. Omitted from JSON when empty."
+        }
+    },
+    "required": ["id", "zone", "type", "priority"],
+    "additionalProperties": false
+}

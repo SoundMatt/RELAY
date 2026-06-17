@@ -7,16 +7,24 @@ linters:
     - govet
     - staticcheck
     - unused
-    - gosimple
     - ineffassign
     - revive
-    - gofmt
+  settings:
+    revive:
+      rules:
+        - name: exported
+          severity: warning
+    errcheck:
+      # Writes to CLI stdout/stderr: the returned error is conventionally
+      # unactionable (broken pipe aside) and checking each call adds only noise.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
 
-linters-settings:
-  revive:
-    rules:
-      - name: exported
-        severity: warning
+formatters:
+  enable:
+    - gofmt
 
 issues:
   max-issues-per-linter: 0

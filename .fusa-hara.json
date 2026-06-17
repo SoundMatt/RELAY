@@ -1,0 +1,119 @@
+{
+  "project": "RELAY",
+  "standard": "ISO 26262",
+  "createdAt": "2026-06-17T00:00:00Z",
+  "operationalSituations": [
+    {
+      "id": "OS-001",
+      "description": "Developer imports RELAY sub-packages (can, lin, rcp, …) to build x-Net adapters or relay.Node wrappers — canonical types and validators used in production code paths"
+    },
+    {
+      "id": "OS-002",
+      "description": "CI pipeline runs relay conform as a release gate — the binary's capabilities document and sentinel errors are verified against the spec before the x-Net release is tagged"
+    },
+    {
+      "id": "OS-003",
+      "description": "Auditor uses the RELAY spec (spec/relay-spec.md) and conformance report as the authoritative reference when certifying an x-Net implementation for use in a safety-critical vehicle system"
+    }
+  ],
+  "hazards": [
+    {
+      "id": "H-001",
+      "description": "ValidateFrame accepts an invalid frame — a structurally invalid CAN or LIN frame passes validation and reaches the bus",
+      "source": "Missing or incorrect constraint check in ValidateFrame (e.g. RTR+FD, BRS without FD, ID out of range, data length exceeded)",
+      "situations": ["OS-001"],
+      "risk": { "severity": "S3", "exposure": "E3", "controllability": "C2", "asil": "ASIL-C" },
+      "safetyGoals": ["SG-001"]
+    },
+    {
+      "id": "H-002",
+      "description": "ToMessage / FromMessage loses mandatory fields — relay.Node routes a message missing a protocol-essential field, causing the receiving node to act on incomplete data",
+      "source": "Missing field copy, off-by-one in Meta map, or incorrect strconv conversion",
+      "situations": ["OS-001"],
+      "risk": { "severity": "S2", "exposure": "E3", "controllability": "C2", "asil": "ASIL-B" },
+      "safetyGoals": ["SG-002"]
+    },
+    {
+      "id": "H-003",
+      "description": "Error sentinels not distinct — errors.Is(err, relay.ErrClosed) returns true for a wrong sentinel (e.g. ErrNotConnected), causing an application to misdiagnose a connection failure",
+      "source": "Sentinel values accidentally equal, or incorrect %w wrapping in protocol-specific errors",
+      "situations": ["OS-001"],
+      "risk": { "severity": "S2", "exposure": "E3", "controllability": "C2", "asil": "ASIL-B" },
+      "safetyGoals": ["SG-003"]
+    },
+    {
+      "id": "H-004",
+      "description": "MatchTopic wildcard error — a subscription receives messages it should not (false positive) or misses messages it should receive (false negative)",
+      "source": "Incorrect MQTT §4.7 wildcard implementation, '$' prefix exemption missing, or '#' parent-level match wrong",
+      "situations": ["OS-001"],
+      "risk": { "severity": "S2", "exposure": "E3", "controllability": "C2", "asil": "ASIL-B" },
+      "safetyGoals": ["SG-004"]
+    },
+    {
+      "id": "H-005",
+      "description": "Spec defect — RELAY spec §15 or §8 contains an incorrect field mapping or constraint, causing all conformant x-Net implementations to implement the same wrong behaviour",
+      "source": "Editorial error in spec or incorrect derivation from protocol standards",
+      "situations": ["OS-002", "OS-003"],
+      "risk": { "severity": "S2", "exposure": "E4", "controllability": "C2", "asil": "ASIL-C" },
+      "safetyGoals": ["SG-005"]
+    },
+    {
+      "id": "H-006",
+      "description": "Conformance false positive — relay conform reports PASS for an x-Net implementation that violates a mandatory requirement, allowing a non-conformant implementation to be released",
+      "source": "Incomplete conformance checks, schema mismatch not caught, or exit-code logic error in relay conform",
+      "situations": ["OS-002", "OS-003"],
+      "risk": { "severity": "S2", "exposure": "E3", "controllability": "C2", "asil": "ASIL-B" },
+      "safetyGoals": ["SG-006"]
+    }
+  ],
+  "safetyGoals": [
+    {
+      "id": "SG-001",
+      "description": "RELAY shall implement all §15.1 and §15.3 ValidateFrame constraints such that every structural violation results in ErrInvalidFrame and never passes validation",
+      "hazards": ["H-001"],
+      "asil": "ASIL-C",
+      "safeState": "ErrInvalidFrame returned; frame not transmitted",
+      "fssrRef": "REQ-RELAY-031 REQ-RELAY-036"
+    },
+    {
+      "id": "SG-002",
+      "description": "RELAY shall implement ToMessage / FromMessage as lossless round-trips for all mandatory fields specified in §15.7",
+      "hazards": ["H-002"],
+      "asil": "ASIL-B",
+      "safeState": "Field value preserved exactly; routing carries correct data",
+      "fssrRef": "REQ-RELAY-032 REQ-RELAY-034 REQ-RELAY-037 REQ-RELAY-039 REQ-RELAY-041 REQ-RELAY-043"
+    },
+    {
+      "id": "SG-003",
+      "description": "RELAY shall define the four error sentinels as mutually distinct non-nil errors such that errors.Is returns false for every cross-sentinel comparison",
+      "hazards": ["H-003"],
+      "asil": "ASIL-B",
+      "safeState": "Correct sentinel detected; application takes correct recovery action",
+      "fssrRef": "REQ-RELAY-012"
+    },
+    {
+      "id": "SG-004",
+      "description": "RELAY shall implement MatchTopic to exactly conform to MQTT §4.7 wildcard semantics including '$' prefix exemption and '#' parent-level match",
+      "hazards": ["H-004"],
+      "asil": "ASIL-B",
+      "safeState": "Only intended messages reach subscribers",
+      "fssrRef": "REQ-RELAY-038"
+    },
+    {
+      "id": "SG-005",
+      "description": "The RELAY spec shall be version-controlled, reviewed before each release, and any correction to §15 or §8 shall require a MINOR version increment and CHANGELOG entry",
+      "hazards": ["H-005"],
+      "asil": "ASIL-C",
+      "safeState": "Spec defect found before x-Net implementations adopt the incorrect version",
+      "fssrRef": "REQ-RELAY-020"
+    },
+    {
+      "id": "SG-006",
+      "description": "relay conform shall exit non-zero whenever any mandatory conformance requirement fails; requirements 1–9 and 12 shall be machine-checked (§17)",
+      "hazards": ["H-006"],
+      "asil": "ASIL-B",
+      "safeState": "Non-conformant implementation not released; CI gate blocks tag",
+      "fssrRef": "REQ-RELAY-029"
+    }
+  ]
+}

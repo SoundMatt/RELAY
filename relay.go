@@ -17,6 +17,8 @@ import (
 //fusa:req REQ-RELAY-001
 type Protocol int
 
+// Protocol constants, one per supported network protocol (§3).
+//
 //fusa:req REQ-RELAY-002
 const (
 	CAN    Protocol = 1

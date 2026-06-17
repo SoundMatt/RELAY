@@ -1,0 +1,38 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/can-frame.json",
+    "title": "can.Frame",
+    "description": "CAN / CAN-FD canonical frame type (spec §15.1).",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 536870911,
+            "description": "CAN arbitration ID. Standard IDs are ≤0x7FF; extended IDs are ≤0x1FFFFFFF."
+        },
+        "ext": {
+            "type": "boolean",
+            "description": "True for 29-bit extended ID format. Omitted from JSON when false."
+        },
+        "rtr": {
+            "type": "boolean",
+            "description": "Remote transmission request. Must be false when fd is true. Omitted from JSON when false."
+        },
+        "fd": {
+            "type": "boolean",
+            "description": "True for CAN-FD frames (supports up to 64 data bytes). Omitted from JSON when false."
+        },
+        "brs": {
+            "type": "boolean",
+            "description": "Bit-rate switch (CAN-FD only). Must be false when fd is false. Omitted from JSON when false."
+        },
+        "data": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "description": "Frame data bytes, base64-encoded. Max 8 bytes for classic CAN; max 64 bytes for CAN-FD."
+        }
+    },
+    "required": ["id", "data"],
+    "additionalProperties": false
+}

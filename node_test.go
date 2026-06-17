@@ -15,10 +15,10 @@ var _ Caller = (*callerStub)(nil)
 
 type nodeStub struct{}
 
-func (nodeStub) Protocol() Protocol                                   { return CAN }
-func (nodeStub) Send(_ context.Context, _ Message) error              { return nil }
+func (nodeStub) Protocol() Protocol                                    { return CAN }
+func (nodeStub) Send(_ context.Context, _ Message) error               { return nil }
 func (nodeStub) Subscribe(...SubscriberOption) (<-chan Message, error) { return nil, nil }
-func (nodeStub) Close() error                                         { return nil }
+func (nodeStub) Close() error                                          { return nil }
 
 type callerStub struct{ nodeStub }
 
@@ -94,6 +94,32 @@ func TestApplyMultipleOpts(t *testing.T) {
 	}
 	if cfg.BackPressure != DropOldest {
 		t.Errorf("BackPressure = %d, want DropOldest", cfg.BackPressure)
+	}
+}
+
+//fusa:test REQ-RELAY-051
+func TestWithEventID(t *testing.T) {
+	cfg := ApplySubscriberOpts([]SubscriberOption{WithEventID(42)})
+	if cfg.EventID != 42 {
+		t.Errorf("EventID = %d, want 42", cfg.EventID)
+	}
+	// Default EventID is zero.
+	dflt := ApplySubscriberOpts(nil)
+	if dflt.EventID != 0 {
+		t.Errorf("default EventID = %d, want 0", dflt.EventID)
+	}
+}
+
+//fusa:test REQ-RELAY-056
+func TestWithTopic(t *testing.T) {
+	cfg := ApplySubscriberOpts([]SubscriberOption{WithTopic("sensors/temperature")})
+	if cfg.TopicName != "sensors/temperature" {
+		t.Errorf("TopicName = %q, want %q", cfg.TopicName, "sensors/temperature")
+	}
+	// Default TopicName is empty.
+	dflt := ApplySubscriberOpts(nil)
+	if dflt.TopicName != "" {
+		t.Errorf("default TopicName = %q, want empty", dflt.TopicName)
 	}
 }
 

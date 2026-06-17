@@ -1,0 +1,26 @@
+{
+    "name": "rcp-status",
+    "description": "RCP status for FrontLeft zone, healthy",
+    "type": "rcp.Status",
+    "value": {
+        "zone": 1,
+        "seq": 3,
+        "healthy": true,
+        "payload": "AQ=="
+    },
+    "message": {
+        "protocol": 5,
+        "version": {
+            "major": 0,
+            "minor": 0,
+            "patch": 0
+        },
+        "id": "FrontLeft",
+        "payload": "AQ==",
+        "timestamp": "0001-01-01T00:00:00Z",
+        "seq": 3,
+        "meta": {
+            "rcp.healthy": "true"
+        }
+    }
+}

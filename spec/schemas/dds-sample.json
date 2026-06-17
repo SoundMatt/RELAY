@@ -1,0 +1,37 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/dds-sample.json",
+    "title": "dds.Sample",
+    "description": "DDS canonical sample type (spec §15.2).",
+    "type": "object",
+    "properties": {
+        "topic": {
+            "type": "string",
+            "description": "DDS topic name."
+        },
+        "payload": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "description": "Serialised sample payload bytes, base64-encoded."
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Source timestamp (RFC 3339)."
+        },
+        "seq": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Sample sequence number."
+        },
+        "writer_guid": {
+            "type": "array",
+            "items": {"type": "integer", "minimum": 0, "maximum": 255},
+            "minItems": 16,
+            "maxItems": 16,
+            "description": "GUID of the originating DataWriter, as 16 unsigned bytes."
+        }
+    },
+    "required": ["topic", "payload", "timestamp", "seq", "writer_guid"],
+    "additionalProperties": false
+}

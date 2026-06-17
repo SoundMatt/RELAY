@@ -1,0 +1,58 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/cli-capabilities.json",
+    "title": "RELAY capabilities document",
+    "description": "JSON output of `<binary> capabilities` (spec §12.2).",
+    "type": "object",
+    "properties": {
+        "kind": {
+            "type": "string",
+            "const": "capabilities",
+            "description": "Document type discriminator. Must be \"capabilities\"."
+        },
+        "tool": {
+            "type": "string",
+            "description": "Binary name."
+        },
+        "version": {
+            "type": "string",
+            "description": "Semantic version of the binary."
+        },
+        "spec_version": {
+            "type": "string",
+            "description": "RELAY spec version this binary targets."
+        },
+        "commands": {
+            "type": "array",
+            "items": {"type": "string"},
+            "contains": {"const": "version"},
+            "description": "All subcommands implemented. Must include \"version\", \"capabilities\", \"status\"."
+        },
+        "transports": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Transport names supported (e.g. [\"socketcan\", \"peak\"])."
+        },
+        "features": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Optional feature flags (e.g. [\"fd\", \"loopback\"])."
+        },
+        "interfaces": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "relay interfaces implemented (e.g. [\"Node\", \"Caller\"])."
+        },
+        "optional_interfaces": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Optional relay interfaces implemented (e.g. [\"HealthProvider\", \"Drainer\"])."
+        },
+        "adapt": {
+            "type": "boolean",
+            "description": "True if the binary exports an Adapt() function (spec §10.3)."
+        }
+    },
+    "required": ["kind", "tool", "version", "spec_version", "commands", "transports", "features", "interfaces", "optional_interfaces", "adapt"],
+    "additionalProperties": false
+}

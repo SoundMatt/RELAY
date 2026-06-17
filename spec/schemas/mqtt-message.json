@@ -1,0 +1,66 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/mqtt-message.json",
+    "title": "mqtt.Message",
+    "description": "MQTT canonical message type (spec §15.4).",
+    "type": "object",
+    "properties": {
+        "topic": {
+            "type": "string",
+            "description": "MQTT topic name or filter. May contain + and # wildcards."
+        },
+        "payload": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "description": "MQTT message payload bytes, base64-encoded."
+        },
+        "qos": {
+            "type": "integer",
+            "enum": [0, 1, 2],
+            "description": "MQTT QoS level: 0 = AtMostOnce, 1 = AtLeastOnce, 2 = ExactlyOnce."
+        },
+        "retained": {
+            "type": "boolean",
+            "description": "Retain flag. Omitted from JSON when false."
+        },
+        "packet_id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535,
+            "description": "MQTT packet identifier. Omitted from JSON when zero."
+        },
+        "response_topic": {
+            "type": "string",
+            "description": "MQTT 5.0 response topic. Omitted from JSON when empty."
+        },
+        "correlation_data": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "description": "MQTT 5.0 correlation data, base64-encoded. Omitted from JSON when empty."
+        },
+        "user_properties": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string"},
+                    "value": {"type": "string"}
+                },
+                "required": ["key", "value"],
+                "additionalProperties": false
+            },
+            "description": "MQTT 5.0 user properties (key-value pairs). Omitted from JSON when empty."
+        },
+        "content_type": {
+            "type": "string",
+            "description": "MQTT 5.0 content type. Omitted from JSON when empty."
+        },
+        "expiry_interval": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "MQTT 5.0 message expiry interval in seconds. Omitted from JSON when zero."
+        }
+    },
+    "required": ["topic", "payload", "qos"],
+    "additionalProperties": false
+}

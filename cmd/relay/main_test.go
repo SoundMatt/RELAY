@@ -129,3 +129,61 @@ func TestRunVersion(t *testing.T) {
 		t.Error("run version output must contain \"relay\"")
 	}
 }
+
+//fusa:test REQ-RELAY-044
+func TestRunStatus(t *testing.T) {
+	var out, errOut bytes.Buffer
+	if err := run(&out, &errOut, []string{"status"}); err != nil {
+		t.Fatalf("run status: %v", err)
+	}
+	var doc struct {
+		Tool    string `json:"tool"`
+		Healthy bool   `json:"healthy"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &doc); err != nil {
+		t.Fatalf("json.Unmarshal: %v\noutput: %s", err, out.String())
+	}
+	if doc.Tool != "relay" {
+		t.Errorf("tool = %q, want relay", doc.Tool)
+	}
+	if !doc.Healthy {
+		t.Error("relay status must report healthy=true")
+	}
+}
+
+//fusa:test REQ-RELAY-029
+func TestRunCapabilities(t *testing.T) {
+	var out, errOut bytes.Buffer
+	if err := run(&out, &errOut, []string{"capabilities"}); err != nil {
+		t.Fatalf("run capabilities: %v", err)
+	}
+	var doc struct {
+		Kind        string   `json:"kind"`
+		Tool        string   `json:"tool"`
+		SpecVersion string   `json:"spec_version"`
+		Commands    []string `json:"commands"`
+		Adapt       bool     `json:"adapt"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &doc); err != nil {
+		t.Fatalf("json.Unmarshal: %v\noutput: %s", err, out.String())
+	}
+	if doc.Kind != "capabilities" {
+		t.Errorf("kind = %q, want %q", doc.Kind, "capabilities")
+	}
+	if doc.Tool != "relay" {
+		t.Errorf("tool = %q, want %q", doc.Tool, "relay")
+	}
+	if doc.SpecVersion != relay.SpecVersion {
+		t.Errorf("spec_version = %q, want %q", doc.SpecVersion, relay.SpecVersion)
+	}
+	found := false
+	for _, cmd := range doc.Commands {
+		if cmd == "capabilities" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("commands must include %q, got %v", "capabilities", doc.Commands)
+	}
+}

@@ -1,0 +1,33 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/lin-frame.json",
+    "title": "lin.Frame",
+    "description": "LIN canonical frame type (spec §15.3).",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 63,
+            "description": "LIN frame ID (6 bits, 0x00–0x3F)."
+        },
+        "data": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "description": "Frame data bytes, base64-encoded. 1–8 bytes."
+        },
+        "checksum": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
+            "description": "Frame checksum byte (computed over the protected ID and data per checksum_type)."
+        },
+        "checksum_type": {
+            "type": "integer",
+            "enum": [0, 1],
+            "description": "0 = Classic checksum; 1 = Enhanced checksum. Diagnostic frames (0x3C, 0x3D) must use Classic (0)."
+        }
+    },
+    "required": ["id", "data", "checksum", "checksum_type"],
+    "additionalProperties": false
+}

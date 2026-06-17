@@ -57,45 +57,48 @@ Deliverables: `relay version`
 
 ---
 
-### v0.2 — Interface contracts
+### v0.2 — Interface contracts ✦ in progress
 
-**Goal:** Every protocol interface from §7 is defined as a Go interface in the
-RELAY module. Implementations can declare conformance by satisfying the interface.
+**Goal:** Optional interfaces defined in RELAY; x-Net compile-time assertions
+filed as issues; `relay capabilities` CLI command shipping.
 
-- `relay.Bus` (CAN), `relay.MasterBus` (LIN)
-- `relay.Participant`, `relay.Publisher`, `relay.Subscriber` (DDS)
-- `relay.Client`, `relay.Subscription` (MQTT, SOMEIP)
-- `relay.Controller`, `relay.Registry`, `relay.LoaningController` (RCP)
-- `relay.Service`, `relay.Server` (SOMEIP)
-- Optional interfaces: `relay.LoaningPublisher`, `relay.HealthProvider`,
-  `relay.MetricsProvider`, `relay.Drainer`
-- Interface compile-time assertions for all existing Go protocol packages
-- `relay capabilities` CLI command (§9.2)
+Per §13.6, the protocol-specific interface types (`Bus`, `Participant`, etc.)
+live in each x-Net package — not in RELAY — to avoid circular imports. RELAY
+defines the interfaces whose types are entirely within RELAY or stdlib.
+
+- ✅ Optional interfaces: `relay.HealthProvider`, `relay.MetricsProvider`, `relay.Drainer`
+- ✅ Supporting types: `relay.Health`, `relay.HealthStatus`, `relay.Metrics`
+- ✅ `relay capabilities` CLI command
+- ✅ REQ-RELAY-023 … REQ-RELAY-029 added to requirements registry
+- ✅ SpecVersion bumped to `"0.2"`; spec issues #2–#9 fixed
+- ⬜ Protocol-specific interface compile-time assertions — tracked as x-Net issues
+  (go-CAN#15, go-DDS#54, go-LIN#17, go-mqtt#21, go-RCP#51, go-SOMEIP#31, cpp-RCP#5)
 
 Deliverables: `relay version`, `relay capabilities`
 
 ---
 
-### v0.3 — Canonical frame types and application interface
+### v0.3 — Canonical frame types and application interface ✦ in progress
 
-**Goal:** All six protocol canonical types are defined in the RELAY module with
-validation and envelope conversion, and `relay.Node` / `relay.Caller` are
-implemented so applications can program protocol-agnostically.
+**Goal:** All six protocol canonical types defined in RELAY sub-packages with
+validation and envelope conversion; `relay status` CLI command shipping.
 
-- `relay.Frame` (CAN), `relay.Filter` (CAN, LIN), `relay.Sample` (DDS),
-  `relay.QoS` (DDS), `relay.LINFrame`, `relay.MQTTMessage`, `relay.UserProperty`,
-  `relay.RCPCommand`, `relay.RCPResponse`, `relay.RCPStatus`, `relay.SOMEIPMessage`
-- All enum types and constants
-- `ValidateCANFrame`, `ValidateLINFrame` with full constraint enforcement (§15)
-- `ToMessage()` and `FromMessage()` for all six protocols (§15)
-- `relay.Node` interface — pub/sub protocols (§10.1)
-- `relay.Caller` interface — request/response protocols (§10.2)
-- `Adapt()` in each protocol package: `can.Adapt`, `dds.Adapt`, `lin.Adapt`,
-  `mqtt.Adapt`, `rcp.Adapt`, `someip.Adapt` (§10.3)
-- `relay.Node` and `relay.Caller` C++ abstract base classes (§18.2)
-- `relay::Node` and `relay::Caller` Rust traits (§18.3)
-- JSON schemas for all canonical types in `spec/schemas/`
-- `relay status` CLI command (§11.1)
+Types live in sub-packages (`github.com/SoundMatt/RELAY/can` etc.) so x-Net
+packages can import them without circular dependencies. `Adapt()` functions
+live in x-Net packages (tracked as issues there) because they wrap x-Net's
+Bus/Participant/etc. types which RELAY cannot import.
+
+- ✅ `github.com/SoundMatt/RELAY/can` — Frame, Filter, LoanedFrame, ValidateFrame, MaxDataLen, ToMessage/FromMessage; REQ-RELAY-030..032
+- ✅ `github.com/SoundMatt/RELAY/dds` — Sample, QoS, GUID, enums, ValidateDomain, ToMessage/FromMessage; REQ-RELAY-033..034
+- ✅ `github.com/SoundMatt/RELAY/lin` — Frame, Filter, ScheduleEntry, ValidateFrame, ProtectID, VerifyPID, CalcChecksum, ToMessage/FromMessage; REQ-RELAY-035..037
+- ✅ `github.com/SoundMatt/RELAY/mqtt` — Message, UserProperty, QoS, MatchTopic, ToMessage/FromMessage; REQ-RELAY-038..039
+- ✅ `github.com/SoundMatt/RELAY/rcp` — Command, Response, Status, Loan, Zone (PascalCase String()), Priority, CommandType, ResponseStatus, ToMessage/FromMessage; REQ-RELAY-040..041
+- ✅ `github.com/SoundMatt/RELAY/someip` — Message, MessageType (MsgType* prefix), ReturnCode (Ret* prefix), SOMEIPProtocolVersion, Validate(), ToMessage/FromMessage; REQ-RELAY-042..043
+- ✅ `relay status` CLI command; REQ-RELAY-044
+- ✅ REQ-RELAY-030 … REQ-RELAY-044 added to requirements registry
+- ⬜ `Adapt()` in each x-Net package — tracked as x-Net issues
+- ✅ JSON schemas for canonical types in `spec/schemas/` — delivered in v0.6
+- ⬜ C++ and Rust type implementations — tracked as x-Net issues
 
 Deliverables: `relay version`, `relay capabilities`, `relay status`
 
@@ -103,16 +106,16 @@ Deliverables: `relay version`, `relay capabilities`, `relay status`
 
 ## Phase 2 — Safety Groundwork
 
-### v0.4 — Requirements and HARA
+### v0.4 — Requirements and HARA ✦ in progress
 
 **Goal:** RELAY is developed as an ASIL-C tool. Full requirements traceability
 and hazard analysis in place before conformance tooling ships.
 
-- Expand `.fusa-reqs.json` to cover all §7 and §12 requirements
-- HARA (`.fusa-hara.json`) — tool-failure hazards and safety goals
-- `gofusa trace --strict` gates CI — all requirements traced and tested
-- FMEA (`.fusa-fmea.json`)
-- Tool Safety Manual (`docs/tool-safety-manual.md`)
+- ✅ `.fusa-hara.json` — 6 hazards (H-001..H-006), 6 safety goals (SG-001..SG-006), ASIL-C worst case
+- ✅ `docs/tool-safety-manual.md` — 7-section tool safety manual with AoU, hazard table, evidence index
+- ✅ REQ-RELAY-045..050 — §7 constructor contract and §12 schema requirements added
+- ⬜ `gofusa trace --strict` CI gate — deferred to v0.5 once relay conform is implemented and 100% traceability is verified
+- ⬜ `.fusa-fmea.json` — go-FuSa FMEA schema not yet published; deferred to v0.9
 
 ---
 
@@ -122,17 +125,20 @@ and hazard analysis in place before conformance tooling ships.
 
 **Goal:** Any RELAY-conformant binary can be verified without source access.
 
-- `relay conform <binary>` — invokes `version --format json`, `capabilities`,
-  `status --format json`; validates schemas against §9
-- Synthesises protocol-specific frames, sends them via `send`, reads them
-  back via `subscribe` using known endpoints where available
-- Validates sentinel errors via intentional misuse (`send` after `close`,
-  invalid frame IDs, oversized payloads)
-- Conformance report: text / JSON / HTML
-- Exit 0 on PASS, exit 1 on any FAIL
-- `relay conform --strict` — also fails on WARN
+- ✅ `relay conform <binary>` — invokes `version --format json`, `capabilities`,
+  `status --format json`; validates each document against §12 schemas
+- ✅ Validates sentinel errors via golden error vectors (`spec/vectors/errors/`)
+  exercised by `TestErrorVectors` (invalid frame IDs, RTR+FD, wrong protocol
+  version, domain out of range)
+- ✅ Conformance report: text and JSON (`--format`)
+- ✅ Exit 0 on PASS/WARN, exit 1 on any FAIL
+- ✅ `relay conform --strict` — also fails on WARN
+- ✅ REQ-RELAY-052 … REQ-RELAY-055 added to requirements registry
+- ⬜ HTML report renderer — deferred to v0.7 alongside `relay trace` renderers
+- ⬜ Live send/subscribe round-trip via known endpoints — deferred (needs
+  running x-Net binaries; covered by golden vectors in the interim)
 
-Deliverables: `relay conform`
+Deliverables: `relay conform` ✅
 
 ---
 
@@ -141,12 +147,22 @@ Deliverables: `relay conform`
 **Goal:** Machine-readable spec artifacts that conformance tooling and test
 suites can consume directly.
 
-- JSON Schema (draft 2020-12) for every canonical type in §12
-- JSON Schema for capability (§9.2) and version (§9.1) documents
-- Golden reference vectors — one per canonical type, one per error condition,
-  with pre-computed `ToMessage()` outputs
-- `relay conform` updated to validate against schemas
-- `spec/schemas/` and `spec/vectors/` committed and CI-tested
+- ✅ JSON Schema (draft 2020-12) for every canonical type (§15): can-frame,
+  dds-sample, lin-frame, mqtt-message, rcp-command, rcp-status, someip-message,
+  relay-message
+- ✅ JSON Schema for version (§12.1), capabilities (§12.2), status (§12.3), and
+  conform-result CLI documents
+- ✅ Golden reference vectors — one per canonical type with deterministic
+  `ToMessage()` output, plus error-condition vectors under `spec/vectors/errors/`
+- ✅ Schemas embedded in the binary (`relay.Schema`) and `relay conform`
+  validates live output against them via a dependency-free draft-2020-12 subset
+  validator
+- ✅ `spec/schemas/` and `spec/vectors/` committed and CI-tested
+  (`TestGoldenVectorsRoundTrip`, `TestErrorVectors`, `TestGoldenVectorsConformToSchemas`)
+- ✅ Fixed SOME/IP `ToMessage`/`FromMessage` lossiness (client_id, session_id,
+  message_type now preserved); REQ-RELAY-056 … REQ-RELAY-058 added
+
+Deliverables: `spec/schemas/`, `spec/vectors/` ✅
 
 ---
 

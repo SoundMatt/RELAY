@@ -1,0 +1,50 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/relay-message.json",
+    "title": "relay.Message",
+    "description": "The universal message type exchanged between all RELAY protocol adapters (spec §4).",
+    "type": "object",
+    "properties": {
+        "protocol": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "relay.Protocol integer constant identifying the originating protocol (spec §3)."
+        },
+        "version": {
+            "type": "object",
+            "properties": {
+                "major": {"type": "integer", "minimum": 0},
+                "minor": {"type": "integer", "minimum": 0},
+                "patch": {"type": "integer", "minimum": 0}
+            },
+            "required": ["major", "minor", "patch"],
+            "description": "Protocol data model version."
+        },
+        "id": {
+            "type": "string",
+            "description": "Routing key. Semantics are protocol-specific (topic, CAN ID as decimal string, DDS topic name, etc.) (spec §4.2)."
+        },
+        "payload": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "description": "Protocol payload bytes, base64-encoded."
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Message creation timestamp (RFC 3339)."
+        },
+        "seq": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Monotonically increasing sequence number. Omitted from JSON when zero (spec §4)."
+        },
+        "meta": {
+            "type": "object",
+            "additionalProperties": {"type": "string"},
+            "description": "Protocol-specific metadata key/value pairs (spec §4.3). Omitted from JSON when empty."
+        }
+    },
+    "required": ["protocol", "version", "id", "payload", "timestamp"],
+    "additionalProperties": false
+}

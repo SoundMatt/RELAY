@@ -1,0 +1,8 @@
+{
+    "name": "dds-domain-out-of-range",
+    "description": "DDS domain ID must be in 0–232 inclusive; 233 is out of range",
+    "type": "dds.Domain",
+    "kind": "error",
+    "value": 233,
+    "error": "ErrDomainOutOfRange"
+}

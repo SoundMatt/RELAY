@@ -20,21 +20,30 @@ import (
 //fusa:req REQ-RELAY-042
 const SOMEIPProtocolVersion uint8 = 0x01
 
-// Type aliases for SOME/IP identifiers (§15.6).
-type (
-	ServiceID  = uint16
-	MethodID   = uint16
-	ClientID   = uint16
-	SessionID  = uint16
-	InstanceID = uint16
-	EventID    = uint16
-)
+// ServiceID is a SOME/IP service identifier (§15.6).
+type ServiceID = uint16
+
+// MethodID is a SOME/IP method identifier (§15.6).
+type MethodID = uint16
+
+// ClientID is a SOME/IP client identifier (§15.6).
+type ClientID = uint16
+
+// SessionID is a SOME/IP session identifier (§15.6).
+type SessionID = uint16
+
+// InstanceID is a SOME/IP service-instance identifier (§15.6).
+type InstanceID = uint16
+
+// EventID is a SOME/IP event identifier (§15.6).
+type EventID = uint16
 
 // MessageType is the SOME/IP message type byte.
 //
 //fusa:req REQ-RELAY-042
 type MessageType uint8
 
+// MessageType values (§15.6).
 const (
 	MsgTypeRequest           MessageType = 0x00
 	MsgTypeRequestNoReturn   MessageType = 0x01
@@ -80,6 +89,7 @@ func (m MessageType) String() string {
 //fusa:req REQ-RELAY-042
 type ReturnCode uint8
 
+// ReturnCode values (§15.6).
 const (
 	RetOK                    ReturnCode = 0x00
 	RetNotOK                 ReturnCode = 0x01

@@ -20,6 +20,7 @@ import (
 //fusa:req REQ-RELAY-040
 type Zone uint8
 
+// Zone values.
 const (
 	ZoneUnknown    Zone = 0
 	ZoneFrontLeft  Zone = 1
@@ -70,6 +71,7 @@ func ZoneFromString(s string) Zone {
 //fusa:req REQ-RELAY-040
 type Priority uint8
 
+// Priority values.
 const (
 	PriorityNormal   Priority = 0
 	PriorityHigh     Priority = 1
@@ -103,6 +105,7 @@ func priorityFromString(s string) Priority {
 //fusa:req REQ-RELAY-040
 type CommandType uint16
 
+// CommandType values.
 const (
 	CmdNoop     CommandType = 0
 	CmdSet      CommandType = 1
@@ -156,6 +159,7 @@ func cmdTypeFromString(s string) CommandType {
 //fusa:req REQ-RELAY-040
 type ResponseStatus uint8
 
+// ResponseStatus values.
 const (
 	StatusOK      ResponseStatus = 0
 	StatusError   ResponseStatus = 1
@@ -259,7 +263,7 @@ func CommandFromMessage(msg relay.Message) (Command, error) {
 	}, nil
 }
 
-// ResponseToMessage converts a Response to a relay.Message per §15.7.5.
+// ToMessage converts a Response to a relay.Message per §15.7.5.
 //
 //fusa:req REQ-RELAY-041
 func (r Response) ToMessage() relay.Message {

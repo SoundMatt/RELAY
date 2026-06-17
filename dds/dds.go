@@ -22,6 +22,7 @@ type GUID [16]byte
 // ReliabilityKind controls DDS reliability QoS.
 type ReliabilityKind int
 
+// ReliabilityKind values.
 const (
 	BestEffort ReliabilityKind = 0
 	Reliable   ReliabilityKind = 1
@@ -30,6 +31,7 @@ const (
 // DurabilityKind controls DDS durability QoS.
 type DurabilityKind int
 
+// DurabilityKind values.
 const (
 	Volatile       DurabilityKind = 0
 	TransientLocal DurabilityKind = 1

@@ -47,6 +47,7 @@ type Caller interface {
 //fusa:req REQ-RELAY-015
 type BackPressurePolicy int
 
+// BackPressurePolicy values.
 const (
 	DropNewest BackPressurePolicy = iota // drop the arriving sample
 	DropOldest                           // drop the oldest buffered sample

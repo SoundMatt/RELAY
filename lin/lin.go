@@ -19,6 +19,7 @@ import (
 //fusa:req REQ-RELAY-035
 type ChecksumType int
 
+// ChecksumType values.
 const (
 	ClassicChecksum  ChecksumType = 0
 	EnhancedChecksum ChecksumType = 1

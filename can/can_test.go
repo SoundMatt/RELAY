@@ -35,18 +35,18 @@ func TestFilterMatches(t *testing.T) {
 //fusa:test REQ-RELAY-031
 func TestValidateFrame(t *testing.T) {
 	cases := []struct {
-		f   Frame
-		ok  bool
+		f  Frame
+		ok bool
 	}{
 		{Frame{ID: 0x7FF, Data: make([]byte, 8)}, true},
-		{Frame{ID: 0x800, Data: make([]byte, 1)}, false},            // std ID too large
+		{Frame{ID: 0x800, Data: make([]byte, 1)}, false}, // std ID too large
 		{Frame{ID: 0x1FFFFFFF, Ext: true, Data: make([]byte, 8)}, true},
-		{Frame{ID: 0x20000000, Ext: true, Data: make([]byte, 1)}, false}, // ext ID too large
+		{Frame{ID: 0x20000000, Ext: true, Data: make([]byte, 1)}, false},   // ext ID too large
 		{Frame{ID: 1, BRS: true, FD: false, Data: make([]byte, 1)}, false}, // BRS without FD
 		{Frame{ID: 1, RTR: true, FD: true, Data: make([]byte, 1)}, false},  // RTR with FD
 		{Frame{ID: 1, FD: true, Data: make([]byte, 64)}, true},
-		{Frame{ID: 1, FD: true, Data: make([]byte, 65)}, false},            // FD data too long
-		{Frame{ID: 1, Data: make([]byte, 9)}, false},                       // classic data too long
+		{Frame{ID: 1, FD: true, Data: make([]byte, 65)}, false}, // FD data too long
+		{Frame{ID: 1, Data: make([]byte, 9)}, false},            // classic data too long
 	}
 	for i, tc := range cases {
 		err := ValidateFrame(tc.f)

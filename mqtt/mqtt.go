@@ -19,6 +19,7 @@ import (
 //fusa:req REQ-RELAY-038
 type QoS int
 
+// QoS levels (MQTT §4.3).
 const (
 	AtMostOnce  QoS = 0
 	AtLeastOnce QoS = 1

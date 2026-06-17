@@ -11,6 +11,7 @@ import "context"
 //fusa:req REQ-RELAY-023
 type HealthStatus int
 
+// HealthStatus values.
 const (
 	HealthOK       HealthStatus = 0
 	HealthDegraded HealthStatus = 1

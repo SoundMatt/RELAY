@@ -40,9 +40,9 @@ func TestValidateFrame(t *testing.T) {
 		ok bool
 	}{
 		{Frame{ID: 0x3F, Data: make([]byte, 8)}, true},
-		{Frame{ID: 0x40, Data: make([]byte, 1)}, false},                                         // ID too large
-		{Frame{ID: 1, Data: make([]byte, 0)}, false},                                            // empty data
-		{Frame{ID: 1, Data: make([]byte, 9)}, false},                                            // data too long
+		{Frame{ID: 0x40, Data: make([]byte, 1)}, false}, // ID too large
+		{Frame{ID: 1, Data: make([]byte, 0)}, false},    // empty data
+		{Frame{ID: 1, Data: make([]byte, 9)}, false},    // data too long
 		{Frame{ID: LINDiagRequestID, ChecksumType: ClassicChecksum, Data: make([]byte, 1)}, true},
 		{Frame{ID: LINDiagRequestID, ChecksumType: EnhancedChecksum, Data: make([]byte, 1)}, false}, // diag must be classic
 	}

@@ -15,10 +15,10 @@ var _ Caller = (*callerStub)(nil)
 
 type nodeStub struct{}
 
-func (nodeStub) Protocol() Protocol                                   { return CAN }
-func (nodeStub) Send(_ context.Context, _ Message) error              { return nil }
+func (nodeStub) Protocol() Protocol                                    { return CAN }
+func (nodeStub) Send(_ context.Context, _ Message) error               { return nil }
 func (nodeStub) Subscribe(...SubscriberOption) (<-chan Message, error) { return nil, nil }
-func (nodeStub) Close() error                                         { return nil }
+func (nodeStub) Close() error                                          { return nil }
 
 type callerStub struct{ nodeStub }
 

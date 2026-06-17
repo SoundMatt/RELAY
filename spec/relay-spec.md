@@ -629,6 +629,41 @@ type Drainer interface {
 }
 ```
 
+### 9.1 Metrics field semantics
+
+Each `Metrics` counter is monotonically non-decreasing for the life of the node and
+counts the following events. Implementations MUST follow these definitions so that
+two implementations of different protocols report comparable numbers.
+
+| Field | Counts | Notes |
+|---|---|---|
+| `WriteCount` | One per accepted application send, i.e. each `Send`/`Call`/`Publish` (or LIN `SendHeader`) that returns without error | Counted once per call, never per subscriber. A send rejected with an error increments `ErrorCount`, not `WriteCount`. |
+| `BytesWritten` | Sum of `len(Payload)` (application payload only) over the sends counted by `WriteCount` | Excludes protocol framing (PID, checksum, headers, CRC). |
+| `DeliverCount` | One per successful enqueue onto a subscriber delivery channel, **counted once per receiving subscriber** | A frame delivered to 3 subscribers is 3 deliveries. Filtered-out frames that match no subscriber count as 0. |
+| `BytesDelivered` | Sum of `len(Payload)` over the deliveries counted by `DeliverCount` | Same per-subscriber multiplicity as `DeliverCount`. |
+| `DropCount` | One per sample discarded by back-pressure (`DropNewest`/`DropOldest`) when a subscriber channel is full, counted once per affected subscriber | Filter misses are NOT drops. |
+| `ErrorCount` | One per node operation that returns a non-nil error | Includes send-after-close, no-response, oversize/invalid frames. |
+
+### 9.2 Drainer semantics
+
+`CloseWithDrain` blocks until all messages already accepted by the node (return value
+seen by the caller) have been delivered to every live subscriber, or until `ctx` is
+done — whichever comes first. It then performs the equivalent of `Close()` and returns.
+
+The following rules are normative:
+
+- **What is drained.** Only state owned by the node: the producer-side send queue (if
+  any) and each subscriber's delivery channel. For in-process buses (CAN, LIN, virtual)
+  that broadcast synchronously and hold no producer queue, draining reduces to waiting
+  for each subscriber channel to empty.
+- **Bound on a slow consumer.** A stalled or abandoned consumer MUST NOT block
+  `CloseWithDrain` beyond `ctx`. When `ctx` expires with messages still undelivered, the
+  implementation MUST close immediately, dropping the undelivered messages (they are
+  added to `DropCount`).
+- **Return value.** If draining completes before `ctx` expires, return `nil`. If `ctx`
+  expires first, return `ErrTimeout`. After `CloseWithDrain` returns, the node is closed;
+  a subsequent `Close()` is a no-op (idempotent per §6.1).
+
 ---
 
 ## 10. Application Interface

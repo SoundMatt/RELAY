@@ -178,7 +178,7 @@
     {
       "id": "REQ-RELAY-026",
       "title": "Metrics struct",
-      "text": "The system shall define a Metrics struct with uint64 fields WriteCount, DeliverCount, DropCount, BytesWritten, BytesDelivered, ErrorCount, marshalled as JSON with snake_case keys.",
+      "text": "The system shall define a Metrics struct with uint64 fields WriteCount, DeliverCount, DropCount, BytesWritten, BytesDelivered, ErrorCount, marshalled as JSON with snake_case keys. Field semantics MUST follow spec §9.1: WriteCount counts accepted sends once per call (never per subscriber); DeliverCount and BytesDelivered are counted once per receiving subscriber; BytesWritten/BytesDelivered sum application payload only (no framing); DropCount counts back-pressure discards (not filter misses); ErrorCount counts operations returning a non-nil error.",
       "category": "functional",
       "criticality": "medium"
     },
@@ -192,7 +192,7 @@
     {
       "id": "REQ-RELAY-028",
       "title": "Drainer interface",
-      "text": "The system shall define a Drainer interface with method CloseWithDrain(ctx context.Context) error. Implementations MUST flush in-flight messages before closing, returning ErrTimeout if ctx expires.",
+      "text": "The system shall define a Drainer interface with method CloseWithDrain(ctx context.Context) error. Per spec §9.2, CloseWithDrain MUST block until every accepted message has been delivered to all live subscribers, or until ctx is done, then close. A slow or abandoned consumer MUST NOT block past ctx: on ctx expiry the node MUST close immediately, drop undelivered messages (counted in Metrics.DropCount), and return ErrTimeout; on clean drain it MUST return nil. After it returns the node is closed and a subsequent Close() is a no-op.",
       "category": "functional",
       "criticality": "medium"
     },

@@ -106,16 +106,16 @@ Deliverables: `relay version`, `relay capabilities`, `relay status`
 
 ## Phase 2 — Safety Groundwork
 
-### v0.4 — Requirements and HARA
+### v0.4 — Requirements and HARA ✦ in progress
 
 **Goal:** RELAY is developed as an ASIL-C tool. Full requirements traceability
 and hazard analysis in place before conformance tooling ships.
 
-- Expand `.fusa-reqs.json` to cover all §7 and §12 requirements
-- HARA (`.fusa-hara.json`) — tool-failure hazards and safety goals
-- `gofusa trace --strict` gates CI — all requirements traced and tested
-- FMEA (`.fusa-fmea.json`)
-- Tool Safety Manual (`docs/tool-safety-manual.md`)
+- ✅ `.fusa-hara.json` — 6 hazards (H-001..H-006), 6 safety goals (SG-001..SG-006), ASIL-C worst case
+- ✅ `docs/tool-safety-manual.md` — 7-section tool safety manual with AoU, hazard table, evidence index
+- ✅ REQ-RELAY-045..050 — §7 constructor contract and §12 schema requirements added
+- ⬜ `gofusa trace --strict` CI gate — deferred to v0.5 once relay conform is implemented and 100% traceability is verified
+- ⬜ `.fusa-fmea.json` — go-FuSa FMEA schema not yet published; deferred to v0.9
 
 ---
 

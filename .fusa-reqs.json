@@ -307,6 +307,48 @@
       "text": "The relay CLI shall implement the status command that prints a JSON status document with protocol, tool, version, healthy, connected, endpoint, and details fields per spec §12.3.",
       "category": "functional",
       "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-045",
+      "title": "Constructor contract — Form 1 (endpoint-addressed)",
+      "text": "A conformant hardware transport sub-package MUST export New(ctx context.Context, endpoint string, opts ...Option) (Interface, error) per spec §7 Form 1. A failed New MUST return nil interface and non-nil error.",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-046",
+      "title": "Constructor contract — mock sub-package",
+      "text": "Every conformant implementation MUST ship a mock sub-package with a Form 2 New returning a fully functional in-process implementation that supports all mandatory and optional interfaces of the primary implementation (spec §7 rule 4).",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-047",
+      "title": "Version document schema — all fields",
+      "text": "The version --format json output MUST include all fields: tool, protocol, protocol_int, version, spec_version, language (one of go/cpp/rust), runtime (spec §12.1).",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-048",
+      "title": "Capabilities document schema — all fields",
+      "text": "The capabilities output MUST include all fields: kind (\"capabilities\"), tool, protocol, protocol_int, version, spec_version, commands, transports, features, interfaces, optional_interfaces, adapt (spec §12.2).",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-049",
+      "title": "Status document schema — all fields",
+      "text": "The status --format json output MUST include all fields: protocol, tool, version, healthy, connected, endpoint, details (spec §12.3).",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-050",
+      "title": "HARA — Hazard Analysis and Risk Assessment",
+      "text": "The RELAY project shall maintain a HARA (.fusa-hara.json) identifying all tool-failure hazards, their ASIL ratings, and the safety goals that mitigate them. The HARA shall be reviewed before each MINOR spec release.",
+      "category": "safety",
+      "criticality": "high"
     }
   ]
 }

@@ -356,6 +356,41 @@
       "text": "The system shall export WithEventID(id uint32) SubscriberOption that sets SubscriberConfig.EventID. SOMEIP adapters MUST read this field to determine the target event group; all other protocol adapters MUST ignore it. A SOMEIP adapter MUST return ErrNotConnected if EventID is zero.",
       "category": "functional",
       "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-052",
+      "title": "relay conform CLI command",
+      "text": "The system shall provide a `relay conform <binary>` command that invokes the target binary's version, capabilities, and status commands, validates their JSON output against the schemas in §12, and reports each finding with a severity of PASS, WARN, or FAIL. The process MUST exit 0 when the result is PASS or WARN, and MUST exit 1 when any finding is FAIL. With --strict, WARN is also treated as FAIL (spec §17).",
+      "category": "functional",
+      "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-053",
+      "title": "Validate version document against §12.1",
+      "text": "relay conform MUST validate that the version --format json output contains all required fields: tool, version, spec_version, language, runtime. It MUST FAIL if any required field is absent or empty. It MUST FAIL if language is not one of {go, cpp, rust}. A null protocol field MUST produce a WARN (multi-protocol tools may omit it) rather than a FAIL (spec §12.1).",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-054",
+      "title": "Validate capabilities document against §12.2",
+      "text": "relay conform MUST validate that the capabilities output has kind=\"capabilities\", non-empty tool/version/spec_version fields, a commands array containing at least \"version\", \"capabilities\", and \"status\", and a boolean adapt field. Missing mandatory commands MUST produce FAIL findings. adapt=false MUST produce a WARN (spec §12.2).",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-055",
+      "title": "Validate status document against §12.3",
+      "text": "relay conform MUST validate that the status output contains non-empty tool and version fields, and boolean healthy and connected fields. Missing or wrong-type fields MUST produce FAIL findings (spec §12.3).",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-056",
+      "title": "WithTopic subscriber option",
+      "text": "The system shall export WithTopic(name string) SubscriberOption that sets SubscriberConfig.TopicName. DDS adapters (Adapt(Participant).Subscribe) MUST read this field to determine which topic to create a subscriber for; all other protocol adapters MUST ignore it. A DDS adapter MUST return ErrNotConnected if TopicName is empty.",
+      "category": "functional",
+      "criticality": "high"
     }
   ]
 }

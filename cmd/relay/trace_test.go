@@ -10,6 +10,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -135,6 +136,57 @@ func TestCaptureTraceBlankLinesIgnored(t *testing.T) {
 	}
 	if n != 1 {
 		t.Errorf("n = %d, want 1 (blank lines ignored)", n)
+	}
+}
+
+// writeFakeSubscriber writes an executable /bin/sh script that emits the given
+// NDJSON on stdout regardless of its arguments, mimicking `<binary> subscribe`.
+func writeFakeSubscriber(t *testing.T, ndjson string) string {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("fake /bin/sh subscriber not available on Windows")
+	}
+	p := filepath.Join(t.TempDir(), "fakesub")
+	script := "#!/bin/sh\ncat <<'TRACE_EOF'\n" + ndjson + "TRACE_EOF\n"
+	if err := os.WriteFile(p, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake subscriber: %v", err)
+	}
+	return p
+}
+
+//fusa:test REQ-RELAY-061
+func TestRunTraceLive(t *testing.T) {
+	bin := writeFakeSubscriber(t, ndjsonOf(t, sampleMsgs()...))
+	var out, errb bytes.Buffer
+	if err := runTrace(&out, &errb, []string{"--format", "json", bin}); err != nil {
+		t.Fatalf("runTrace live: %v\nstderr: %s", err, errb.String())
+	}
+	var msgs []relay.Message
+	if err := json.Unmarshal(out.Bytes(), &msgs); err != nil {
+		t.Fatalf("live json: %v\n%s", err, out.String())
+	}
+	if len(msgs) != 3 {
+		t.Errorf("captured %d messages live, want 3", len(msgs))
+	}
+}
+
+//fusa:test REQ-RELAY-061
+func TestRunTraceLiveCount(t *testing.T) {
+	bin := writeFakeSubscriber(t, ndjsonOf(t, sampleMsgs()...))
+	var out, errb bytes.Buffer
+	if err := runTrace(&out, &errb, []string{"--count", "1", "--format", "ndjson", bin}); err != nil {
+		t.Fatalf("runTrace live --count: %v", err)
+	}
+	if got := strings.Count(strings.TrimSpace(out.String()), "\n") + 1; got != 1 {
+		t.Errorf("live --count 1 emitted %d lines, want 1", got)
+	}
+}
+
+//fusa:test REQ-RELAY-061
+func TestRunTraceUnknownFormat(t *testing.T) {
+	var out, errb bytes.Buffer
+	if err := runTrace(&out, &errb, []string{"--replay", "--from", "x", "--format", "xml"}); err == nil {
+		t.Error("expected error for unknown format")
 	}
 }
 

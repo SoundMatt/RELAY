@@ -944,16 +944,16 @@ binaries are reported as such. With `--scan` it walks `PATH` for executables
 whose base name matches `--match` (default `*`) and reports only the conformant
 ones. Exit: `0` success, `2` no candidates.
 
-#### `trace <binary> [--protocol P] [--count N] [--output FILE] [--format ndjson|json|text] [-- subscribe-args...]`
+#### `trace [--protocol P] [--count N] [--output FILE] [--format ndjson|json|text] <binary>`
 #### `trace --replay --from FILE [--protocol P] [--format ndjson|json|text]`
 
-Live mode spawns `<binary> subscribe --format json` (forwarding any args after
-`--`) and captures the `relay.Message` NDJSON stream. `--replay` renders a
-previously captured file instead. `--protocol P` includes only messages from
-protocol `P`; `--count N` stops after N messages; `--output FILE` writes to a
-file instead of stdout. Formats: `ndjson` (one message per line, streamed),
-`json` (a single array), `text` (a human-readable summary). Exit: `0` clean,
-`1` error, `2` invalid args.
+Flags precede the positional `<binary>`. Live mode spawns
+`<binary> subscribe --format json` and captures the `relay.Message` NDJSON
+stream. `--replay` renders a previously captured file instead. `--protocol P`
+includes only messages from protocol `P`; `--count N` stops after N messages;
+`--output FILE` writes to a file instead of stdout. Formats: `ndjson` (one
+message per line, streamed), `json` (a single array), `text` (a human-readable
+summary). Exit: `0` clean, `1` error, `2` invalid args.
 
 ### 11.3 Exit codes
 

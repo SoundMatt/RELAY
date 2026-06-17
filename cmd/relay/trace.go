@@ -20,11 +20,12 @@ import (
 
 // runTrace implements:
 //
-//	relay trace <binary> [--protocol P] [--count N] [--output FILE] [--format ndjson|json|text] [-- subscribe-args...]
+//	relay trace [--protocol P] [--count N] [--output FILE] [--format ndjson|json|text] <binary>
 //	relay trace --replay --from FILE [--protocol P] [--format ndjson|json|text]
 //
-// Live mode spawns `<binary> subscribe --format json` and captures the
-// relay.Message NDJSON stream (spec §11.2). Replay mode renders a captured file.
+// Flags precede the positional <binary> (Go's flag package stops at the first
+// positional). Live mode spawns `<binary> subscribe --format json` and captures
+// the relay.Message NDJSON stream (spec §11.2). Replay renders a captured file.
 //
 //fusa:req REQ-RELAY-061
 func runTrace(stdout, stderr io.Writer, args []string) error {
@@ -85,13 +86,12 @@ func runTrace(stdout, stderr io.Writer, args []string) error {
 
 	// --- Live mode ---
 	if fs.NArg() == 0 {
-		fmt.Fprintln(stderr, "Usage: relay trace <binary> [--protocol P] [--count N] [--output FILE] [--format ndjson|json|text] [-- subscribe-args...]")
+		fmt.Fprintln(stderr, "Usage: relay trace [--protocol P] [--count N] [--output FILE] [--format ndjson|json|text] <binary>")
 		return exitCode(2)
 	}
 	binary := fs.Arg(0)
-	extra := fs.Args()[1:]
 
-	subArgs := append([]string{"subscribe", "--format", "json"}, extra...)
+	subArgs := []string{"subscribe", "--format", "json"}
 	if *count > 0 {
 		subArgs = append(subArgs, "--count", fmt.Sprintf("%d", *count))
 	}

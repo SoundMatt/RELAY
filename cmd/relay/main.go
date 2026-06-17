@@ -52,6 +52,12 @@ func run(stdout, stderr io.Writer, args []string) error {
 		return runTrace(stdout, stderr, args[1:])
 	case "report":
 		return runReport(stdout, stderr, args[1:])
+	case "sbom":
+		return runSBOM(stdout, stderr, args[1:])
+	case "safety-case":
+		return runSafetyCase(stdout, stderr, args[1:])
+	case "audit-pack":
+		return runAuditPack(stdout, stderr, args[1:])
 	case "--help", "-h", "help":
 		printUsage(stdout)
 		return nil
@@ -73,6 +79,9 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  probe           Discover RELAY-conformant binaries")
 	fmt.Fprintln(w, "  trace           Capture or replay a relay.Message stream")
 	fmt.Fprintln(w, "  report          Cross-implementation conformance report")
+	fmt.Fprintln(w, "  sbom            Print the software bill of materials")
+	fmt.Fprintln(w, "  safety-case     Summarise the safety evidence set")
+	fmt.Fprintln(w, "  audit-pack      Bundle all safety evidence into a zip")
 }
 
 // runVersion implements `relay version [--format text|json]`.
@@ -134,7 +143,7 @@ func runCapabilities(w io.Writer, _ []string) error {
 		Tool:               "relay",
 		Version:            toolVersion,
 		SpecVersion:        relay.SpecVersion,
-		Commands:           []string{"version", "capabilities", "status", "conform", "probe", "trace", "report"},
+		Commands:           []string{"version", "capabilities", "status", "conform", "probe", "trace", "report", "sbom", "safety-case", "audit-pack"},
 		Transports:         []string{},
 		Features:           []string{},
 		Interfaces:         []string{},

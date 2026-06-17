@@ -19,7 +19,7 @@
         "type": {
             "type": "integer",
             "minimum": 0,
-            "description": "CommandType integer value (CmdNoop=0, CmdSeat=1, CmdMirror=2, CmdWindow=3, CmdClimate=4, CmdLight=5, CmdWake=6)."
+            "description": "CommandType integer value (CmdNoop=0, CmdSet=1, CmdGet=2, CmdReset=3, CmdWatchdog=4, CmdSleep=5, CmdWake=6)."
         },
         "priority": {
             "type": "integer",

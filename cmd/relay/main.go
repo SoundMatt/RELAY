@@ -62,6 +62,8 @@ func run(stdout, stderr io.Writer, args []string) error {
 		return runCompare(stdout, stderr, args[1:])
 	case "versions":
 		return runVersions(stdout, stderr, args[1:])
+	case "serve":
+		return runServe(stdout, stderr, args[1:])
 	case "--help", "-h", "help":
 		printUsage(stdout)
 		return nil
@@ -88,6 +90,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  audit-pack      Bundle all safety evidence into a zip")
 	fmt.Fprintln(w, "  compare         Compare two implementations for interchangeability")
 	fmt.Fprintln(w, "  versions        List implementations and their spec alignment")
+	fmt.Fprintln(w, "  serve           Serve a web dashboard, JSON API, and status badge")
 }
 
 // runVersion implements `relay version [--format text|json]`.
@@ -149,7 +152,7 @@ func runCapabilities(w io.Writer, _ []string) error {
 		Tool:               "relay",
 		Version:            toolVersion,
 		SpecVersion:        relay.SpecVersion,
-		Commands:           []string{"version", "capabilities", "status", "conform", "probe", "trace", "report", "sbom", "safety-case", "audit-pack", "compare", "versions"},
+		Commands:           []string{"version", "capabilities", "status", "conform", "probe", "trace", "report", "sbom", "safety-case", "audit-pack", "compare", "versions", "serve"},
 		Transports:         []string{},
 		Features:           []string{},
 		Interfaces:         []string{},

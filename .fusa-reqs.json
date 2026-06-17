@@ -468,6 +468,20 @@
       "text": "The system shall provide `relay versions [--scan] [--match glob] [--format text|json] [binary...]` that lists each implementation's tool, protocol, version, and spec_version, and whether its spec_version is aligned with the spec version this relay tool implements (relay.SpecVersion). With no candidates it MUST exit 2.",
       "category": "functional",
       "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-068",
+      "title": "relay serve dashboard and API",
+      "text": "The system shall provide `relay serve [--addr :8080] [--scan] [--match glob] [--strict] [binary...]` that serves an HTTP dashboard and JSON API for the configured implementations: GET / returns an HTML dashboard with per-implementation status cards; GET /api/v1/implementations returns the probe results as JSON; GET /api/v1/status returns the aggregated conformance report as JSON. Unknown paths MUST return 404. With no candidates it MUST exit 2. The handler MUST be constructable independently of ListenAndServe for testing.",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-069",
+      "title": "relay serve status badge",
+      "text": "relay serve MUST expose GET /badge/status.svg returning an image/svg+xml status badge whose colour reflects the overall conformance result (green PASS, amber WARN, red FAIL) and whose text shows the result.",
+      "category": "functional",
+      "criticality": "low"
     }
   ]
 }

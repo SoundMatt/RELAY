@@ -20,6 +20,7 @@ type reportEntry struct {
 	Binary   string          `json:"binary"`
 	Tool     string          `json:"tool,omitempty"`
 	Protocol string          `json:"protocol,omitempty"`
+	Version  string          `json:"version,omitempty"`
 	Result   conformSeverity `json:"result"`
 	Pass     int             `json:"pass"`
 	Warn     int             `json:"warn"`
@@ -102,7 +103,7 @@ func buildReport(candidates []string, scan, strict bool) reportDoc {
 			continue
 		}
 		cr := conformBinary(c, strict)
-		e := reportEntry{Binary: c, Tool: probe.Tool, Protocol: probe.Protocol, Result: cr.Result}
+		e := reportEntry{Binary: c, Tool: probe.Tool, Protocol: probe.Protocol, Version: probe.Version, Result: cr.Result}
 		for _, f := range cr.Findings {
 			switch f.Severity {
 			case sevPass:

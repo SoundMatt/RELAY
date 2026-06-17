@@ -929,6 +929,32 @@ Subscribes and prints received messages as `relay.Message` NDJSON on stdout.
 
 Exit: `0` clean, `1` error.
 
+### 11.2.1 Observability commands (RELAY tooling)
+
+These are provided by the `relay` tool itself for cross-implementation
+observability. They drive other binaries through the commands above; an x-Net
+binary is not required to implement them.
+
+#### `probe [--scan] [--match glob] [--format text|json] [binary...]`
+
+Discovers RELAY-conformant binaries. With explicit binaries it probes each
+(running `capabilities` and `version --format json`) and reports the tool,
+protocol, version, spec version, transports, and `adapt` flag; non-conformant
+binaries are reported as such. With `--scan` it walks `PATH` for executables
+whose base name matches `--match` (default `*`) and reports only the conformant
+ones. Exit: `0` success, `2` no candidates.
+
+#### `trace [--protocol P] [--count N] [--output FILE] [--format ndjson|json|text] <binary>`
+#### `trace --replay --from FILE [--protocol P] [--format ndjson|json|text]`
+
+Flags precede the positional `<binary>`. Live mode spawns
+`<binary> subscribe --format json` and captures the `relay.Message` NDJSON
+stream. `--replay` renders a previously captured file instead. `--protocol P`
+includes only messages from protocol `P`; `--count N` stops after N messages;
+`--output FILE` writes to a file instead of stdout. Formats: `ndjson` (one
+message per line, streamed), `json` (a single array), `text` (a human-readable
+summary). Exit: `0` clean, `1` error, `2` invalid args.
+
 ### 11.3 Exit codes
 
 | Code | Meaning |

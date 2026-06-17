@@ -47,6 +47,32 @@ func TestProtocolString(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-059
+func TestParseProtocol(t *testing.T) {
+	cases := []struct {
+		in   string
+		want Protocol
+		ok   bool
+	}{
+		{"CAN", CAN, true}, {"can", CAN, true}, {" Dds ", DDS, true},
+		{"LIN", LIN, true}, {"mqtt", MQTT, true}, {"RCP", RCP, true},
+		{"SOMEIP", SOMEIP, true}, {"some/ip", SOMEIP, true},
+		{"", 0, false}, {"bogus", 0, false},
+	}
+	for _, c := range cases {
+		got, ok := ParseProtocol(c.in)
+		if ok != c.ok || got != c.want {
+			t.Errorf("ParseProtocol(%q) = (%v, %v), want (%v, %v)", c.in, got, ok, c.want, c.ok)
+		}
+	}
+	// Round-trips with String for the named protocols.
+	for _, p := range []Protocol{CAN, DDS, LIN, MQTT, RCP, SOMEIP} {
+		if got, ok := ParseProtocol(p.String()); !ok || got != p {
+			t.Errorf("round-trip failed for %s", p)
+		}
+	}
+}
+
 //fusa:test REQ-RELAY-004
 //fusa:test REQ-RELAY-005
 func TestVersionString(t *testing.T) {

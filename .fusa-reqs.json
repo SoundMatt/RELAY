@@ -405,6 +405,27 @@
       "text": "The project shall publish JSON Schema (draft 2020-12) documents under spec/schemas/ for every canonical type (§15) and every CLI document (§12.1 version, §12.2 capabilities, §12.3 status). The schemas MUST be embedded in the relay binary and exposed via relay.Schema(name). relay conform MUST validate each target document against the relevant embedded schema and report any structural violation as a FAIL. A CI-tested check MUST verify that every golden vector value conforms to its published schema.",
       "category": "functional",
       "criticality": "high"
+    },
+    {
+      "id": "REQ-RELAY-059",
+      "title": "ParseProtocol name lookup",
+      "text": "The system shall export ParseProtocol(s string) (Protocol, bool) mapping a case-insensitive protocol name to its Protocol constant. It MUST be the inverse of Protocol.String for the six named protocols (accepting both \"SOMEIP\" and \"SOME/IP\") and MUST return ok=false for any unrecognised name.",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-060",
+      "title": "relay probe command",
+      "text": "The system shall provide `relay probe [--scan] [--match glob] [--format text|json] [binary...]` that probes binaries (running capabilities and version) and reports each RELAY-conformant binary's tool, protocol, version, spec_version, transports, and adapt flag (spec §11). With explicit binaries it MUST report non-conformant binaries as such; with --scan it MUST walk PATH for executables matching --match and report only conformant ones. With no candidates it MUST exit 2.",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-061",
+      "title": "relay trace command",
+      "text": "The system shall provide `relay trace` which (live) spawns `<binary> subscribe --format json` and captures the relay.Message NDJSON stream, or (--replay --from FILE) renders a captured file. It MUST support --format ndjson|json|text, --count N to stop after N messages, --output FILE, and --protocol P to include only messages from protocol P. Malformed message lines MUST produce an error; blank lines MUST be ignored; an unknown protocol or --replay without --from MUST exit 2.",
+      "category": "functional",
+      "criticality": "medium"
     }
   ]
 }

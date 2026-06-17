@@ -173,15 +173,18 @@ Deliverables: `spec/schemas/`, `spec/vectors/` ✅
 **Goal:** Live message capture and cross-protocol observability for systems
 using multiple RELAY-conformant implementations.
 
-- `relay probe` — discovers RELAY-conformant binaries on PATH; reports
-  protocol, version, spec version, and available transports
-- `relay trace [--protocol CAN|DDS|...] [--count N] [--output FILE]`
-  — subscribes via conformant binaries and captures `relay.Message`
-  objects to stdout (NDJSON) or file
-- `relay trace --replay --from FILE` — replays a captured trace
-- Text / JSON / HTML renderers for captured sessions
+- ✅ `relay probe [--scan] [--match glob] [binary...]` — discovers RELAY-conformant
+  binaries (explicit or by scanning PATH); reports tool, protocol, version, spec
+  version, transports, and adapt
+- ✅ `relay trace <binary> [--protocol P] [--count N] [--output FILE]`
+  — spawns `<binary> subscribe --format json` and captures the `relay.Message`
+  NDJSON stream to stdout or file
+- ✅ `relay trace --replay --from FILE` — replays a captured trace
+- ✅ Text / JSON / NDJSON renderers; `--protocol P` filter
+- ✅ `relay.ParseProtocol` added (REQ-RELAY-059); REQ-RELAY-060/061 for probe/trace
+- ⬜ HTML renderer — deferred to v0.8 (`relay report`), which is the HTML/report milestone
 
-Deliverables: `relay probe`, `relay trace`
+Deliverables: `relay probe`, `relay trace` ✅
 
 ---
 

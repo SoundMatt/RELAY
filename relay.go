@@ -9,6 +9,7 @@ package relay
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -48,6 +49,30 @@ func (p Protocol) String() string {
 		return "SOMEIP"
 	default:
 		return "unknown"
+	}
+}
+
+// ParseProtocol maps a protocol name (case-insensitive) to its Protocol
+// constant. It is the inverse of String for the six named protocols and
+// returns ok=false for any unrecognised name.
+//
+//fusa:req REQ-RELAY-059
+func ParseProtocol(s string) (Protocol, bool) {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
+	case "CAN":
+		return CAN, true
+	case "DDS":
+		return DDS, true
+	case "LIN":
+		return LIN, true
+	case "MQTT":
+		return MQTT, true
+	case "RCP":
+		return RCP, true
+	case "SOMEIP", "SOME/IP":
+		return SOMEIP, true
+	default:
+		return 0, false
 	}
 }
 

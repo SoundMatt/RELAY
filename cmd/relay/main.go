@@ -46,6 +46,10 @@ func run(stdout, stderr io.Writer, args []string) error {
 		return runStatus(stdout, args[1:])
 	case "conform":
 		return runConform(stdout, stderr, args[1:])
+	case "probe":
+		return runProbe(stdout, stderr, args[1:])
+	case "trace":
+		return runTrace(stdout, stderr, args[1:])
 	case "--help", "-h", "help":
 		printUsage(stdout)
 		return nil
@@ -64,6 +68,8 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  capabilities    Print RELAY tooling capabilities document")
 	fmt.Fprintln(w, "  status          Print RELAY tooling status document")
 	fmt.Fprintln(w, "  conform <bin>   Verify that <bin> conforms to the RELAY spec")
+	fmt.Fprintln(w, "  probe           Discover RELAY-conformant binaries")
+	fmt.Fprintln(w, "  trace           Capture or replay a relay.Message stream")
 }
 
 // runVersion implements `relay version [--format text|json]`.
@@ -125,7 +131,7 @@ func runCapabilities(w io.Writer, _ []string) error {
 		Tool:               "relay",
 		Version:            toolVersion,
 		SpecVersion:        relay.SpecVersion,
-		Commands:           []string{"version", "capabilities", "status", "conform"},
+		Commands:           []string{"version", "capabilities", "status", "conform", "probe", "trace"},
 		Transports:         []string{},
 		Features:           []string{},
 		Interfaces:         []string{},

@@ -1,5 +1,22 @@
 # RELAY Spec Changelog
 
+## v1.3 — 2026-06-18 (stable)
+
+C++ reference binding. Documentation-only — no normative or Go API change, so
+this is a MINOR release.
+
+- §18.2 (C++) completed: the `relay.hpp` header-only layout, the core types
+  (`Protocol`, `Version`, `Message`), and **all six** canonical frame types
+  (`can`, `dds`, `lin`, `mqtt`, `rcp`, `someip`) with their enums, constants,
+  and validators — including the v1.1 CAN XL fields.
+- C++ types reuse the §18.2 `to_message`/`from_message` convention with the
+  §15.7 Meta-key mappings identical to Go and Rust (cross-language trace
+  interchangeability across all three reference languages).
+- `SpecVersion = "1.3"`.
+
+The `relay.hpp` header implementation is tracked as a RELAY issue (spec defines
+the binding; the header is a separate deliverable).
+
 ## v1.2 — 2026-06-18 (stable)
 
 Rust reference binding. Documentation-only — no normative or Go API change, so

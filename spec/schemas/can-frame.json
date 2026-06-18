@@ -2,35 +2,65 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/can-frame.json",
     "title": "can.Frame",
-    "description": "CAN / CAN-FD canonical frame type (spec §15.1).",
+    "description": "CAN / CAN-FD / CAN XL canonical frame type (spec §15.1).",
     "type": "object",
     "properties": {
         "id": {
             "type": "integer",
             "minimum": 0,
             "maximum": 536870911,
-            "description": "CAN arbitration ID. Standard IDs are ≤0x7FF; extended IDs are ≤0x1FFFFFFF."
+            "description": "CAN arbitration ID. Standard IDs are ≤0x7FF; extended IDs are ≤0x1FFFFFFF. For CAN XL this is the 11-bit Priority ID (≤0x7FF)."
         },
         "ext": {
             "type": "boolean",
-            "description": "True for 29-bit extended ID format. Omitted from JSON when false."
+            "description": "True for 29-bit extended ID format. Must be false for CAN XL. Omitted from JSON when false."
         },
         "rtr": {
             "type": "boolean",
-            "description": "Remote transmission request. Must be false when fd is true. Omitted from JSON when false."
+            "description": "Remote transmission request. Must be false when fd or xl is true. Omitted from JSON when false."
         },
         "fd": {
             "type": "boolean",
-            "description": "True for CAN-FD frames (supports up to 64 data bytes). Omitted from JSON when false."
+            "description": "True for CAN-FD frames (supports up to 64 data bytes). Mutually exclusive with xl. Omitted from JSON when false."
         },
         "brs": {
             "type": "boolean",
-            "description": "Bit-rate switch (CAN-FD only). Must be false when fd is false. Omitted from JSON when false."
+            "description": "Bit-rate switch (CAN-FD only). Must be false when fd is false and for CAN XL. Omitted from JSON when false."
+        },
+        "esi": {
+            "type": "boolean",
+            "description": "Error State Indicator (CAN-FD / CAN XL only). Must be false when neither fd nor xl is set. Omitted from JSON when false."
+        },
+        "xl": {
+            "type": "boolean",
+            "description": "True for CAN XL frames (ISO 11898-1:2024; supports up to 2048 data bytes). Mutually exclusive with fd. Omitted from JSON when false."
+        },
+        "sdt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
+            "description": "CAN XL SDU Type identifying the payload content. Omitted from JSON when zero."
+        },
+        "vcid": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
+            "description": "CAN XL Virtual CAN network ID. Omitted from JSON when zero."
+        },
+        "af": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295,
+            "description": "CAN XL Acceptance Field. Omitted from JSON when zero."
+        },
+        "sec": {
+            "type": "boolean",
+            "description": "CAN XL Simple Extended Content flag. Omitted from JSON when false."
         },
         "data": {
             "type": "string",
             "contentEncoding": "base64",
-            "description": "Frame data bytes, base64-encoded. Max 8 bytes for classic CAN; max 64 bytes for CAN-FD."
+            "description": "Frame data bytes, base64-encoded. Max 8 bytes for classic CAN; 64 for CAN-FD; 2048 for CAN XL (min 1)."
         }
     },
     "required": ["id", "data"],

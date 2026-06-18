@@ -6,6 +6,7 @@ package can
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	relay "github.com/SoundMatt/RELAY"
@@ -101,5 +102,79 @@ func TestFromMessageInvalidID(t *testing.T) {
 	}
 	if !errors.Is(err, ErrInvalidFrame) {
 		t.Errorf("error must wrap ErrInvalidFrame, got %v", err)
+	}
+}
+
+//fusa:test REQ-RELAY-070
+func TestXLMaxDataLen(t *testing.T) {
+	if CANXLMaxDataLen != 2048 || CANXLMinDataLen != 1 {
+		t.Errorf("unexpected XL constants: %d %d", CANXLMaxDataLen, CANXLMinDataLen)
+	}
+	if (Frame{}).MaxDataLen() != 8 {
+		t.Error("classic MaxDataLen should be 8")
+	}
+	if (Frame{FD: true}).MaxDataLen() != 64 {
+		t.Error("FD MaxDataLen should be 64")
+	}
+	if (Frame{XL: true}).MaxDataLen() != 2048 {
+		t.Error("XL MaxDataLen should be 2048")
+	}
+}
+
+//fusa:test REQ-RELAY-072
+//fusa:test REQ-RELAY-071
+func TestValidateXLFrame(t *testing.T) {
+	cases := []struct {
+		name string
+		f    Frame
+		ok   bool
+	}{
+		{"valid XL", Frame{ID: 0x7FF, XL: true, SDT: 3, VCID: 1, AF: 0xCAFE, Data: make([]byte, 2048)}, true},
+		{"XL data too long", Frame{ID: 1, XL: true, Data: make([]byte, 2049)}, false},
+		{"XL empty data", Frame{ID: 1, XL: true, Data: nil}, false},
+		{"XL priority overflow", Frame{ID: 0x800, XL: true, Data: make([]byte, 1)}, false},
+		{"XL with Ext", Frame{ID: 1, XL: true, Ext: true, Data: make([]byte, 1)}, false},
+		{"XL with RTR", Frame{ID: 1, XL: true, RTR: true, Data: make([]byte, 1)}, false},
+		{"XL with BRS", Frame{ID: 1, XL: true, BRS: true, Data: make([]byte, 1)}, false},
+		{"FD and XL", Frame{ID: 1, FD: true, XL: true, Data: make([]byte, 1)}, false},
+		{"ESI without FD/XL", Frame{ID: 1, ESI: true, Data: make([]byte, 1)}, false},
+		{"ESI with FD", Frame{ID: 1, FD: true, ESI: true, Data: make([]byte, 1)}, true},
+		{"ESI with XL", Frame{ID: 1, XL: true, ESI: true, Data: make([]byte, 1)}, true},
+	}
+	for _, tc := range cases {
+		err := ValidateFrame(tc.f)
+		if tc.ok && err != nil {
+			t.Errorf("%s: unexpected error: %v", tc.name, err)
+		}
+		if !tc.ok {
+			if err == nil {
+				t.Errorf("%s: expected error", tc.name)
+			} else if !errors.Is(err, ErrInvalidFrame) {
+				t.Errorf("%s: error must wrap ErrInvalidFrame, got %v", tc.name, err)
+			}
+		}
+	}
+}
+
+//fusa:test REQ-RELAY-073
+func TestXLToFromMessageRoundTrip(t *testing.T) {
+	orig := Frame{ID: 0x123, XL: true, ESI: true, SDT: 5, VCID: 2, AF: 51966, SEC: true, Data: []byte{0xDE, 0xAD, 0xBE, 0xEF}}
+	got, err := FromMessage(orig.ToMessage())
+	if err != nil {
+		t.Fatalf("FromMessage: %v", err)
+	}
+	if !reflect.DeepEqual(got, orig) {
+		t.Errorf("XL round-trip mismatch:\n got: %+v\nwant: %+v", got, orig)
+	}
+}
+
+//fusa:test REQ-RELAY-073
+func TestClassicMetaUnchanged(t *testing.T) {
+	// A classic frame must not emit any XL/ESI Meta keys, keeping output stable.
+	msg := Frame{ID: 1, Data: []byte{1}}.ToMessage()
+	for _, k := range []string{"can.esi", "can.xl", "can.sdt", "can.vcid", "can.af", "can.sec"} {
+		if _, ok := msg.Meta[k]; ok {
+			t.Errorf("classic frame must not emit %s", k)
+		}
 	}
 }

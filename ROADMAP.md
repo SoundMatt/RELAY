@@ -288,9 +288,32 @@ without a MAJOR version increment.
 
 ---
 
-## Future (post v1.0)
+## Phase 9 — Protocol Extension
 
-- **v1.1 — RELAY spec v1.1:** First protocol extension (e.g. CAN XL support)
+### v1.1 — CAN XL ✦ done
+
+**Goal:** First additive protocol extension under the v1.0 stability guarantee.
+
+- ✅ `can.Frame` extended with CAN XL fields (`XL`, `SDT`, `VCID`, `AF`, `SEC`)
+  and the CAN-FD/XL `ESI` flag — all additive, defaulting to zero/false
+- ✅ `CANXLMinDataLen`/`CANXLMaxDataLen`/`CANXLMaxPrioID` limits and a
+  format-aware `Frame.MaxDataLen()` method
+- ✅ `ValidateFrame` XL/ESI constraints (FD⊕XL, 11-bit priority ID, 1…2048-byte
+  payload, no Ext/RTR/BRS on XL)
+- ✅ Lossless `ToMessage`/`FromMessage` round-trip via `can.{esi,xl,sdt,vcid,af,sec}`
+- ✅ Updated `spec/schemas/can-frame.json`; golden vector `can-xl-frame`;
+  error vectors `can-fd-xl-mutually-exclusive`, `can-xl-priority-id-overflow`
+- ✅ Spec §15.1 + §15.7.1 updated; `SpecVersion = "1.1"`
+- ✅ REQ-RELAY-070…073 traced and tested
+- ⬜ CAN XL transceiver / segmentation / `Adapt()` — filed as x-CAN issues
+  (go-CAN, rust-CAN, cpp-CAN); RELAY defines the contract only
+
+Deliverables: CAN XL canonical type, schema, vectors ✅
+
+---
+
+## Future (post v1.1)
+
 - **v1.2 — Rust reference:** `relay-rs` crate with all canonical types and trait definitions
 - **v1.3 — C++ reference:** `relay.hpp` header with all canonical types and abstract base classes
 - **v1.4 — Formal verification:** Model-checked lifecycle invariants (§6)

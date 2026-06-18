@@ -1,5 +1,33 @@
 # RELAY Spec Changelog
 
+## v1.1 — 2026-06-18 (stable)
+
+First protocol extension. Fully additive over v1.0 — no breaking changes to any
+stable surface, so this is a MINOR release.
+
+**CAN XL (ISO 11898-1:2024):**
+- `can.Frame` gains `XL`, `SDT`, `VCID`, `AF`, and `SEC` fields for the CAN XL
+  format (payloads up to 2048 bytes; 11-bit Priority ID carried in `ID`).
+- `can.Frame` gains `ESI` (Error State Indicator), valid for CAN-FD and CAN XL.
+- New limits `CANXLMinDataLen` (1), `CANXLMaxDataLen` (2048), `CANXLMaxPrioID`
+  (0x7FF), and a format-aware `Frame.MaxDataLen()` method (`MaxDataLen(fd bool)`
+  is retained for back-compat).
+- `ValidateFrame` rejects: FD and XL both set; ESI without FD/XL; and XL frames
+  that set Ext/RTR/BRS, exceed the 11-bit Priority ID, or fall outside the
+  1…2048-byte payload range.
+- `ToMessage`/`FromMessage` round-trip the new fields losslessly via `can.esi`,
+  `can.xl`, `can.sdt`, `can.vcid`, `can.af`, `can.sec` Meta keys (emitted only
+  when set, so classic/FD frame output is unchanged).
+- Updated `spec/schemas/can-frame.json`; new golden vector `can-xl-frame` and
+  error vectors `can-fd-xl-mutually-exclusive`, `can-xl-priority-id-overflow`.
+
+**Evidence:** requirements extended to REQ-RELAY-001…073 (new REQ-RELAY-070…073
+for CAN XL/ESI), all traced and tested.
+
+**Implementation note:** the CAN XL transceiver, segmentation, and `Adapt()`
+work lives in the x-CAN implementations (go-CAN / rust-CAN / cpp-CAN), tracked
+as issues there.
+
 ## v1.0 — 2026-06-17 (stable)
 
 First **stable** release. No normative changes from v0.3; this release promotes

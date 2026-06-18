@@ -391,9 +391,31 @@ Deliverables: ASIL-D / DAL-A evidence path (`docs/asil-d-uplift.md`) ✅
 
 ---
 
+## Phase 13 — Interoperability
+
+### v1.6 — Cross-implementation interop harness ✦ spec done
+
+**Goal:** Verify implementations of the same protocol are *behaviourally*
+interchangeable (not just declared-capability compatible, as `compare` checks).
+
+- ✅ Spec §11.2 optional `convert --protocol P` driver command: canonical value
+  in (stdin JSON) → that implementation's `relay.Message` out (stdout JSON)
+- ✅ Spec §11.2.1 `interop <binaryA> <binaryB> …`: drives each impl with shared
+  golden vectors via `convert`, diffs the canonical output pairwise, reports an
+  equivalence matrix; canonical `relay.Message` is the cross-language oracle
+- ✅ `SpecVersion = "1.6"`; CHANGELOG/ROADMAP
+- ⬜ `relay interop` command implementation — filed as a RELAY tracking issue
+- ⬜ `convert` per-impl driver — filed as x-Net issues (go-CAN, go-DDS, go-LIN,
+  go-mqtt, go-RCP, go-SOMEIP, cpp-RCP), prerequisite for live interop
+
+Deliverables: interop harness spec (§11.2 `convert`, §11.2.1 `interop`) ✅
+
+---
+
 ## Roadmap complete
 
-All planned phases (1–12, v0.1 → v1.5) are delivered. Future work is demand-driven:
+All planned phases (1–13, v0.1 → v1.6) are delivered. Future work is demand-driven:
 new protocol extensions (additive MINOR releases), reference-implementation
-crates/headers (tracked issues), and the incremental ASIL-D/DAL-A uplift work
+crates/headers (tracked issues), the `relay interop` build-out and its `convert`
+driver surface (tracked issues), and the incremental ASIL-D/DAL-A uplift work
 items above.

@@ -1,4 +1,4 @@
-# RELAY Specification — v1.5
+# RELAY Specification — v1.6
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -940,6 +940,19 @@ Subscribes and prints received messages as `relay.Message` NDJSON on stdout.
 
 Exit: `0` clean, `1` error.
 
+#### `convert --protocol P [--format json]`
+
+The black-box driver surface for interoperability testing (§11.2.1 `interop`).
+Reads one canonical-type value for protocol `P` as JSON on stdin (the schema in
+`spec/schemas/`, e.g. `can.Frame`), runs it through the implementation's own
+`ToMessage()` conversion, and writes the resulting `relay.Message` as JSON on
+stdout. The conversion MUST be the same code path the implementation uses at
+runtime, so that the output is a faithful witness of the implementation's
+behaviour. `timestamp` MAY be zeroed in the output to keep results comparable.
+If the input fails the implementation's validator, `convert` MUST exit `1` and
+write the sentinel error name (§5) to stderr. Exit: `0` converted, `1` invalid
+input, `2` invalid args.
+
 ### 11.2.1 Observability commands (RELAY tooling)
 
 These are provided by the `relay` tool itself for cross-implementation
@@ -1021,6 +1034,30 @@ Serves a web dashboard and JSON API for the configured implementations:
 | `GET /badge/status.svg` | `image/svg+xml` status badge (green PASS / amber WARN / red FAIL) |
 
 Unknown paths return `404`. Exit: `2` with no candidates.
+
+#### `interop [--protocol P] [--vectors DIR] [--strict] [--format text|json|markdown] <binaryA> <binaryB> [binaryN...]`
+
+Verifies that two or more implementations of the same protocol are
+**behaviourally interchangeable**, complementing `compare` (which checks only
+declared capabilities). For each input vector in `--vectors DIR` (default: the
+embedded golden vectors, §6 of the spec-vectors set) whose `protocol` matches
+`--protocol P` (or all protocols if omitted), `interop`:
+
+1. feeds the vector's canonical value to each binary via `<binary> convert
+   --protocol P --format json` (§11.2);
+2. captures each binary's `relay.Message` output, normalising `timestamp`;
+3. compares the outputs pairwise.
+
+Two implementations are **interop-equivalent** for a vector when their
+normalised `relay.Message` outputs are byte-identical. The canonical
+`relay.Message` is the cross-language equality oracle: because the §15.7
+Meta-key mappings are identical across Go, Rust, and C++ (§18), a C++ `cpp-CAN`
+and a Rust `rust-CAN` that both conform MUST produce identical output for the
+same input. The report is a pairwise equivalence matrix per vector, with the
+field-level diff for any mismatch. A binary that lacks `convert`, errors, or
+mismatches another is reported. `--strict` treats any missing `convert` as a
+failure rather than a skip. Exit: `0` all equivalent, `1` any mismatch/error,
+`2` no candidates or invalid args.
 
 ### 11.3 Exit codes
 
@@ -2301,11 +2338,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v1.5**
+Current version: **v1.6**
 
-**Go:** `const SpecVersion = "1.5"` (update in implementations targeting v1.5)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "1.5";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.5";`
+**Go:** `const SpecVersion = "1.6"` (update in implementations targeting v1.6)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "1.6";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.6";`
 
 ---
 

@@ -91,9 +91,6 @@ See `.fusa-hara.json` for the full HARA. Summary:
 
 ## 6. Known limitations
 
-- `relay conform` is not yet implemented (v0.5). Until then, conformance must be
-  verified by manual review of the x-Net capabilities document and error sentinel
-  tests.
 - `ValidateFrame` for CAN does not check SOME/IP payload framing. SOME/IP
   validation is the responsibility of the `someip` sub-package (`Message.Validate`).
 - `MatchTopic` is tested against MQTT §4.7 cases but is not qualified against
@@ -104,9 +101,22 @@ See `.fusa-hara.json` for the full HARA. Summary:
 
 | Artifact | Location | Purpose |
 |---|---|---|
-| Requirements | `.fusa-reqs.json` | Functional requirements REQ-RELAY-001..044 |
+| Requirements | `.fusa-reqs.json` | Requirements REQ-RELAY-001..076, all traced + tested |
 | HARA | `.fusa-hara.json` | Hazard analysis and safety goals |
+| TARA | `.fusa-tara.json` | Cybersecurity threat analysis (ISO/SAE 21434) |
+| Formal model | `docs/formal/RelayLifecycle.tla` | TLC-checked §6 lifecycle invariants |
 | Test suite | `*_test.go` | Requirement traceability via `//fusa:test` |
 | CI | `.github/workflows/ci.yml` | Lint, test (80% coverage gate), go-FuSa, Docker |
 | Spec | `spec/relay-spec.md` | Normative interface and frame type definitions |
 | Changelog | `spec/CHANGELOG.md` | Version history and breaking changes |
+
+All evidence is embedded in the `relay` binary (`relay.Evidence`) and bundled by
+`relay audit-pack`.
+
+## 8. Qualification level and uplift path
+
+RELAY is qualified as an ISO 26262 **ASIL-C** tool at **TCL2**. The evidence
+path to ISO 26262 **ASIL-D** / DO-178C **DAL-A** (via DO-330) is documented in
+`docs/asil-d-uplift.md`, which contains the gap analysis and the
+Tool-error-Detection / Error-Measure (TD/EM) table. That uplift is incremental
+and is not required for the current ASIL-C/TCL2 qualification.

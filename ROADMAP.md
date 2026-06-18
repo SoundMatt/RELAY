@@ -369,6 +369,31 @@ Deliverables: formal lifecycle model (§6.1) ✅
 
 ---
 
-## Future (post v1.4)
+## Phase 12 — Certification Uplift
 
-- **v1.5 — Certification uplift:** ISO 26262 ASIL-D / DO-178C DAL-A evidence path
+### v1.5 — ASIL-D / DAL-A evidence path ✦ done
+
+**Goal:** Document the path from the current ASIL-C / TCL2 qualification to the
+highest integrity levels.
+
+- ✅ `docs/asil-d-uplift.md`: gap analysis (ISO 26262 ASIL-C → ASIL-D and
+  DO-178C DAL-A via DO-330) with a tool-error Detection/Error-Measure (TD/EM)
+  table mapping each HARA hazard to its detection measure and evidence
+- ✅ Embedded as the `asil-d-uplift` evidence artifact; bundled by `relay audit-pack`
+- ✅ Tool safety manual refreshed (stale limitations corrected; evidence index
+  updated to REQ-RELAY-001…076 + TARA + formal model; new §8 uplift section)
+- ✅ `SpecVersion = "1.5"`; REQ-RELAY-076 traced and tested
+- ⬜ The uplift work items (MC/DC coverage, mutation testing, independent
+  verification, formal TOR/TQP, SLSA provenance) are tracked as issues when
+  scheduled — incremental and not required for the current ASIL-C/TCL2 level
+
+Deliverables: ASIL-D / DAL-A evidence path (`docs/asil-d-uplift.md`) ✅
+
+---
+
+## Roadmap complete
+
+All planned phases (1–12, v0.1 → v1.5) are delivered. Future work is demand-driven:
+new protocol extensions (additive MINOR releases), reference-implementation
+crates/headers (tracked issues), and the incremental ASIL-D/DAL-A uplift work
+items above.

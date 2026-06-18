@@ -18,6 +18,7 @@ func TestEvidenceNames(t *testing.T) {
 		"requirements": true, "hara": true, "tara": true,
 		"version": true, "tool-safety-manual": true,
 		"formal-model": true, "formal-model-doc": true,
+		"asil-d-uplift": true,
 	}
 	if len(names) != len(want) {
 		t.Fatalf("EvidenceNames = %v, want %d entries", names, len(want))
@@ -54,6 +55,22 @@ func TestFormalModelCoversLifecycle(t *testing.T) {
 		ref := "6." + itoa(i)
 		if !strings.Contains(ds, ref) {
 			t.Errorf("formal-model-doc does not reference §6 requirement %s", ref)
+		}
+	}
+}
+
+//fusa:test REQ-RELAY-076
+func TestAsilDUpliftEvidence(t *testing.T) {
+	b, err := Evidence("asil-d-uplift")
+	if err != nil || len(b) == 0 {
+		t.Fatalf("asil-d-uplift evidence missing: %v", err)
+	}
+	s := string(b)
+	// The uplift doc must address both target standards and stay framed as a
+	// path, not a claim of current qualification.
+	for _, want := range []string{"ASIL-D", "DAL-A", "DO-330", "TCL2"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("asil-d-uplift does not mention %q", want)
 		}
 	}
 }

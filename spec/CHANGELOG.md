@@ -1,5 +1,26 @@
 # RELAY Spec Changelog
 
+## v1.5 — 2026-06-18 (stable)
+
+Certification uplift evidence path. Documentation/evidence only — no normative
+or API change (MINOR release).
+
+- Added `docs/asil-d-uplift.md`: the evidence path from the current ISO 26262
+  ASIL-C / TCL2 qualification to ASIL-D and DO-178C DAL-A (via DO-330), with a
+  gap analysis (coverage, independence, fault injection, formal methods,
+  configuration management) and a tool-error Detection/Error-Measure (TD/EM)
+  table mapping each HARA hazard to its detection measure and evidence.
+- Embedded as the `asil-d-uplift` evidence artifact and bundled by
+  `relay audit-pack`.
+- Tool safety manual refreshed: corrected stale limitations (relay conform is
+  shipped), evidence index now lists REQ-RELAY-001…076, TARA and the formal
+  model; new §8 documents the qualification level and uplift path.
+- `SpecVersion = "1.5"`; REQ-RELAY-076 traced and tested.
+
+The document is explicitly a **path**, not a claim that RELAY is currently
+qualified at ASIL-D / DAL-A; the uplift work items are tracked as issues when
+scheduled.
+
 ## v1.4 — 2026-06-18 (stable)
 
 Formal verification of the §6 node lifecycle. Additive (MINOR release).

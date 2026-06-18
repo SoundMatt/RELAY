@@ -1,4 +1,4 @@
-# RELAY Specification — v1.4
+# RELAY Specification — v1.5
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -2301,11 +2301,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v1.4**
+Current version: **v1.5**
 
-**Go:** `const SpecVersion = "1.4"` (update in implementations targeting v1.4)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "1.4";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.4";`
+**Go:** `const SpecVersion = "1.5"` (update in implementations targeting v1.5)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "1.5";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.5";`
 
 ---
 

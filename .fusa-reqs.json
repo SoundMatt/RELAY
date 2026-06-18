@@ -524,6 +524,13 @@
       "text": "The formal lifecycle model and its documentation MUST be embedded as evidence artifacts (\"formal-model\", \"formal-model-doc\") and bundled by relay audit-pack.",
       "category": "safety",
       "criticality": "low"
+    },
+    {
+      "id": "REQ-RELAY-076",
+      "title": "Certification uplift evidence path",
+      "text": "The evidence path from the current ISO 26262 ASIL-C / TCL2 qualification to ASIL-D and DO-178C DAL-A (via DO-330) MUST be documented (docs/asil-d-uplift.md) with a gap analysis and a tool-error detection/measure table, embedded as the \"asil-d-uplift\" evidence artifact and bundled by relay audit-pack.",
+      "category": "safety",
+      "criticality": "low"
     }
   ]
 }

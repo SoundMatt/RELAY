@@ -7,6 +7,7 @@ package relay
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -16,6 +17,7 @@ func TestEvidenceNames(t *testing.T) {
 	want := map[string]bool{
 		"requirements": true, "hara": true, "tara": true,
 		"version": true, "tool-safety-manual": true,
+		"formal-model": true, "formal-model-doc": true,
 	}
 	if len(names) != len(want) {
 		t.Fatalf("EvidenceNames = %v, want %d entries", names, len(want))
@@ -25,6 +27,43 @@ func TestEvidenceNames(t *testing.T) {
 			t.Errorf("unexpected evidence name %q", n)
 		}
 	}
+}
+
+//fusa:test REQ-RELAY-074
+//fusa:test REQ-RELAY-075
+func TestFormalModelCoversLifecycle(t *testing.T) {
+	// The formal model must be embedded as evidence and be non-empty.
+	model, err := Evidence("formal-model")
+	if err != nil || len(model) == 0 {
+		t.Fatalf("formal-model evidence missing: %v", err)
+	}
+	doc, err := Evidence("formal-model-doc")
+	if err != nil || len(doc) == 0 {
+		t.Fatalf("formal-model-doc evidence missing: %v", err)
+	}
+	// The model must be the lifecycle module and define a Spec for TLC.
+	ms := string(model)
+	if !strings.Contains(ms, "MODULE RelayLifecycle") || !strings.Contains(ms, "Spec ==") {
+		t.Error("formal-model is not a well-formed RelayLifecycle TLA+ module")
+	}
+	// The documentation's requirement→invariant mapping must reference every
+	// one of the ten §6 lifecycle requirements (6.1 … 6.10), so the mapping
+	// cannot silently drop a requirement.
+	ds := string(doc)
+	for i := 1; i <= 10; i++ {
+		ref := "6." + itoa(i)
+		if !strings.Contains(ds, ref) {
+			t.Errorf("formal-model-doc does not reference §6 requirement %s", ref)
+		}
+	}
+}
+
+// itoa avoids importing strconv solely for single-digit formatting.
+func itoa(i int) string {
+	if i < 10 {
+		return string(rune('0' + i))
+	}
+	return string(rune('0'+i/10)) + string(rune('0'+i%10))
 }
 
 //fusa:test REQ-RELAY-064

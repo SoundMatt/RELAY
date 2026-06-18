@@ -8,7 +8,7 @@ import "testing"
 
 //fusa:test REQ-RELAY-020
 func TestSpecVersion(t *testing.T) {
-	if SpecVersion != "1.3" {
-		t.Errorf("SpecVersion = %q, want %q", SpecVersion, "1.3")
+	if SpecVersion != "1.4" {
+		t.Errorf("SpecVersion = %q, want %q", SpecVersion, "1.4")
 	}
 }

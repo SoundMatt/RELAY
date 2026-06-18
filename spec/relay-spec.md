@@ -1,4 +1,4 @@
-# RELAY Specification — v1.2
+# RELAY Specification — v1.3
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -1859,6 +1859,163 @@ std::expected<T, std::error_code> from_message(const relay::Message& m);
 
 The C++23 form MUST be guarded by `#if __cpp_lib_expected >= 202202L`. Implementations targeting C++17 MUST provide the pair form. Timestamp MUST use `std::chrono::system_clock::now()` when constructing from an external source without a wire timestamp.
 
+#### Header layout (`relay.hpp`)
+
+The C++ reference is a header-only binding `relay.hpp` exposing the
+`relay` namespace, with each protocol in a nested namespace
+(`relay::can`, `relay::dds`, `relay::lin`, `relay::mqtt`, `relay::rcp`,
+`relay::someip`). `kRelaySpecVersion` (§19.4) MUST be defined in the `relay`
+namespace. Canonical types are plain aggregates; all integer fields use
+fixed-width `<cstdint>` types and match the §15 JSON field names on
+serialisation.
+
+#### Core types (C++)
+
+```cpp
+namespace relay {
+
+enum class Protocol : int { CAN = 1, DDS = 2, LIN = 3, MQTT = 4, RCP = 5, SOMEIP = 6 };
+std::string_view to_string(Protocol) noexcept; // "CAN", "DDS", …
+
+struct Version {
+    int major = 0, minor = 0, patch = 0;
+    std::string str() const; // "major.minor.patch"
+};
+
+struct Message {
+    Protocol                            protocol;
+    Version                             version;
+    std::string                         id;        // §4.2
+    std::vector<std::uint8_t>           payload;   // base64 in JSON
+    std::chrono::system_clock::time_point timestamp; // RFC 3339 nanosecond
+    std::uint64_t                       seq = 0;   // omitted from JSON when 0
+    std::map<std::string, std::string>  meta;      // §4.3
+};
+
+} // namespace relay
+```
+
+`Errc` (the four mandatory sentinels) is defined above and registered as the
+`std::error_category` named `"relay"`.
+
+#### Canonical frame types (C++)
+
+```cpp
+namespace relay::can {
+struct Frame {
+    std::uint32_t id   = 0;
+    bool          ext  = false;
+    bool          rtr  = false;
+    bool          fd   = false;
+    bool          brs  = false;
+    bool          esi  = false; // CAN-FD / CAN XL
+    bool          xl   = false; // CAN XL
+    std::uint8_t  sdt  = 0;     // CAN XL
+    std::uint8_t  vcid = 0;     // CAN XL
+    std::uint32_t af   = 0;     // CAN XL
+    bool          sec  = false; // CAN XL
+    std::vector<std::uint8_t> data;
+    std::size_t max_data_len() const noexcept; // 2048 (XL) / 64 (FD) / 8
+};
+inline constexpr std::size_t   kMaxDataLen     = 8;
+inline constexpr std::size_t   kFdMaxDataLen   = 64;
+inline constexpr std::size_t   kXlMinDataLen   = 1;
+inline constexpr std::size_t   kXlMaxDataLen   = 2048;
+inline constexpr std::uint32_t kMaxStdId       = 0x7FF;
+inline constexpr std::uint32_t kMaxExtId       = 0x1FFFFFFF;
+inline constexpr std::uint32_t kXlMaxPrioId    = 0x7FF;
+std::error_code validate_frame(const Frame&); // constraints per §15.1
+} // namespace relay::can
+
+namespace relay::dds {
+using Guid = std::array<std::uint8_t, 16>;
+struct Sample {
+    std::string                           topic;
+    std::vector<std::uint8_t>             payload;
+    std::chrono::system_clock::time_point timestamp;
+    std::uint64_t                         sequence_number = 0; // "seq"
+    Guid                                  writer_guid{};
+};
+enum class ReliabilityKind : int { BestEffort = 0, Reliable = 1 };
+enum class DurabilityKind  : int { Volatile = 0, TransientLocal = 1 };
+enum class BackPressurePolicy : int { DropNewest = 0, DropOldest = 1, Block = 2 };
+} // namespace relay::dds
+
+namespace relay::lin {
+enum class ChecksumType : int { Classic = 0, Enhanced = 1 };
+struct Frame {
+    std::uint8_t              id       = 0;
+    std::vector<std::uint8_t> data;
+    std::uint8_t              checksum = 0;
+    ChecksumType              checksum_type = ChecksumType::Classic;
+};
+inline constexpr std::size_t  kMaxDataLen     = 8;
+inline constexpr std::uint8_t kMaxId          = 0x3F;
+inline constexpr std::uint8_t kDiagRequestId  = 0x3C;
+inline constexpr std::uint8_t kDiagResponseId = 0x3D;
+std::error_code validate_frame(const Frame&);
+} // namespace relay::lin
+
+namespace relay::mqtt {
+enum class QoS : int { AtMostOnce = 0, AtLeastOnce = 1, ExactlyOnce = 2 };
+struct UserProperty { std::string key, value; };
+struct Message {
+    std::string               topic;
+    std::vector<std::uint8_t> payload;
+    QoS                       qos = QoS::AtMostOnce;
+    bool                      retained = false;
+    std::uint16_t             packet_id = 0;
+    std::string               response_topic;
+    std::vector<std::uint8_t> correlation_data;
+    std::vector<UserProperty> user_properties;
+    std::string               content_type;
+    std::uint32_t             expiry_interval = 0;
+};
+} // namespace relay::mqtt
+
+namespace relay::rcp {
+enum class Zone : std::uint8_t { Unknown = 0, FrontLeft = 1, FrontRight = 2,
+    RearLeft = 3, RearRight = 4, Central = 5 };
+enum class Priority : std::uint8_t { Normal = 0, High = 1, Critical = 2 };
+enum class CommandType : std::uint16_t { Noop = 0, Set = 1, Get = 2, Reset = 3,
+    Watchdog = 4, Sleep = 5, Wake = 6 };
+enum class ResponseStatus : std::uint8_t { Ok = 0, Error = 1, Timeout = 2,
+    Busy = 3, Unknown = 4 };
+struct Command  { std::uint32_t id; Zone zone; CommandType type; Priority priority;
+    std::vector<std::uint8_t> payload; };
+struct Response { std::uint32_t command_id; Zone zone; ResponseStatus status;
+    std::vector<std::uint8_t> payload; };
+struct Status   { Zone zone; std::uint32_t seq; bool healthy;
+    std::vector<std::uint8_t> payload; };
+} // namespace relay::rcp
+
+namespace relay::someip {
+enum class MessageType : std::uint8_t {
+    Request = 0x00, RequestNoReturn = 0x01, Notification = 0x02,
+    Response = 0x80, Error = 0x81,
+    TpRequest = 0x20, TpRequestNoReturn = 0x21, TpNotification = 0x22,
+    TpResponse = 0xA0, TpError = 0xA1 };
+enum class ReturnCode : std::uint8_t {
+    Ok = 0x00, NotOk = 0x01, UnknownService = 0x02, UnknownMethod = 0x03,
+    NotReady = 0x04, NotReachable = 0x05, Timeout = 0x06, WrongProtocolVersion = 0x07,
+    WrongInterfaceVersion = 0x08, MalformedMessage = 0x09, WrongMessageType = 0x0A };
+inline constexpr std::uint8_t kProtocolVersion = 0x01;
+struct Message {
+    std::uint16_t service_id, method_id, client_id, session_id;
+    std::uint8_t  protocol_version;  // MUST equal kProtocolVersion
+    std::uint8_t  interface_version;
+    MessageType   message_type;
+    ReturnCode    return_code;
+    std::vector<std::uint8_t> payload;
+};
+std::error_code validate(const Message&); // protocol_version MUST be 0x01
+} // namespace relay::someip
+```
+
+Every canonical type exposes `to_message()` / `from_message()` per the §18.2
+convention above, using the §15.7 Meta-key mappings identical to Go and Rust so
+that traces are interchangeable across all three languages.
+
 ### 18.3 Rust
 
 #### Async-primary model
@@ -2133,11 +2290,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v1.2**
+Current version: **v1.3**
 
-**Go:** `const SpecVersion = "1.2"` (update in implementations targeting v1.2)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "1.2";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.2";`
+**Go:** `const SpecVersion = "1.3"` (update in implementations targeting v1.3)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "1.3";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.3";`
 
 ---
 

@@ -332,8 +332,25 @@ Deliverables: complete Rust binding (§18.3) ✅
 
 ---
 
-## Future (post v1.2)
+### v1.3 — C++ reference ✦ done
 
-- **v1.3 — C++ reference:** `relay.hpp` header with all canonical types and abstract base classes
+**Goal:** A complete C++ binding of the spec so a `relay.hpp` header can be built
+against §18.2 without ambiguity.
+
+- ✅ §18.2 (C++) completed: header-only `relay.hpp` layout, core types
+  (`Protocol`, `Version`, `Message`), and all six canonical frame types with
+  enums, constants, and validators (incl. v1.1 CAN XL fields)
+- ✅ C++ `to_message`/`from_message` convention reuses the §15.7 Meta-key
+  mappings identical to Go and Rust (cross-language trace interchangeability)
+- ✅ `SpecVersion = "1.3"`
+- ⬜ `relay.hpp` header implementation — filed as a tracking issue; spec defines
+  the binding, the header is a separate deliverable
+
+Deliverables: complete C++ binding (§18.2) ✅
+
+---
+
+## Future (post v1.3)
+
 - **v1.4 — Formal verification:** Model-checked lifecycle invariants (§6)
 - **v1.5 — Certification uplift:** ISO 26262 ASIL-D / DO-178C DAL-A evidence path

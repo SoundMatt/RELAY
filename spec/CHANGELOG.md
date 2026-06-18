@@ -1,5 +1,21 @@
 # RELAY Spec Changelog
 
+## v1.2 — 2026-06-18 (stable)
+
+Rust reference binding. Documentation-only — no normative or Go API change, so
+this is a MINOR release.
+
+- §18.3 (Rust) completed: the `relay-rs` crate layout, the core types
+  (`Protocol`, `Version`, `Message`), and **all six** canonical frame types
+  (`can`, `dds`, `lin`, `mqtt`, `rcp`, `someip`) with their enums, constants,
+  and serde field mappings — including the v1.1 CAN XL fields.
+- Rust `to_message`/`from_message` conversion contract documented, with the same
+  Meta-key field mappings as Go so traces are interchangeable across languages.
+- `SpecVersion = "1.2"`.
+
+The `relay-rs` crate implementation is tracked as RELAY issue (spec defines the
+binding; the crate is a separate deliverable).
+
 ## v1.1 — 2026-06-18 (stable)
 
 First protocol extension. Fully additive over v1.0 — no breaking changes to any

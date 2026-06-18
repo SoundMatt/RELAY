@@ -1,5 +1,21 @@
 # RELAY Spec Changelog
 
+## v1.4 — 2026-06-18 (stable)
+
+Formal verification of the §6 node lifecycle. Additive (MINOR release).
+
+- Added a TLA+ model `docs/formal/RelayLifecycle.tla` (+ `RelayLifecycle.cfg`,
+  `README.md`) that model-checks the §6 lifecycle as a state machine: TLC
+  verifies invariants for zero-value safety, send/receive-after-close,
+  channels-closed-on-close, and the no-auto-reconnect policy.
+- `docs/formal/README.md` gives the full requirement→invariant mapping for all
+  ten §6 requirements.
+- The model and its documentation are embedded in the binary as evidence
+  (`relay.Evidence("formal-model")`, `"formal-model-doc"`) and bundled by
+  `relay audit-pack`.
+- New spec §6.1; `SpecVersion = "1.4"`; REQ-RELAY-074/075 traced and tested
+  (`TestFormalModelCoversLifecycle` asserts the mapping covers §6.1…§6.10).
+
 ## v1.3 — 2026-06-18 (stable)
 
 C++ reference binding. Documentation-only — no normative or Go API change, so

@@ -1,4 +1,4 @@
-# RELAY Specification — v1.3
+# RELAY Specification — v1.4
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -375,6 +375,17 @@ Every RELAY-conformant implementation MUST satisfy all of the following.
 8. **Multiple subscriptions.** `Subscribe()` is safe to call multiple times; each call MUST return an independent channel or `Subscription`. Closing one MUST NOT affect others.
 9. **Zero-value safety.** A zero-value or uninitialised node MUST NOT panic; it MUST return `ErrNotConnected` for any operation.
 10. **Reconnection policy.** Implementations MUST NOT reconnect automatically after a transport drop. After the underlying transport fails, all subsequent operations MUST return `ErrNotConnected`. The application is responsible for calling `Close()` and creating a new instance. If an implementation exposes `Reconnect(ctx context.Context) error`, that method MUST perform only explicit reconnection — implicit background reconnection is never permitted.
+
+### 6.1 Formal model
+
+These ten requirements are formalised as a model-checked state machine in
+`docs/formal/RelayLifecycle.tla` (TLA+). The model explores every reachable
+combination of node state and operation and verifies, via TLC, the invariants
+that encode the requirements above (zero-value safety, send/receive-after-close,
+channels-closed-on-close, and no-auto-reconnect). `docs/formal/README.md` gives
+the full requirement-to-invariant mapping. The model and its documentation are
+embedded in the `relay` binary as evidence (`relay.Evidence("formal-model")`)
+and bundled by `relay audit-pack`, so the formal argument travels with the tool.
 
 ---
 
@@ -2290,11 +2301,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v1.3**
+Current version: **v1.4**
 
-**Go:** `const SpecVersion = "1.3"` (update in implementations targeting v1.3)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "1.3";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.3";`
+**Go:** `const SpecVersion = "1.4"` (update in implementations targeting v1.4)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "1.4";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.4";`
 
 ---
 

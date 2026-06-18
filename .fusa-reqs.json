@@ -510,6 +510,20 @@
       "text": "can.Frame.ToMessage and can.FromMessage MUST losslessly round-trip the ESI, XL, SDT, VCID, AF and SEC fields via relay.Message Meta keys can.esi, can.xl, can.sdt, can.vcid, can.af and can.sec.",
       "category": "functional",
       "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-074",
+      "title": "Formal lifecycle model",
+      "text": "A TLA+ formal model of the \u00a76 node lifecycle MUST exist (docs/formal/RelayLifecycle.tla) with a TLC-checkable Spec, and its requirement-to-invariant mapping MUST cover all ten \u00a76 lifecycle requirements.",
+      "category": "safety",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-075",
+      "title": "Formal model evidence",
+      "text": "The formal lifecycle model and its documentation MUST be embedded as evidence artifacts (\"formal-model\", \"formal-model-doc\") and bundled by relay audit-pack.",
+      "category": "safety",
+      "criticality": "low"
     }
   ]
 }

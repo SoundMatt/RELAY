@@ -350,7 +350,25 @@ Deliverables: complete C++ binding (§18.2) ✅
 
 ---
 
-## Future (post v1.3)
+## Phase 11 — Formal Verification
 
-- **v1.4 — Formal verification:** Model-checked lifecycle invariants (§6)
+### v1.4 — Model-checked §6 lifecycle ✦ done
+
+**Goal:** The §6 lifecycle requirements are machine-checked, not just prose.
+
+- ✅ TLA+ model `docs/formal/RelayLifecycle.tla` (+ `.cfg`) modelling the node
+  lifecycle state machine and its invariants (zero-value safety,
+  send/receive-after-close, channels-closed-on-close, no-auto-reconnect)
+- ✅ `docs/formal/README.md` requirement→invariant mapping for all ten §6 rules
+- ✅ Model + doc embedded as evidence (`relay.Evidence("formal-model")`) and
+  bundled by `relay audit-pack`
+- ✅ Spec §6.1; `SpecVersion = "1.4"`; REQ-RELAY-074/075 traced and tested
+  (`TestFormalModelCoversLifecycle` guards the §6.1…§6.10 mapping)
+
+Deliverables: formal lifecycle model (§6.1) ✅
+
+---
+
+## Future (post v1.4)
+
 - **v1.5 — Certification uplift:** ISO 26262 ASIL-D / DO-178C DAL-A evidence path

@@ -1,5 +1,24 @@
 # RELAY Spec Changelog
 
+## v1.6 — 2026-06-18 (stable)
+
+Cross-implementation interoperability harness. Additive (MINOR release);
+specification only — the `relay interop` command and the per-implementation
+`convert` driver are tracked as issues.
+
+- New optional CLI command `convert --protocol P` (§11.2): reads a canonical-type
+  value as JSON on stdin, runs it through the implementation's own `ToMessage()`,
+  and writes the resulting `relay.Message` as JSON — the black-box driver surface
+  for interop testing.
+- New tooling command `interop <binaryA> <binaryB> …` (§11.2.1): feeds shared
+  golden vectors to each implementation via `convert`, normalises timestamps, and
+  produces a pairwise equivalence matrix with field-level diffs. The canonical
+  `relay.Message` is the cross-language equality oracle, so conforming
+  `cpp-CAN`/`rust-CAN`/`go-CAN` MUST produce identical output for identical input.
+- Complements `compare` (declared-capability interchange) with behavioural
+  interchange.
+- `SpecVersion = "1.6"`.
+
 ## v1.5 — 2026-06-18 (stable)
 
 Certification uplift evidence path. Documentation/evidence only — no normative

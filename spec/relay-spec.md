@@ -1,4 +1,4 @@
-# RELAY Specification — v1.0
+# RELAY Specification — v1.1
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -756,7 +756,7 @@ protocol. These rules define the mapping:
 
 | Protocol | Send: ID → native | Send: Meta → native | Subscribe: native → Message |
 |---|---|---|---|
-| CAN | Parse decimal uint32 → `Frame.ID` | `can.ext/fd/rtr/brs` → frame flags | `Frame.ToMessage()` per §15.1 |
+| CAN | Parse decimal uint32 → `Frame.ID` | `can.ext/fd/rtr/brs/esi/xl/sdt/vcid/af/sec` → frame flags/fields | `Frame.ToMessage()` per §15.1 |
 | DDS | String → topic name for `Publisher.Write()` | `dds.reliability` etc. ignored (set at Participant level) | `Sample.ToMessage()` per §15.2 |
 | LIN | Parse decimal uint8 → frame ID for `Bus.Publish()` | — | `Frame.ToMessage()` per §15.3 |
 | MQTT | String → topic for `Client.Publish()` | `mqtt.qos` → QoS level; `mqtt.retained` ignored on send | `Message.ToMessage()` per §15.4 |
@@ -1288,6 +1288,12 @@ type Frame struct {
     RTR  bool   `json:"rtr,omitempty"`
     FD   bool   `json:"fd,omitempty"`
     BRS  bool   `json:"brs,omitempty"`
+    ESI  bool   `json:"esi,omitempty"`  // Error State Indicator (CAN-FD / CAN XL)
+    XL   bool   `json:"xl,omitempty"`   // CAN XL format
+    SDT  uint8  `json:"sdt,omitempty"`  // SDU Type (CAN XL)
+    VCID uint8  `json:"vcid,omitempty"` // Virtual CAN network ID (CAN XL)
+    AF   uint32 `json:"af,omitempty"`   // Acceptance Field (CAN XL)
+    SEC  bool   `json:"sec,omitempty"`  // Simple Extended Content flag (CAN XL)
     Data []byte `json:"data"`
 }
 
@@ -1310,15 +1316,37 @@ func (f *LoanedFrame) Return() {
 const (
     CANMaxDataLen   = 8
     CANFDMaxDataLen = 64
+    CANXLMinDataLen = 1      // CAN XL frames carry at least one data byte
+    CANXLMaxDataLen = 2048   // CAN XL payload limit
     CANMaxStdID     = 0x7FF
     CANMaxExtID     = 0x1FFFFFFF
+    CANXLMaxPrioID  = 0x7FF  // CAN XL Priority ID is 11-bit
 )
 
 func MaxDataLen(fd bool) int {
     if fd { return CANFDMaxDataLen }
     return CANMaxDataLen
 }
+
+// MaxDataLen returns the payload limit for this frame's format:
+// 2048 (XL), 64 (FD), or 8 (classic).
+func (f Frame) MaxDataLen() int {
+    switch {
+    case f.XL: return CANXLMaxDataLen
+    case f.FD: return CANFDMaxDataLen
+    default:   return CANMaxDataLen
+    }
+}
 ```
+
+**CAN XL (ISO 11898-1:2024).** The `XL` flag selects the CAN XL format,
+carrying up to 2048 data bytes. `XL` and `FD` are mutually exclusive frame
+formats. CAN XL frames use an 11-bit Priority ID carried in `ID` (no
+standard/extended distinction), and the `SDT`, `VCID`, `AF` and `SEC` fields
+carry the XL SDU Type, Virtual CAN network ID, Acceptance Field, and Simple
+Extended Content flag. `ESI` (Error State Indicator) is valid for CAN-FD and
+CAN XL frames. All CAN XL fields are additive over v1.0 and default to
+zero/false for classic and CAN-FD frames.
 
 Implementations construct `LoanedFrame` directly:
 `&LoanedFrame{Frame: f, release: releaseFn}`. No constructor function is required
@@ -1331,6 +1359,10 @@ by the spec. The `release` field is unexported to prevent callers from bypassing
 - BRS MUST be false when FD is false
 - RTR MUST be false when FD is true *(gap in existing go-CAN: this check is absent — see Appendix A)*
 - len(Data) ≤ 8 when FD is false; ≤ 64 when FD is true
+- FD and XL MUST NOT both be set (mutually exclusive formats)
+- ESI MUST be false unless FD or XL is set
+- For XL frames: Ext MUST be false; RTR MUST be false; BRS MUST be false;
+  Priority ID (`ID`) MUST be ≤ 0x7FF; 1 ≤ len(Data) ≤ 2048
 
 ---
 
@@ -1929,11 +1961,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v1.0**
+Current version: **v1.1**
 
-**Go:** `const SpecVersion = "1.0"` (update in implementations targeting v1.0)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "1.0";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.0";`
+**Go:** `const SpecVersion = "1.1"` (update in implementations targeting v1.1)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "1.1";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.1";`
 
 ---
 

@@ -178,7 +178,7 @@
     {
       "id": "REQ-RELAY-026",
       "title": "Metrics struct",
-      "text": "The system shall define a Metrics struct with uint64 fields WriteCount, DeliverCount, DropCount, BytesWritten, BytesDelivered, ErrorCount, marshalled as JSON with snake_case keys. Field semantics MUST follow spec §9.1: WriteCount counts accepted sends once per call (never per subscriber); DeliverCount and BytesDelivered are counted once per receiving subscriber; BytesWritten/BytesDelivered sum application payload only (no framing); DropCount counts back-pressure discards (not filter misses); ErrorCount counts operations returning a non-nil error.",
+      "text": "The system shall define a Metrics struct with uint64 fields WriteCount, DeliverCount, DropCount, BytesWritten, BytesDelivered, ErrorCount, marshalled as JSON with snake_case keys. Field semantics MUST follow spec \u00a79.1: WriteCount counts accepted sends once per call (never per subscriber); DeliverCount and BytesDelivered are counted once per receiving subscriber; BytesWritten/BytesDelivered sum application payload only (no framing); DropCount counts back-pressure discards (not filter misses); ErrorCount counts operations returning a non-nil error.",
       "category": "functional",
       "criticality": "medium"
     },
@@ -192,7 +192,7 @@
     {
       "id": "REQ-RELAY-028",
       "title": "Drainer interface",
-      "text": "The system shall define a Drainer interface with method CloseWithDrain(ctx context.Context) error. Per spec §9.2, CloseWithDrain MUST block until every accepted message has been delivered to all live subscribers, or until ctx is done, then close. A slow or abandoned consumer MUST NOT block past ctx: on ctx expiry the node MUST close immediately, drop undelivered messages (counted in Metrics.DropCount), and return ErrTimeout; on clean drain it MUST return nil. After it returns the node is closed and a subsequent Close() is a no-op.",
+      "text": "The system shall define a Drainer interface with method CloseWithDrain(ctx context.Context) error. Per spec \u00a79.2, CloseWithDrain MUST block until every accepted message has been delivered to all live subscribers, or until ctx is done, then close. A slow or abandoned consumer MUST NOT block past ctx: on ctx expiry the node MUST close immediately, drop undelivered messages (counted in Metrics.DropCount), and return ErrTimeout; on clean drain it MUST return nil. After it returns the node is closed and a subsequent Close() is a no-op.",
       "category": "functional",
       "criticality": "medium"
     },
@@ -206,146 +206,146 @@
     {
       "id": "REQ-RELAY-030",
       "title": "CAN canonical types",
-      "text": "The can sub-package shall define Frame, Filter, LoanedFrame, the constants CANMaxDataLen, CANFDMaxDataLen, CANMaxStdID, CANMaxExtID, and MaxDataLen(fd bool) int per spec §15.1.",
+      "text": "The can sub-package shall define Frame, Filter, LoanedFrame, the constants CANMaxDataLen, CANFDMaxDataLen, CANMaxStdID, CANMaxExtID, and MaxDataLen(fd bool) int per spec \u00a715.1.",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-031",
       "title": "CAN ValidateFrame",
-      "text": "The can sub-package shall implement ValidateFrame(f Frame) error that enforces all §15.1 constraints. It shall return ErrInvalidFrame (not relay.ErrPayloadTooLarge) for structural violations.",
+      "text": "The can sub-package shall implement ValidateFrame(f Frame) error that enforces all \u00a715.1 constraints. It shall return ErrInvalidFrame (not relay.ErrPayloadTooLarge) for structural violations.",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-032",
       "title": "CAN ToMessage and FromMessage",
-      "text": "Frame.ToMessage() shall produce a relay.Message per §15.7.1. FromMessage(relay.Message) shall invert the conversion; if msg.ID is not a valid uint32 it shall return ErrInvalidFrame.",
+      "text": "Frame.ToMessage() shall produce a relay.Message per \u00a715.7.1. FromMessage(relay.Message) shall invert the conversion; if msg.ID is not a valid uint32 it shall return ErrInvalidFrame.",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-033",
       "title": "DDS canonical types",
-      "text": "The dds sub-package shall define GUID, Sample, QoS, ReliabilityKind, DurabilityKind, Domain, and ValidateDomain per spec §15.2. DefaultQoS() shall return a QoS with HistoryDepth=1.",
+      "text": "The dds sub-package shall define GUID, Sample, QoS, ReliabilityKind, DurabilityKind, Domain, and ValidateDomain per spec \u00a715.2. DefaultQoS() shall return a QoS with HistoryDepth=1.",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-034",
       "title": "DDS ToMessage and FromMessage",
-      "text": "Sample.ToMessage() shall produce a relay.Message per §15.7.2. FromMessage(relay.Message) shall invert the conversion, decoding WriterGUID from hex if present.",
+      "text": "Sample.ToMessage() shall produce a relay.Message per \u00a715.7.2. FromMessage(relay.Message) shall invert the conversion, decoding WriterGUID from hex if present.",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-035",
       "title": "LIN canonical types",
-      "text": "The lin sub-package shall define Frame, Filter, ScheduleEntry, ChecksumType, and constants LINMaxDataLen, LINMaxID, LINDiagRequestID, LINDiagResponseID per spec §15.3.",
+      "text": "The lin sub-package shall define Frame, Filter, ScheduleEntry, ChecksumType, and constants LINMaxDataLen, LINMaxID, LINDiagRequestID, LINDiagResponseID per spec \u00a715.3.",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-036",
       "title": "LIN validation helpers",
-      "text": "The lin sub-package shall implement ValidateFrame, ProtectID, VerifyPID, and CalcChecksum per spec §8.3 and §15.3. ValidateFrame shall return ErrInvalidFrame for all constraint violations.",
+      "text": "The lin sub-package shall implement ValidateFrame, ProtectID, VerifyPID, and CalcChecksum per spec \u00a78.3 and \u00a715.3. ValidateFrame shall return ErrInvalidFrame for all constraint violations.",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-037",
       "title": "LIN ToMessage and FromMessage",
-      "text": "Frame.ToMessage() shall produce a relay.Message per §15.7.3. FromMessage shall parse msg.ID as decimal uint8 in 0–63; if out of range it shall return ErrInvalidFrame.",
+      "text": "Frame.ToMessage() shall produce a relay.Message per \u00a715.7.3. FromMessage shall parse msg.ID as decimal uint8 in 0\u201363; if out of range it shall return ErrInvalidFrame.",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-038",
       "title": "MQTT canonical types",
-      "text": "The mqtt sub-package shall define Message, UserProperty, QoS (AtMostOnce, AtLeastOnce, ExactlyOnce), and MatchTopic per spec §15.4. MatchTopic shall implement MQTT §4.7 wildcards; topics starting with '$' must not match wildcard subscriptions.",
+      "text": "The mqtt sub-package shall define Message, UserProperty, QoS (AtMostOnce, AtLeastOnce, ExactlyOnce), and MatchTopic per spec \u00a715.4. MatchTopic shall implement MQTT \u00a74.7 wildcards; topics starting with '$' must not match wildcard subscriptions.",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-039",
       "title": "MQTT ToMessage and FromMessage",
-      "text": "Message.ToMessage() shall produce a relay.Message per §15.7.4. FromMessage shall invert the conversion, parsing mqtt.qos and mqtt.retained from Meta.",
+      "text": "Message.ToMessage() shall produce a relay.Message per \u00a715.7.4. FromMessage shall invert the conversion, parsing mqtt.qos and mqtt.retained from Meta.",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-040",
       "title": "RCP canonical types",
-      "text": "The rcp sub-package shall define Command, Response, Status, Loan, Zone (with PascalCase String() and ZoneFromString), Priority, CommandType, ResponseStatus per spec §15.5.",
+      "text": "The rcp sub-package shall define Command, Response, Status, Loan, Zone (with PascalCase String() and ZoneFromString), Priority, CommandType, ResponseStatus per spec \u00a715.5.",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-041",
       "title": "RCP conversion functions",
-      "text": "Status.ToMessage() and Response.ToMessage() shall produce relay.Messages per §15.7.5. CommandFromMessage and StatusFromMessage shall invert the conversions.",
+      "text": "Status.ToMessage() and Response.ToMessage() shall produce relay.Messages per \u00a715.7.5. CommandFromMessage and StatusFromMessage shall invert the conversions.",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-042",
       "title": "SOMEIP canonical types",
-      "text": "The someip sub-package shall define Message, MessageType constants (MsgType* prefix), ReturnCode constants (Ret* prefix), type aliases, SOMEIPProtocolVersion=0x01, and Validate() per spec §15.6.",
+      "text": "The someip sub-package shall define Message, MessageType constants (MsgType* prefix), ReturnCode constants (Ret* prefix), type aliases, SOMEIPProtocolVersion=0x01, and Validate() per spec \u00a715.6.",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-043",
       "title": "SOMEIP ToMessage and FromMessage",
-      "text": "Message.ToMessage() shall produce a relay.Message per §15.7.6. FromMessage shall parse msg.ID as 'svcID/methodID' decimal pair; if malformed it shall return ErrInvalidID.",
+      "text": "Message.ToMessage() shall produce a relay.Message per \u00a715.7.6. FromMessage shall parse msg.ID as 'svcID/methodID' decimal pair; if malformed it shall return ErrInvalidID.",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-044",
       "title": "relay status command",
-      "text": "The relay CLI shall implement the status command that prints a JSON status document with protocol, tool, version, healthy, connected, endpoint, and details fields per spec §12.3.",
+      "text": "The relay CLI shall implement the status command that prints a JSON status document with protocol, tool, version, healthy, connected, endpoint, and details fields per spec \u00a712.3.",
       "category": "functional",
       "criticality": "medium"
     },
     {
       "id": "REQ-RELAY-045",
-      "title": "Constructor contract — Form 1 (endpoint-addressed)",
-      "text": "A conformant hardware transport sub-package MUST export New(ctx context.Context, endpoint string, opts ...Option) (Interface, error) per spec §7 Form 1. A failed New MUST return nil interface and non-nil error.",
+      "title": "Constructor contract \u2014 Form 1 (endpoint-addressed)",
+      "text": "A conformant hardware transport sub-package MUST export New(ctx context.Context, endpoint string, opts ...Option) (Interface, error) per spec \u00a77 Form 1. A failed New MUST return nil interface and non-nil error.",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-046",
-      "title": "Constructor contract — mock sub-package",
-      "text": "Every conformant implementation MUST ship a mock sub-package with a Form 2 New returning a fully functional in-process implementation that supports all mandatory and optional interfaces of the primary implementation (spec §7 rule 4).",
+      "title": "Constructor contract \u2014 mock sub-package",
+      "text": "Every conformant implementation MUST ship a mock sub-package with a Form 2 New returning a fully functional in-process implementation that supports all mandatory and optional interfaces of the primary implementation (spec \u00a77 rule 4).",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-047",
-      "title": "Version document schema — all fields",
-      "text": "The version --format json output MUST include all fields: tool, protocol, protocol_int, version, spec_version, language (one of go/cpp/rust), runtime (spec §12.1).",
+      "title": "Version document schema \u2014 all fields",
+      "text": "The version --format json output MUST include all fields: tool, protocol, protocol_int, version, spec_version, language (one of go/cpp/rust), runtime (spec \u00a712.1).",
       "category": "functional",
       "criticality": "medium"
     },
     {
       "id": "REQ-RELAY-048",
-      "title": "Capabilities document schema — all fields",
-      "text": "The capabilities output MUST include all fields: kind (\"capabilities\"), tool, protocol, protocol_int, version, spec_version, commands, transports, features, interfaces, optional_interfaces, adapt (spec §12.2).",
+      "title": "Capabilities document schema \u2014 all fields",
+      "text": "The capabilities output MUST include all fields: kind (\"capabilities\"), tool, protocol, protocol_int, version, spec_version, commands, transports, features, interfaces, optional_interfaces, adapt (spec \u00a712.2).",
       "category": "functional",
       "criticality": "medium"
     },
     {
       "id": "REQ-RELAY-049",
-      "title": "Status document schema — all fields",
-      "text": "The status --format json output MUST include all fields: protocol, tool, version, healthy, connected, endpoint, details (spec §12.3).",
+      "title": "Status document schema \u2014 all fields",
+      "text": "The status --format json output MUST include all fields: protocol, tool, version, healthy, connected, endpoint, details (spec \u00a712.3).",
       "category": "functional",
       "criticality": "medium"
     },
     {
       "id": "REQ-RELAY-050",
-      "title": "HARA — Hazard Analysis and Risk Assessment",
+      "title": "HARA \u2014 Hazard Analysis and Risk Assessment",
       "text": "The RELAY project shall maintain a HARA (.fusa-hara.json) identifying all tool-failure hazards, their ASIL ratings, and the safety goals that mitigate them. The HARA shall be reviewed before each MINOR spec release.",
       "category": "safety",
       "criticality": "high"
@@ -360,28 +360,28 @@
     {
       "id": "REQ-RELAY-052",
       "title": "relay conform CLI command",
-      "text": "The system shall provide a `relay conform <binary>` command that invokes the target binary's version, capabilities, and status commands, validates their JSON output against the schemas in §12, and reports each finding with a severity of PASS, WARN, or FAIL. The process MUST exit 0 when the result is PASS or WARN, and MUST exit 1 when any finding is FAIL. With --strict, WARN is also treated as FAIL (spec §17).",
+      "text": "The system shall provide a `relay conform <binary>` command that invokes the target binary's version, capabilities, and status commands, validates their JSON output against the schemas in \u00a712, and reports each finding with a severity of PASS, WARN, or FAIL. The process MUST exit 0 when the result is PASS or WARN, and MUST exit 1 when any finding is FAIL. With --strict, WARN is also treated as FAIL (spec \u00a717).",
       "category": "functional",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-053",
-      "title": "Validate version document against §12.1",
-      "text": "relay conform MUST validate that the version --format json output contains all required fields: tool, version, spec_version, language, runtime. It MUST FAIL if any required field is absent or empty. It MUST FAIL if language is not one of {go, cpp, rust}. A null protocol field MUST produce a WARN (multi-protocol tools may omit it) rather than a FAIL (spec §12.1).",
+      "title": "Validate version document against \u00a712.1",
+      "text": "relay conform MUST validate that the version --format json output contains all required fields: tool, version, spec_version, language, runtime. It MUST FAIL if any required field is absent or empty. It MUST FAIL if language is not one of {go, cpp, rust}. A null protocol field MUST produce a WARN (multi-protocol tools may omit it) rather than a FAIL (spec \u00a712.1).",
       "category": "functional",
       "criticality": "medium"
     },
     {
       "id": "REQ-RELAY-054",
-      "title": "Validate capabilities document against §12.2",
-      "text": "relay conform MUST validate that the capabilities output has kind=\"capabilities\", non-empty tool/version/spec_version fields, a commands array containing at least \"version\", \"capabilities\", and \"status\", and a boolean adapt field. Missing mandatory commands MUST produce FAIL findings. adapt=false MUST produce a WARN (spec §12.2).",
+      "title": "Validate capabilities document against \u00a712.2",
+      "text": "relay conform MUST validate that the capabilities output has kind=\"capabilities\", non-empty tool/version/spec_version fields, a commands array containing at least \"version\", \"capabilities\", and \"status\", and a boolean adapt field. Missing mandatory commands MUST produce FAIL findings. adapt=false MUST produce a WARN (spec \u00a712.2).",
       "category": "functional",
       "criticality": "medium"
     },
     {
       "id": "REQ-RELAY-055",
-      "title": "Validate status document against §12.3",
-      "text": "relay conform MUST validate that the status output contains non-empty tool and version fields, and boolean healthy and connected fields. Missing or wrong-type fields MUST produce FAIL findings (spec §12.3).",
+      "title": "Validate status document against \u00a712.3",
+      "text": "relay conform MUST validate that the status output contains non-empty tool and version fields, and boolean healthy and connected fields. Missing or wrong-type fields MUST produce FAIL findings (spec \u00a712.3).",
       "category": "functional",
       "criticality": "medium"
     },
@@ -395,14 +395,14 @@
     {
       "id": "REQ-RELAY-057",
       "title": "Golden reference vectors",
-      "text": "The project shall maintain golden reference vectors under spec/vectors/ — at least one per canonical type capturing its deterministic ToMessage() output, and at least one per error condition under spec/vectors/errors/ naming the expected error sentinel. A CI-tested check MUST verify that every value vector round-trips losslessly through ToMessage()/FromMessage() and that every error vector is rejected by its validator with the named sentinel (errors.Is). The SOME/IP ToMessage()/FromMessage() conversion MUST be lossless, preserving ClientID, SessionID, and MessageType.",
+      "text": "The project shall maintain golden reference vectors under spec/vectors/ \u2014 at least one per canonical type capturing its deterministic ToMessage() output, and at least one per error condition under spec/vectors/errors/ naming the expected error sentinel. A CI-tested check MUST verify that every value vector round-trips losslessly through ToMessage()/FromMessage() and that every error vector is rejected by its validator with the named sentinel (errors.Is). The SOME/IP ToMessage()/FromMessage() conversion MUST be lossless, preserving ClientID, SessionID, and MessageType.",
       "category": "safety",
       "criticality": "high"
     },
     {
       "id": "REQ-RELAY-058",
       "title": "JSON Schemas and schema-driven conformance",
-      "text": "The project shall publish JSON Schema (draft 2020-12) documents under spec/schemas/ for every canonical type (§15) and every CLI document (§12.1 version, §12.2 capabilities, §12.3 status). The schemas MUST be embedded in the relay binary and exposed via relay.Schema(name). relay conform MUST validate each target document against the relevant embedded schema and report any structural violation as a FAIL. A CI-tested check MUST verify that every golden vector value conforms to its published schema.",
+      "text": "The project shall publish JSON Schema (draft 2020-12) documents under spec/schemas/ for every canonical type (\u00a715) and every CLI document (\u00a712.1 version, \u00a712.2 capabilities, \u00a712.3 status). The schemas MUST be embedded in the relay binary and exposed via relay.Schema(name). relay conform MUST validate each target document against the relevant embedded schema and report any structural violation as a FAIL. A CI-tested check MUST verify that every golden vector value conforms to its published schema.",
       "category": "functional",
       "criticality": "high"
     },
@@ -416,7 +416,7 @@
     {
       "id": "REQ-RELAY-060",
       "title": "relay probe command",
-      "text": "The system shall provide `relay probe [--scan] [--match glob] [--format text|json] [binary...]` that probes binaries (running capabilities and version) and reports each RELAY-conformant binary's tool, protocol, version, spec_version, transports, and adapt flag (spec §11). With explicit binaries it MUST report non-conformant binaries as such; with --scan it MUST walk PATH for executables matching --match and report only conformant ones. With no candidates it MUST exit 2.",
+      "text": "The system shall provide `relay probe [--scan] [--match glob] [--format text|json] [binary...]` that probes binaries (running capabilities and version) and reports each RELAY-conformant binary's tool, protocol, version, spec_version, transports, and adapt flag (spec \u00a711). With explicit binaries it MUST report non-conformant binaries as such; with --scan it MUST walk PATH for executables matching --match and report only conformant ones. With no candidates it MUST exit 2.",
       "category": "functional",
       "criticality": "medium"
     },
@@ -482,6 +482,34 @@
       "text": "relay serve MUST expose GET /badge/status.svg returning an image/svg+xml status badge whose colour reflects the overall conformance result (green PASS, amber WARN, red FAIL) and whose text shows the result.",
       "category": "functional",
       "criticality": "low"
+    },
+    {
+      "id": "REQ-RELAY-070",
+      "title": "CAN XL canonical frame fields",
+      "text": "The can.Frame canonical type MUST carry CAN XL (ISO 11898-1:2024) information via the XL flag and the SDT, VCID, AF and SEC fields, and MUST define the CANXLMaxDataLen (2048) and CANXLMinDataLen (1) limits and a Frame.MaxDataLen method returning the format-appropriate payload limit.",
+      "category": "functional",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-071",
+      "title": "CAN-FD/XL Error State Indicator",
+      "text": "The can.Frame canonical type MUST carry the Error State Indicator via the ESI field, which is valid only for CAN-FD or CAN XL frames.",
+      "category": "functional",
+      "criticality": "low"
+    },
+    {
+      "id": "REQ-RELAY-072",
+      "title": "CAN XL frame validation",
+      "text": "can.ValidateFrame MUST reject, with ErrInvalidFrame: a frame with both FD and XL set; ESI set without FD or XL; an XL frame that sets Ext, sets RTR, sets BRS, has a Priority ID above 0x7FF, has fewer than 1 data byte, or exceeds 2048 data bytes.",
+      "category": "safety",
+      "criticality": "medium"
+    },
+    {
+      "id": "REQ-RELAY-073",
+      "title": "CAN XL lossless message conversion",
+      "text": "can.Frame.ToMessage and can.FromMessage MUST losslessly round-trip the ESI, XL, SDT, VCID, AF and SEC fields via relay.Message Meta keys can.esi, can.xl, can.sdt, can.vcid, can.af and can.sec.",
+      "category": "functional",
+      "criticality": "medium"
     }
   ]
 }

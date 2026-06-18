@@ -1,4 +1,4 @@
-# RELAY Specification — v1.1
+# RELAY Specification — v1.2
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -1924,6 +1924,178 @@ impl Context {
 }
 ```
 
+#### Crate layout (`relay-rs`)
+
+The Rust reference crate `relay-rs` (crate name `relay`) mirrors the Go module
+layout (§13.6): the crate root exports the core types below, and each protocol
+has a sub-module (`relay::can`, `relay::dds`, `relay::lin`, `relay::mqtt`,
+`relay::rcp`, `relay::someip`) exporting that protocol's canonical types,
+validators, and conversions. `RELAY_SPEC_VERSION` (§19.4) MUST be exported from
+the crate root. All canonical types MUST derive `Clone`, `Debug`, and
+serde `Serialize`/`Deserialize` with the field names from the §15 JSON tags.
+
+#### Core types (Rust)
+
+```rust
+#[repr(i32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Protocol { Can = 1, Dds = 2, Lin = 3, Mqtt = 4, Rcp = 5, Someip = 6 }
+// Serialises as its integer value (§3); Display yields "CAN", "DDS", … .
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Version { pub major: i32, pub minor: i32, pub patch: i32 }
+// Display yields "major.minor.patch".
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Message {
+    pub protocol:  Protocol,
+    pub version:   Version,
+    pub id:        String,
+    #[serde(with = "base64")]
+    pub payload:   Vec<u8>,
+    pub timestamp: chrono::DateTime<chrono::Utc>, // RFC 3339 nanosecond
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub seq:       u64,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub meta:      std::collections::BTreeMap<String, String>,
+}
+```
+
+`Error` (the four mandatory sentinels) is defined in §5.1. Protocol-specific
+errors wrap a sentinel via `#[from]`/`source()` so that `matches!`-style checks
+against the sentinel succeed (§5.2).
+
+#### Canonical frame types (Rust)
+
+```rust
+// relay::can
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct Frame {
+    pub id:   u32,
+    #[serde(default, skip_serializing_if = "is_false")] pub ext:  bool,
+    #[serde(default, skip_serializing_if = "is_false")] pub rtr:  bool,
+    #[serde(default, skip_serializing_if = "is_false")] pub fd:   bool,
+    #[serde(default, skip_serializing_if = "is_false")] pub brs:  bool,
+    #[serde(default, skip_serializing_if = "is_false")] pub esi:  bool, // CAN-FD / XL
+    #[serde(default, skip_serializing_if = "is_false")] pub xl:   bool, // CAN XL
+    #[serde(default, skip_serializing_if = "is_zero")]  pub sdt:  u8,   // CAN XL
+    #[serde(default, skip_serializing_if = "is_zero")]  pub vcid: u8,   // CAN XL
+    #[serde(default, skip_serializing_if = "is_zero")]  pub af:   u32,  // CAN XL
+    #[serde(default, skip_serializing_if = "is_false")] pub sec:  bool, // CAN XL
+    #[serde(with = "base64")] pub data: Vec<u8>,
+}
+pub const CAN_MAX_DATA_LEN: usize = 8;
+pub const CAN_FD_MAX_DATA_LEN: usize = 64;
+pub const CAN_XL_MIN_DATA_LEN: usize = 1;
+pub const CAN_XL_MAX_DATA_LEN: usize = 2048;
+pub const CAN_MAX_STD_ID: u32 = 0x7FF;
+pub const CAN_MAX_EXT_ID: u32 = 0x1FFF_FFFF;
+pub const CAN_XL_MAX_PRIO_ID: u32 = 0x7FF;
+// fn validate_frame(&Frame) -> Result<(), Error>  — constraints per §15.1.
+
+// relay::dds
+pub type Guid = [u8; 16];
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Sample {
+    pub topic: String,
+    #[serde(with = "base64")] pub payload: Vec<u8>,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    #[serde(rename = "seq")] pub sequence_number: u64,
+    pub writer_guid: Guid,
+}
+#[repr(i32)] #[derive(Clone, Copy, Debug)] pub enum ReliabilityKind { BestEffort = 0, Reliable = 1 }
+#[repr(i32)] #[derive(Clone, Copy, Debug)] pub enum DurabilityKind  { Volatile = 0, TransientLocal = 1 }
+#[repr(i32)] #[derive(Clone, Copy, Debug)] pub enum BackPressurePolicy { DropNewest = 0, DropOldest = 1, Block = 2 }
+
+// relay::lin
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct Frame { pub id: u8, #[serde(with = "base64")] pub data: Vec<u8>,
+    pub checksum: u8, pub checksum_type: LinChecksumType }
+#[repr(i32)] #[derive(Clone, Copy, Debug)] pub enum LinChecksumType { Classic = 0, Enhanced = 1 }
+pub const LIN_MAX_DATA_LEN: usize = 8;
+pub const LIN_MAX_ID: u8 = 0x3F;
+pub const LIN_DIAG_REQUEST_ID: u8 = 0x3C;
+pub const LIN_DIAG_RESPONSE_ID: u8 = 0x3D;
+
+// relay::mqtt
+#[repr(i32)] #[derive(Clone, Copy, Debug)] pub enum QoS { AtMostOnce = 0, AtLeastOnce = 1, ExactlyOnce = 2 }
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UserProperty { pub key: String, pub value: String }
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Message {
+    pub topic: String,
+    #[serde(with = "base64")] pub payload: Vec<u8>,
+    pub qos: QoS,
+    #[serde(default, skip_serializing_if = "is_false")] pub retained: bool,
+    #[serde(default, skip_serializing_if = "is_zero")]  pub packet_id: u16,
+    #[serde(default, skip_serializing_if = "String::is_empty")] pub response_topic: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")] pub correlation_data: Vec<u8>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")] pub user_properties: Vec<UserProperty>,
+    #[serde(default, skip_serializing_if = "String::is_empty")] pub content_type: String,
+    #[serde(default, skip_serializing_if = "is_zero")]  pub expiry_interval: u32,
+}
+
+// relay::rcp
+#[repr(u8)] #[derive(Clone, Copy, Debug)]
+pub enum Zone { Unknown = 0, FrontLeft = 1, FrontRight = 2, RearLeft = 3, RearRight = 4, Central = 5 }
+#[repr(u8)] #[derive(Clone, Copy, Debug)] pub enum Priority { Normal = 0, High = 1, Critical = 2 }
+#[repr(u16)] #[derive(Clone, Copy, Debug)]
+pub enum CommandType { Noop = 0, Set = 1, Get = 2, Reset = 3, Watchdog = 4, Sleep = 5, Wake = 6 }
+#[repr(u8)] #[derive(Clone, Copy, Debug)]
+pub enum ResponseStatus { Ok = 0, Error = 1, Timeout = 2, Busy = 3, Unknown = 4 }
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Command { pub id: u32, pub zone: Zone, #[serde(rename = "type")] pub kind: CommandType,
+    pub priority: Priority, #[serde(default, skip_serializing_if = "Vec::is_empty")] pub payload: Vec<u8> }
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Response { pub command_id: u32, pub zone: Zone, pub status: ResponseStatus,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")] pub payload: Vec<u8> }
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Status { pub zone: Zone, pub seq: u32, pub healthy: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")] pub payload: Vec<u8> }
+
+// relay::someip
+#[repr(u8)] #[derive(Clone, Copy, Debug)]
+pub enum MessageType {
+    Request = 0x00, RequestNoReturn = 0x01, Notification = 0x02,
+    Response = 0x80, Error = 0x81,
+    TpRequest = 0x20, TpRequestNoReturn = 0x21, TpNotification = 0x22,
+    TpResponse = 0xA0, TpError = 0xA1,
+}
+#[repr(u8)] #[derive(Clone, Copy, Debug)]
+pub enum ReturnCode {
+    Ok = 0x00, NotOk = 0x01, UnknownService = 0x02, UnknownMethod = 0x03,
+    NotReady = 0x04, NotReachable = 0x05, Timeout = 0x06, WrongProtocolVersion = 0x07,
+    WrongInterfaceVersion = 0x08, MalformedMessage = 0x09, WrongMessageType = 0x0A,
+}
+pub const SOMEIP_PROTOCOL_VERSION: u8 = 0x01;
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Message {
+    pub service_id: u16, pub method_id: u16, pub client_id: u16, pub session_id: u16,
+    pub protocol_version: u8,  // MUST equal SOMEIP_PROTOCOL_VERSION
+    pub interface_version: u8,
+    pub message_type: MessageType, pub return_code: ReturnCode,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")] pub payload: Vec<u8>,
+}
+```
+
+#### Conversions (Rust)
+
+Every canonical frame type MUST expose lossless conversions matching the §15.7
+field mappings:
+
+```rust
+impl Frame {
+    pub fn to_message(&self) -> relay::Message { /* … */ }
+}
+pub fn from_message(m: &relay::Message) -> Result<Frame, Error> { /* … */ }
+```
+
+`to_message` MUST stamp `timestamp` with `chrono::Utc::now()` when no wire
+timestamp is available. `from_message` MUST return the relevant sentinel-wrapped
+`Error` on malformed input (e.g. a non-numeric CAN `id`). The Meta-key field
+mappings (`can.fd`, `can.xl`, `someip.msg_type`, …) are identical to the Go
+implementation so that traces are interchangeable across languages.
+
 ---
 
 ## 19. Versioning
@@ -1961,11 +2133,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v1.1**
+Current version: **v1.2**
 
-**Go:** `const SpecVersion = "1.1"` (update in implementations targeting v1.1)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "1.1";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.1";`
+**Go:** `const SpecVersion = "1.2"` (update in implementations targeting v1.2)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "1.2";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.2";`
 
 ---
 

@@ -312,9 +312,28 @@ Deliverables: CAN XL canonical type, schema, vectors ✅
 
 ---
 
-## Future (post v1.1)
+## Phase 10 — Language References
 
-- **v1.2 — Rust reference:** `relay-rs` crate with all canonical types and trait definitions
+### v1.2 — Rust reference ✦ done
+
+**Goal:** A complete Rust binding of the spec so a `relay-rs` crate can be built
+against §18.3 without ambiguity.
+
+- ✅ §18.3 (Rust) completed: crate layout, core types (`Protocol`, `Version`,
+  `Message`), and all six canonical frame types with enums, constants, and serde
+  field mappings (incl. v1.1 CAN XL fields)
+- ✅ Rust `to_message`/`from_message` conversion contract with Go-identical
+  Meta-key mappings (cross-language trace interchangeability)
+- ✅ `SpecVersion = "1.2"`
+- ⬜ `relay-rs` crate implementation + publish to crates.io — filed as a
+  tracking issue; spec defines the binding, the crate is a separate deliverable
+
+Deliverables: complete Rust binding (§18.3) ✅
+
+---
+
+## Future (post v1.2)
+
 - **v1.3 — C++ reference:** `relay.hpp` header with all canonical types and abstract base classes
 - **v1.4 — Formal verification:** Model-checked lifecycle invariants (§6)
 - **v1.5 — Certification uplift:** ISO 26262 ASIL-D / DO-178C DAL-A evidence path

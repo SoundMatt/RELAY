@@ -1,5 +1,28 @@
 # RELAY Spec Changelog
 
+## v1.10 — 2026-06-19 (stable)
+
+Continuous conformance — conformance must now be *continuously proven*, not just
+declared. Additive (MINOR).
+
+- New **§20 Continuous Conformance**, making the CI process normative:
+  - **§20.1 CI gates** — a conformant implementation's CI MUST gate on
+    `relay conform --strict`, the **full x-FuSa lifecycle** (check + 100%
+    traceability + cyber + vuln + qualification), and `relay interop`
+    behavioural conformance; releases tagged only from green CI.
+  - **§20.2** behavioural conformance against the embedded golden vectors via
+    `convert`.
+  - **§20.3** core- vs **tooling-conformant** tiers (the latter adds `convert`,
+    `subscribe`/`send --format json`); an advertised-but-erroring `convert` is a
+    conformance failure.
+  - **§20.4** mandatory evidence (requirements registry, HARA, dFMEA, TARA where
+    untrusted input is processed) — schemas owned by x-FuSa, presence required.
+  - **§20.5** supply-chain: SBOM + build provenance (SLSA), signed releases.
+- RELAY's own CI now runs the **full go-FuSa lifecycle** (adds `vuln`, `qualify`,
+  `verify`, `fmea`, `boundary`, `coupling`, `release`, and the ISO 26262 /
+  DO-178C / SLSA / ISO 21434 gap reports + `audit-pack`) — the reference exemplar.
+- `SpecVersion = "1.10"`; REQ-RELAY-088/089/090.
+
 ## v1.9 — 2026-06-19 (stable)
 
 Cross-language library-architecture convention. Additive (MINOR).

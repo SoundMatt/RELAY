@@ -92,6 +92,35 @@ func TestSpecDefinesLibraryArchitecture(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-088
+//fusa:test REQ-RELAY-089
+//fusa:test REQ-RELAY-090
+func TestSpecDefinesContinuousConformance(t *testing.T) {
+	spec, err := Evidence("specification")
+	if err != nil || len(spec) == 0 {
+		t.Fatalf("specification evidence missing: %v", err)
+	}
+	s := string(spec)
+	if !strings.Contains(s, "## 20. Continuous Conformance") {
+		t.Error("spec must define §20 Continuous Conformance (REQ-088)")
+	}
+	// Wrap-safe single tokens (the spec prose is hard-wrapped, so multi-word
+	// phrases can span a line break).
+	for _, want := range []string{
+		"conform",            // §20.1.1 CI gate
+		"x-FuSa",             // §20.1.2 full lifecycle
+		"qualification",      // §20.1.2 tool qualification
+		"interop",            // §20.1.3 behavioural
+		"Tooling-conformant", // §20.3 tiers (REQ-089)
+		"dFMEA",              // §20.4 evidence (REQ-090)
+		"provenance",         // §20.5 supply-chain (REQ-090)
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("§20 must mandate %q", want)
+		}
+	}
+}
+
 //fusa:test REQ-RELAY-074
 //fusa:test REQ-RELAY-075
 func TestFormalModelCoversLifecycle(t *testing.T) {

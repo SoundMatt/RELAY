@@ -829,6 +829,33 @@
       "criticality": "low",
       "verification": "spec-review",
       "asil": "QM"
+    },
+    {
+      "id": "REQ-RELAY-088",
+      "title": "Continuous-conformance CI gates",
+      "text": "The specification MUST require (\u00a720.1) that a conformant implementation's CI gates on every change on: relay conform --strict (fail on FAIL or WARN); the full x-FuSa lifecycle (check gating ERROR, 100% requirement traceability, cybersecurity analysis, dependency vulnerability scan, and tool qualification); and relay interop behavioural conformance once convert exists. Releases MUST be tagged only from green CI.",
+      "category": "functional",
+      "criticality": "low",
+      "verification": "spec-review",
+      "asil": "QM"
+    },
+    {
+      "id": "REQ-RELAY-089",
+      "title": "Behavioural golden-vector conformance",
+      "text": "The specification MUST require (\u00a720.2/\u00a720.3) that envelope losslessness be demonstrated against the embedded golden vectors via convert (relay interop EQUIVALENT), and MUST define core- vs tooling-conformance tiers, with an advertised-but-erroring convert treated as a conformance failure.",
+      "category": "functional",
+      "criticality": "low",
+      "verification": "spec-review",
+      "asil": "QM"
+    },
+    {
+      "id": "REQ-RELAY-090",
+      "title": "Implementation evidence and supply-chain",
+      "text": "The specification MUST require (\u00a720.4/\u00a720.5) that a conformant implementation carry a traced+tested requirements registry, a HARA, a dFMEA, and a TARA where it processes untrusted input, and MUST produce an SBOM and build provenance for each release from signed reviewed commits.",
+      "category": "safety",
+      "criticality": "low",
+      "verification": "spec-review",
+      "asil": "QM"
     }
   ]
 }

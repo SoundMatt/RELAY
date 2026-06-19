@@ -1692,13 +1692,25 @@ inverse. Both MUST be lossless for all mandatory fields.
 | `Payload` | `Frame.Data` | Direct copy |
 | `Timestamp` | — | `time.Now()` on receive; ignored on `FromMessage` |
 | `Seq` | — | Monotonic counter maintained by adapter; 0 on `FromMessage` |
-| `Meta["can.ext"]` | `Frame.Ext` | `"true"` / `"false"` |
-| `Meta["can.fd"]` | `Frame.FD` | `"true"` / `"false"` |
-| `Meta["can.rtr"]` | `Frame.RTR` | `"true"` / `"false"` |
-| `Meta["can.brs"]` | `Frame.BRS` | `"true"` / `"false"` |
+| `Meta["can.ext"]` | `Frame.Ext` | `"true"` / `"false"` — always emitted |
+| `Meta["can.fd"]` | `Frame.FD` | `"true"` / `"false"` — always emitted |
+| `Meta["can.rtr"]` | `Frame.RTR` | `"true"` / `"false"` — always emitted |
+| `Meta["can.brs"]` | `Frame.BRS` | `"true"` / `"false"` — always emitted |
+| `Meta["can.esi"]` | `Frame.ESI` | `"true"` — emitted only when set (CAN-FD / XL) |
+| `Meta["can.xl"]` | `Frame.XL` | `"true"` — emitted only when set (CAN XL) |
+| `Meta["can.sdt"]` | `Frame.SDT` | decimal `uint8` — emitted only when non-zero (CAN XL) |
+| `Meta["can.vcid"]` | `Frame.VCID` | decimal `uint8` — emitted only when non-zero (CAN XL) |
+| `Meta["can.af"]` | `Frame.AF` | decimal `uint32` — emitted only when non-zero (CAN XL) |
+| `Meta["can.sec"]` | `Frame.SEC` | `"true"` — emitted only when set (CAN XL) |
 
-`FromMessage`: parse `msg.ID` as decimal uint32 → `Frame.ID`; parse Meta flags;
-copy `Payload` → `Data`. If `msg.ID` is not a valid uint32, return `ErrInvalidFrame`.
+**Emission rule:** the four classic flags (`can.ext/fd/rtr/brs`) are always
+emitted; the CAN-FD/XL fields (`can.esi/xl/sdt/vcid/af/sec`) are emitted only
+when set (true or non-zero), so classic and CAN-FD frame output is unchanged
+from v1.0. `FromMessage` reads each key when present (absent ⇒ zero/false).
+
+`FromMessage`: parse `msg.ID` as decimal uint32 → `Frame.ID`; parse the Meta
+flags and CAN XL fields; copy `Payload` → `Data`. If `msg.ID` is not a valid
+uint32, return `ErrInvalidFrame`.
 
 **15.7.2 DDS `Sample.ToMessage()` / `FromMessage()`**
 

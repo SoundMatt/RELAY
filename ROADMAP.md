@@ -508,11 +508,21 @@ full x-FuSa lifecycle.
 
 Deliverables: §20 Continuous Conformance + full-lifecycle RELAY CI ✅
 
+### v1.11 — Remove the C++ CLI conformance waiver ✦ done
+
+- ✅ §17.7 #7: removed the "CLI not applicable" waiver for CLI-less C++ libraries;
+  every conformant implementation MUST ship the CLI (C++ via `-DRELAY_BUILD_CLI=ON`)
+- ✅ Reconciles §17 with §20 (CI gates on `relay conform --strict` against the
+  built CLI); no currently-conformant impl relied on the waiver
+- ✅ `SpecVersion = "1.11"`
+
+Deliverables: stricter §17.7 CLI conformance ✅
+
 ---
 
 ## Roadmap complete
 
-All planned phases (1–17, v0.1 → v1.10) are delivered. Future work is demand-driven:
+All planned phases (1–18, v0.1 → v1.11) are delivered. Future work is demand-driven:
 new protocol extensions (additive MINOR releases), reference-implementation
 crates/headers (tracked issues), the `relay interop` build-out and its `convert`
 driver surface (tracked issues), and the incremental ASIL-D/DAL-A uplift work

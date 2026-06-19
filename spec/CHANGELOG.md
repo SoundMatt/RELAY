@@ -1,5 +1,23 @@
 # RELAY Spec Changelog
 
+## v1.11 — 2026-06-19 (stable)
+
+Removed the C++ CLI conformance waiver.
+
+- **§17.7 #7**: the waiver that let a C++ library with no CLI target have its CLI
+  requirements assessed as "not applicable" is **removed**. Every conformant
+  implementation MUST now provide the `version`/`capabilities`/`status` CLI — a
+  C++ library exposes it via the `-DRELAY_BUILD_CLI=ON` build target.
+- **Rationale:** every real C++ implementation already ships a CLI via a one-line
+  build option (cpp-RCP, cpp-CAN, cpp-DDS), so the accommodation was obsolete; and
+  it conflicted with the §20 continuous-conformance gates, which require
+  `relay conform --strict` *against the built CLI*. A CLI-less implementation can't
+  be machine-verified, so it can no longer claim conformance.
+- **Impact:** no currently-conformant implementation relied on the waiver, so
+  this affects only CLI-less scaffolds (e.g. cpp-MQTT). Tightening conformance —
+  shipped as a MINOR because nothing currently passing is invalidated.
+- `SpecVersion = "1.11"`.
+
 ## v1.10 — 2026-06-19 (stable)
 
 Continuous conformance — conformance must now be *continuously proven*, not just

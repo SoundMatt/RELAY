@@ -1,5 +1,13 @@
 # RELAY Spec Changelog
 
+## v1.8.1 — 2026-06-19 (doc clarification; no normative change)
+
+- §15.7.1 (CAN `ToMessage`/`FromMessage`) now documents the CAN XL Meta keys
+  (`can.esi/xl/sdt/vcid/af/sec`) and the **emission rule**: the four classic
+  flags are always emitted; the CAN-FD/XL fields are emitted only when set, so
+  classic/CAN-FD output is unchanged from v1.0. Documents existing v1.1
+  behaviour (RELAY#42). `SpecVersion` unchanged (`1.8`).
+
 ## v1.8 — 2026-06-19 (stable)
 
 The RELAY **crossbar** — a central protocol router. Additive (MINOR).

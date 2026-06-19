@@ -1,4 +1,4 @@
-# RELAY Specification — v1.7
+# RELAY Specification — v1.8
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -933,6 +933,13 @@ Sends a single message. Protocol-specific required flags:
 
 Exit: `0` sent, `1` error.
 
+**Streaming JSON sink.** `send --format json` with no protocol flags MUST read a
+stream of `relay.Message` values as NDJSON on **stdin** (one per line) and
+publish each, until EOF. This is the egress dual of `subscribe --format json`
+(which writes the same NDJSON to stdout) and is the portable, protocol-uniform
+sink used by `relay crossbar` (§11.2.1). It avoids per-protocol flag handling:
+the message's canonical fields (§15.7) carry everything needed to publish.
+
 #### `subscribe [protocol-flags] [--format text|json] [--count N]`
 
 Subscribes and prints received messages as `relay.Message` NDJSON on stdout.
@@ -1039,6 +1046,32 @@ Serves a web dashboard and JSON API for the configured implementations:
 | `GET /badge/status.svg` | `image/svg+xml` status badge (green PASS / amber WARN / red FAIL) |
 
 Unknown paths return `404`. Exit: `2` with no candidates.
+
+#### `crossbar --config FILE [--duration D]`
+
+The RELAY **crossbar**: a central switch fabric that routes `relay.Message`
+between named protocol **spokes**. Each spoke is an implementation reached
+through its CLI — sourced from `<binary> subscribe --format json` and sunk to
+`<binary> send --format json` (§11.2). A **route** forwards messages from one
+source spoke to one or more destination spokes, with an optional **converter**
+that rewrites the message when the route crosses protocols (a *bridge*; a
+same-protocol route is a *repeat* using the identity converter). The crossbar
+speaks `relay.Message` internally and links no implementation at runtime — it
+conducts each implementation's own I/O, staying zero-dependency and
+cross-language.
+
+The JSON config defines spokes (`name`, `binary`, `protocol`, optional
+`subscribe_args`/`send_args`) and routes (`from`, `to[]`, optional
+`converter` — `identity`, `to-<protocol>`, …; defaults to identity for
+same-protocol routes and a protocol re-tag otherwise). It runs until SIGINT/
+SIGTERM or `--duration`, then reports forwarded/filtered/error counts. Exit:
+`0` clean, `2` on invalid config / unknown protocol, converter, or spoke.
+
+The same engine is exposed as a library (`github.com/SoundMatt/RELAY/router`,
+`router.Router` over `relay.Node`) for in-process embedding with `Adapt()`ed
+implementations. **Note:** runtime message routing introduces hazards (dropped,
+mis-routed, or mistranslated messages) that are not yet in the tool HARA; the
+crossbar is therefore **QM** pending dedicated hazard analysis.
 
 #### `interop [--protocol P] [--vectors DIR] [--strict] [--format text|json|markdown] <binaryA> <binaryB> [binaryN...]`
 
@@ -2346,11 +2379,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v1.7**
+Current version: **v1.8**
 
-**Go:** `const SpecVersion = "1.7"` (update in implementations targeting v1.7)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "1.7";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.7";`
+**Go:** `const SpecVersion = "1.8"` (update in implementations targeting v1.8)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "1.8";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.8";`
 
 ---
 

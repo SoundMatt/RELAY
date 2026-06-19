@@ -155,3 +155,22 @@ func TestInteropVectorsDir(t *testing.T) {
 func relayMsg(id string, payload []byte, meta map[string]string) relay.Message {
 	return relay.Message{Protocol: relay.CAN, ID: id, Payload: payload, Meta: meta}
 }
+
+//fusa:test REQ-RELAY-083
+func TestInteropBrokenConvertFails(t *testing.T) {
+	// A spoke that ADVERTISES convert but whose convert errors is a conformance
+	// failure even in non-strict mode (distinct from a genuinely absent convert).
+	broken := writeScript(t, `case "$1" in
+capabilities) echo '{"kind":"capabilities","tool":"fake","protocol":"CAN","commands":["version","capabilities","status","convert"],"adapt":true}' ;;
+convert) exit 1 ;;
+esac`)
+	var out, errb bytes.Buffer
+	err := runInterop(&out, &errb, []string{"--protocol", "CAN", broken})
+	var code exitCode
+	if !errors.As(err, &code) || int(code) != 1 {
+		t.Errorf("advertised-but-broken convert must FAIL (exit 1), got %v", err)
+	}
+	if strings.Contains(out.String(), "SKIP") {
+		t.Errorf("advertised-but-broken convert must not be reported as SKIP:\n%s", out.String())
+	}
+}

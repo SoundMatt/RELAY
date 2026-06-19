@@ -793,6 +793,33 @@
       "verification": "test",
       "safety_goal": "SG-006",
       "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-RELAY-084",
+      "title": "Crossbar router engine",
+      "text": "The router package MUST provide a Router that registers named spokes (relay.Node) and routes, validates spoke/route registration (no duplicate or empty spoke names, known source and destination spokes, non-empty destinations), and forwards each source spoke's messages to every matching route's destinations applying an optional filter, tracking forwarded/filtered/error counts.",
+      "category": "functional",
+      "criticality": "medium",
+      "verification": "test",
+      "asil": "QM"
+    },
+    {
+      "id": "REQ-RELAY-085",
+      "title": "Route converters",
+      "text": "The router package MUST provide converters that rewrite a relay.Message as it crosses a route: Identity (same-protocol repeat), Retag (cross-protocol protocol re-tag preserving id/payload/meta), a named registry with Lookup, and a DefaultConverter selecting Identity for same-protocol routes and Retag otherwise.",
+      "category": "functional",
+      "criticality": "medium",
+      "verification": "test",
+      "asil": "QM"
+    },
+    {
+      "id": "REQ-RELAY-086",
+      "title": "relay crossbar command",
+      "text": "relay crossbar --config FILE MUST build a Router from a JSON config of spokes (CLI-backed relay.Node over subscribe/send --format json) and routes, run it until interrupted or --duration elapses, and report forwarded/filtered/error stats; it MUST exit 2 on a missing/invalid config, unknown protocol, unknown converter, or unknown route spoke.",
+      "category": "functional",
+      "criticality": "medium",
+      "verification": "test",
+      "asil": "QM"
     }
   ]
 }

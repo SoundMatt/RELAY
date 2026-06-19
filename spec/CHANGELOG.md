@@ -1,5 +1,27 @@
 # RELAY Spec Changelog
 
+## v1.8 — 2026-06-19 (stable)
+
+The RELAY **crossbar** — a central protocol router. Additive (MINOR).
+
+- New **`router` package** (`router.Router` over `relay.Node`): a zero-dependency
+  switch fabric. Register named spokes + routes; each route forwards a source
+  spoke's messages to one or more destinations with an optional filter and
+  converter. Embeddable in-process with `Adapt()`ed implementations.
+- **Converters** (`router`): `Identity` (repeat), `Retag` (cross-protocol),
+  a named registry + `Lookup`, and `DefaultConverter` (identity for
+  same-protocol routes, re-tag otherwise).
+- New **`relay crossbar --config FILE`** command: builds the router from a JSON
+  config of spokes (CLI-backed nodes) and routes; runs until interrupted or
+  `--duration`; reports forwarded/filtered/error stats.
+- New **streaming sink**: `send --format json` reads `relay.Message` NDJSON on
+  stdin (the egress dual of `subscribe --format json`) — the portable,
+  protocol-uniform sink the crossbar uses, avoiding per-protocol send flags.
+- `SpecVersion = "1.8"`; REQ-RELAY-084/085/086; `crossbar` added to capabilities.
+- **Safety note:** runtime routing introduces new hazards (drop/mis-route/
+  mistranslate) not yet in the HARA, so the crossbar requirements are **QM**
+  pending hazard analysis.
+
 ## v1.7 — 2026-06-19 (stable)
 
 Interoperability build-out — the v1.6 interop harness implemented in Go, with a

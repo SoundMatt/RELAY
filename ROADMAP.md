@@ -492,9 +492,27 @@ Deliverables: §13.7 architecture convention ✅
 
 ---
 
+### v1.10 — Continuous conformance ✦ done
+
+**Goal:** Make conformance continuously *proven*, and bring RELAY itself to the
+full x-FuSa lifecycle.
+
+- ✅ Spec §20: normative CI gates (`relay conform --strict`, full x-FuSa, `relay
+  interop`), behavioural golden-vector conformance, core/tooling tiers,
+  mandatory evidence (reqs/HARA/dFMEA/TARA), supply-chain (SBOM/provenance/SLSA)
+- ✅ RELAY CI expanded to the **full go-FuSa lifecycle** (vuln, qualify, verify,
+  fmea, boundary, coupling, release, gap reports, audit-pack)
+- ✅ `SpecVersion = "1.10"`; REQ-RELAY-088/089/090
+- ⬜ x-Nets adopt §20 CI gates — covered by the §13.7/uplift issues + per-repo
+  CI work
+
+Deliverables: §20 Continuous Conformance + full-lifecycle RELAY CI ✅
+
+---
+
 ## Roadmap complete
 
-All planned phases (1–16, v0.1 → v1.9) are delivered. Future work is demand-driven:
+All planned phases (1–17, v0.1 → v1.10) are delivered. Future work is demand-driven:
 new protocol extensions (additive MINOR releases), reference-implementation
 crates/headers (tracked issues), the `relay interop` build-out and its `convert`
 driver surface (tracked issues), and the incremental ASIL-D/DAL-A uplift work

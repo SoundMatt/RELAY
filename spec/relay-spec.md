@@ -1,4 +1,4 @@
-# RELAY Specification — v1.9
+# RELAY Specification — v1.10
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -2437,11 +2437,77 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v1.9**
+Current version: **v1.10**
 
-**Go:** `const SpecVersion = "1.9"` (update in implementations targeting v1.9)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "1.9";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.9";`
+**Go:** `const SpecVersion = "1.10"` (update in implementations targeting v1.10)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "1.10";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.10";`
+
+---
+
+## 20. Continuous Conformance
+
+§17 defines what a conformant implementation *is*; this section defines how
+conformance MUST be **continuously proven**. An implementation is conformant
+only while its CI enforces the gates below on every change.
+
+### 20.1 CI gates
+
+A conformant implementation's CI MUST, on every change to its default branch and
+every pull request, run and gate on:
+
+1. **RELAY conformance** — `relay conform --strict` against the built CLI (§17.7);
+   the job MUST fail on any FAIL or WARN finding.
+2. **Full x-FuSa** — the implementation's language safety tool (go-FuSa `gofusa`,
+   rust-FuSa `rsfusa`, c-FuSa / cpp-FuSa) run across its **full lifecycle**, not a
+   subset: the standard check (gating on ERROR findings), requirements
+   traceability at 100 % (every requirement traced **and** tested), the
+   cybersecurity analysis, the dependency vulnerability scan, and the tool
+   qualification suite. An ERROR-severity finding, an untraced/untested
+   requirement, or a failed qualification case MUST fail the job.
+3. **Behavioural conformance** — once `convert` is implemented (§20.3),
+   `relay interop` against the reference MUST report the implementation
+   EQUIVALENT for every golden vector of its protocol.
+
+Releases MUST be tagged only from a commit whose CI is fully green.
+
+### 20.2 Behavioural conformance
+
+§17.9 (lossless `ToMessage`/`FromMessage`) MUST be demonstrated against the
+embedded golden vectors (§15.7), not only the implementation's own tests: for
+each vector of its protocol, the implementation's `convert` output MUST equal
+the canonical `relay.Message` (the cross-language equality oracle, §11.2.1). This
+makes envelope conformance machine-checkable and identical across languages.
+
+### 20.3 Conformance tiers
+
+- **Core-conformant** — satisfies §17 (version/capabilities/status, types,
+  interfaces, lifecycle, error sentinels).
+- **Tooling-conformant** — additionally implements `convert`, `subscribe
+  --format json`, and the streaming `send --format json` sink (§11.2), so the
+  implementation can participate in `relay interop` and `relay crossbar`. An
+  implementation that declares `convert` in its capabilities MUST be
+  tooling-conformant; a `convert` that errors on a valid vector is a conformance
+  failure, not an absent feature.
+
+### 20.4 Implementation evidence
+
+A conformant implementation MUST carry, and keep current via its x-FuSa CI
+(§20.1.2), the following evidence (the x-FuSa toolchain owns their schemas; RELAY
+requires their presence):
+
+- a **requirements registry** in which every requirement is traced and tested;
+- a **HARA** (hazard analysis and risk assessment);
+- a **dFMEA** generated from the exported surface;
+- a **TARA** (ISO/SAE 21434) if the implementation processes untrusted input or
+  holds secrets.
+
+### 20.5 Supply-chain integrity
+
+A conformant implementation MUST produce, in CI, a software bill of materials and
+build provenance for each release (SLSA build track), and MUST tag releases from
+signed, reviewed commits. RELAY's own `relay sbom` and `gofusa release` satisfy
+this for the reference tooling.
 
 ---
 

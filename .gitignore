@@ -1,35 +1,41 @@
-# Go
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-*.test
-*.out
-coverage.out
-/dist/
-/relay
 
-# Module cache
-vendor/
-
-# Build
-/bin/
-
-# IDE
+.claude/
+.cursor/
+.DS_Store
+.fusa-evidence.json
 .idea/
 .vscode/
-*.swp
+*-gap-report.json
+*.dll
+*.dylib
+*.exe
+*.exe~
+*.out
+*.so
 *.swo
-.cursor/
-
-# OS
-.DS_Store
-Thumbs.db
-
+*.swp
+*.test
+/bin/
+/dist/
+/relay
+# Build
 # Claude
-.claude/
-
+# Go
 # go-FuSa generated reports
-cyber-report.json
+# IDE
+# Module cache
+# OS
+boundary.mermaid
 check-report.json
+coupling-report.json
+coverage.out
+cyber-report.json
+fmea.csv
+fmea.json
+gofusa-audit-pack.zip
+provenance.json
+qualify-report.json
+sbom*.json
+Thumbs.db
+vendor/
+vuln.json

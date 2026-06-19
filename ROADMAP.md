@@ -449,9 +449,33 @@ Deliverables: `relay convert`, `relay interop` ✅
 
 ---
 
+## Phase 15 — Routing
+
+### v1.8 — Crossbar router ✦ done
+
+**Goal:** A central switch fabric that routes/repeats/bridges `relay.Message`
+between any protocol spokes.
+
+- ✅ `router` package: `Router` over `relay.Node` (zero-dependency), named spokes
+  + routes, filter + converter per route, forwarded/filtered/error stats
+- ✅ Converters: `Identity` (repeat), `Retag` (bridge), named registry + `Lookup`,
+  `DefaultConverter`
+- ✅ `relay crossbar --config FILE` — CLI-backed spokes (subscribe/send pipes),
+  JSON config, runs until interrupt/`--duration`, stats on exit
+- ✅ Streaming sink `send --format json` (egress dual of subscribe) spec'd
+- ✅ Spec §11.2/§11.2.1 + capabilities; `SpecVersion = "1.8"`; REQ-084/085/086
+- ⬜ x-Net `send --format json` streaming sink — filed as issues (the existing
+  ad-hoc `send` CLIs are non-conformant to §11.2; crossbar needs the JSON sink)
+- ⬜ Runtime-routing HARA (new hazards: drop/mis-route/mistranslate) — crossbar
+  is QM pending that analysis
+
+Deliverables: `router` library, `relay crossbar`, streaming sink ✅
+
+---
+
 ## Roadmap complete
 
-All planned phases (1–14, v0.1 → v1.7) are delivered. Future work is demand-driven:
+All planned phases (1–15, v0.1 → v1.8) are delivered. Future work is demand-driven:
 new protocol extensions (additive MINOR releases), reference-implementation
 crates/headers (tracked issues), the `relay interop` build-out and its `convert`
 driver surface (tracked issues), and the incremental ASIL-D/DAL-A uplift work

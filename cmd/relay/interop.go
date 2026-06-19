@@ -87,6 +87,20 @@ func runInterop(stdout, stderr io.Writer, args []string) error {
 		return exitCode(2)
 	}
 
+	// A spoke that advertises `convert` in its capabilities but whose convert
+	// errors is non-conformant — that is a FAILURE, not a "skip". Only a binary
+	// that does not advertise convert is legitimately skipped (in non-strict).
+	advertisesConvert := map[string]bool{}
+	for _, bin := range binaries {
+		if caps, err := fetchCaps(bin); err == nil {
+			for _, c := range caps.Commands {
+				if c == "convert" {
+					advertisesConvert[bin] = true
+				}
+			}
+		}
+	}
+
 	doc := interopDoc{Reference: "relay (reference)", Result: "PASS"}
 	for _, v := range vecs {
 		row := interopVectorResult{Vector: v.Name, Protocol: v.Protocol}
@@ -106,12 +120,14 @@ func runInterop(stdout, stderr io.Writer, args []string) error {
 			got, err := runConvertBinary(bin, v.Protocol, v.Value)
 			switch {
 			case err != nil:
-				if *strict {
+				if *strict || advertisesConvert[bin] {
+					// Advertised-but-broken (or strict): a conformance failure.
 					cell.Detail = "convert failed: " + err.Error()
 					doc.Result = "FAIL"
 				} else {
+					// Genuinely absent: skip in non-strict mode.
 					cell.Skipped = true
-					cell.Detail = "convert unavailable (skipped)"
+					cell.Detail = "convert not advertised (skipped)"
 				}
 			default:
 				cell.OK = true

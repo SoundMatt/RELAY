@@ -1,5 +1,20 @@
 # RELAY Spec Changelog
 
+## v1.6.3 — 2026-06-19 (evidence/metadata; no normative change)
+
+Per-requirement ASIL allocation. Specification unchanged (`SpecVersion` stays
+`1.6`); module PATCH.
+
+- Every requirement now carries an `asil` field, **inherited from the safety
+  goal it implements** (SG-001/005 → ASIL-C; SG-002/003/004/006 → ASIL-B);
+  requirements not allocated to a safety goal are **QM** (quality-managed).
+  Cybersecurity requirements are QM on the ASIL axis (their axis is the
+  cybersecurity assurance level, tracked via the TARA).
+- Distribution: 12 ASIL-C, 23 ASIL-B, 46 QM. 35 requirements now carry a
+  `safety_goal` link (up from 8), so ASIL is traceable rather than asserted.
+- This aligns RELAY's requirement schema with the x-Net libraries (which carry
+  per-requirement `asil`) and lets `gofusa` report the worst-case tool ASIL.
+
 ## v1.6.2 — 2026-06-19 (tooling/tests; no normative change)
 
 Test-coverage maximisation. Specification unchanged (`SpecVersion` stays `1.6`);

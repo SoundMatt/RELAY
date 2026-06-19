@@ -101,7 +101,7 @@ See `.fusa-hara.json` for the full HARA. Summary:
 
 | Artifact | Location | Purpose |
 |---|---|---|
-| Requirements | `.fusa-reqs.json` | Requirements REQ-RELAY-001..081 (incl. 5 cybersecurity), all traced + tested, each with a `verification` method |
+| Requirements | `.fusa-reqs.json` | Requirements REQ-RELAY-001..081 (incl. 5 cybersecurity), all traced + tested, each with a `verification` method and an `asil` inherited from its safety goal (QM where unallocated) |
 | HARA | `.fusa-hara.json` | Hazard analysis and safety goals |
 | TARA | `.fusa-tara.json` | Cybersecurity threat analysis (ISO/SAE 21434); mitigations M-001..005 traced to REQ-077..081 |
 | Formal model | `docs/formal/RelayLifecycle.tla` | TLC-checked §6 lifecycle invariants |

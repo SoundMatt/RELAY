@@ -1,4 +1,4 @@
-# RELAY Specification — v1.10
+# RELAY Specification — v1.11
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -1870,7 +1870,7 @@ An implementation is **RELAY-conformant** if and only if:
 4. **Lifecycle invariants.** All ten requirements in §6 are satisfied. Requirement §6.9 (zero-value safety) applies to `relay.Node` and `relay.Caller` adapters only, not to the underlying protocol interface types (`Bus`, `Participant`, etc.).
 5. **Constructor contract.** Each transport sub-package exports `New` per §7; a `mock` sub-package is present.
 6. **Application interface.** The root package exports `Adapt()` per §10.3; the capabilities document declares `"adapt": true`.
-7. **CLI mandatory commands.** `version`, `capabilities`, `status` per §11.1 with JSON schemas matching §12. For C++ library implementations that do not ship a standalone binary by default, CLI conformance MUST be satisfiable by building the CMake target enabled by `-DRELAY_BUILD_CLI=ON`. If no such target is provided, CLI requirements are assessed as "not applicable" in conformance reports and §17.7 is considered waived for that implementation.
+7. **CLI mandatory commands.** `version`, `capabilities`, `status` per §11.1 with JSON schemas matching §12. **Every** implementation MUST provide these commands as a runnable CLI. A C++ (or other) library that does not ship a standalone binary by default MUST still expose them through a CLI target built with `-DRELAY_BUILD_CLI=ON` (or the language's equivalent build option). There is **no waiver**: an implementation that provides no conformance CLI cannot be verified by `relay conform` (§20) and is therefore not RELAY-conformant. *(Prior to v1.11 a C++ library with no CLI target had its CLI requirements assessed as "not applicable". That waiver is removed: every conformant C++ implementation already ships a CLI via the build option, so the accommodation was obsolete and conflicted with the §20 continuous-conformance gates.)*
 8. **Frame constraints.** `ValidateFrame` rejects all frames violating §15 constraints.
 9. **Envelope conversion.** `ToMessage()` and `FromMessage()` are lossless for mandatory fields.
 10. **Subscriber helpers.** `SubscriberConfig`, `SubscriberOption`, `ApplySubscriberOpts`, `ChanDepth` exported per §14.1; default depth is 64.
@@ -2437,11 +2437,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v1.10**
+Current version: **v1.11**
 
-**Go:** `const SpecVersion = "1.10"` (update in implementations targeting v1.10)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "1.10";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.10";`
+**Go:** `const SpecVersion = "1.11"` (update in implementations targeting v1.11)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "1.11";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.11";`
 
 ---
 

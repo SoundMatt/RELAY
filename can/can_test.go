@@ -178,3 +178,15 @@ func TestClassicMetaUnchanged(t *testing.T) {
 		}
 	}
 }
+
+//fusa:test REQ-RELAY-030
+func TestLoanedFrameReturn(t *testing.T) {
+	released := 0
+	lf := &LoanedFrame{Frame: Frame{ID: 1}, release: func() { released++ }}
+	lf.Return()
+	if released != 1 {
+		t.Errorf("release called %d times, want 1", released)
+	}
+	// nil release must be a safe no-op.
+	(&LoanedFrame{Frame: Frame{ID: 2}}).Return()
+}

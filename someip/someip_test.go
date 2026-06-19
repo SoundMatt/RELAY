@@ -117,3 +117,15 @@ func TestMessageTypeStringAllValues(t *testing.T) {
 		t.Errorf("unknown MessageType.String() = %q, want %q", got, "66")
 	}
 }
+
+//fusa:test REQ-RELAY-043
+func TestFromMessageErrors(t *testing.T) {
+	// ID without "svc/method" form must error.
+	if _, err := FromMessage(relay.Message{ID: "123"}); !errors.Is(err, ErrInvalidID) {
+		t.Errorf("expected ErrInvalidID for malformed ID, got %v", err)
+	}
+	// Non-numeric components must error.
+	if _, err := FromMessage(relay.Message{ID: "x/y"}); !errors.Is(err, ErrInvalidID) {
+		t.Errorf("expected ErrInvalidID for non-numeric ID, got %v", err)
+	}
+}

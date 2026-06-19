@@ -1,5 +1,22 @@
 # RELAY Spec Changelog
 
+## v1.6.2 — 2026-06-19 (tooling/tests; no normative change)
+
+Test-coverage maximisation. Specification unchanged (`SpecVersion` stays `1.6`);
+module PATCH.
+
+- **Coverage:** every canonical-type package (`can`, `dds`, `lin`, `mqtt`,
+  `rcp`, `someip`) is now at **100%**; the root package is 98%; `cmd/relay`
+  rose 83%→90% (the remainder is `main()`/`http.ListenAndServe` and
+  build-metadata branches that cannot execute under `go test`). **Aggregate
+  86.7% → 92.2%.**
+- Added branch/error-path tests for `LoanedFrame.Return`, LIN checksum carry,
+  MQTT wildcard matching, RCP/SOME/IP message-conversion error paths, the
+  JSON-schema validator helpers, the CLI dispatcher, and the
+  compare/probe/report renderers.
+- **CI gates raised:** total coverage **80% → 90%**, plus an **85% per-package
+  floor** (was 80%). All new requirement-tests remain traced.
+
 ## v1.6.1 — 2026-06-19 (tooling/evidence; no normative change)
 
 Requirements-traceability, test-coverage, and cybersecurity hardening. The

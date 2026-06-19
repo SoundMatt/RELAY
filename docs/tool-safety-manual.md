@@ -107,7 +107,7 @@ See `.fusa-hara.json` for the full HARA. Summary:
 | Formal model | `docs/formal/RelayLifecycle.tla` | TLC-checked §6 lifecycle invariants |
 | Specification | `spec/relay-spec.md` | Normative interface and frame type definitions (embedded evidence) |
 | Test suite | `*_test.go` | Requirement traceability via `//fusa:test` |
-| CI | `.github/workflows/ci.yml` | Lint, test (80% total + per-package coverage gate), go-FuSa (`check`, `cyber`, `trace -req-coverage 100`), CodeQL, Docker |
+| CI | `.github/workflows/ci.yml` | Lint, test (90% total + 85% per-package coverage gate), go-FuSa (`check`, `cyber`, `trace -req-coverage 100`), CodeQL, Docker |
 | Changelog | `spec/CHANGELOG.md` | Version history and breaking changes |
 
 All evidence is embedded in the `relay` binary (`relay.Evidence`) and bundled by

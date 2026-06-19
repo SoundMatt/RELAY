@@ -48,24 +48,26 @@ jobs:
         run: go vet ./...
       - name: Test
         run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
-      - name: Coverage gate (80% total)
+      - name: Coverage gate (90% total)
         run: |
           pct=$(go tool cover -func=coverage.out | awk '/^total:/{gsub(/%/,"",$3); print $3}')
           echo "Total coverage: ${pct}%"
-          awk -v p="$pct" 'BEGIN { if (p+0 < 80) { print "FAIL: total coverage " p "% < 80%"; exit 1 } }'
-      - name: Per-package coverage floor (80%)
+          awk -v p="$pct" 'BEGIN { if (p+0 < 90) { print "FAIL: total coverage " p "% < 90%"; exit 1 } }'
+      - name: Per-package coverage floor (85%)
         run: |
-          # Guard against dilution: every package must independently meet 80%,
-          # so a weak unit cannot hide behind high-coverage packages.
+          # Guard against dilution: every package must independently meet 85%,
+          # so a weak unit cannot hide behind high-coverage packages. The six
+          # canonical-type packages are at 100%; cmd/relay is capped below 100%
+          # only by main()/ListenAndServe and build-metadata branches.
           fail=0
           while read -r pkg cov; do
             v=${cov%\%}
-            if awk -v p="$v" 'BEGIN { exit !(p+0 < 80) }'; then
-              echo "FAIL: ${pkg} ${cov} < 80%"
+            if awk -v p="$v" 'BEGIN { exit !(p+0 < 85) }'; then
+              echo "FAIL: ${pkg} ${cov} < 85%"
               fail=1
             fi
           done < <(go test -cover ./... | awk '/coverage:/{print $2, $5}')
-          [ "$fail" -eq 0 ] && echo "All packages >= 80%"
+          [ "$fail" -eq 0 ] && echo "All packages >= 85%"
           exit $fail
 
   lint:

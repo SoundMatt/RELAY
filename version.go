@@ -8,4 +8,4 @@ package relay
 // Every RELAY-conformant implementation must export this constant (spec §17 req 12).
 //
 //fusa:req REQ-RELAY-020
-const SpecVersion = "1.8"
+const SpecVersion = "1.9"

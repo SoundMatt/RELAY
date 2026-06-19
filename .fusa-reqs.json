@@ -820,6 +820,15 @@
       "criticality": "medium",
       "verification": "test",
       "asil": "QM"
+    },
+    {
+      "id": "REQ-RELAY-087",
+      "title": "Cross-language library architecture",
+      "text": "The specification MUST define a cross-language library-architecture convention (\u00a713.7): a common module taxonomy with names identical across languages (the adapt adapter, mock, virtual, and a standard module-name registry), so the same protocol implemented in different languages is structurally consistent.",
+      "category": "functional",
+      "criticality": "low",
+      "verification": "spec-review",
+      "asil": "QM"
     }
   ]
 }

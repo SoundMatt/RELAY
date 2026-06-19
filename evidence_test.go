@@ -74,6 +74,24 @@ func TestSpecStatesConstructorContract(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-087
+func TestSpecDefinesLibraryArchitecture(t *testing.T) {
+	spec, err := Evidence("specification")
+	if err != nil || len(spec) == 0 {
+		t.Fatalf("specification evidence missing: %v", err)
+	}
+	s := string(spec)
+	if !strings.Contains(s, "13.7 Cross-language library architecture") {
+		t.Error("spec must define §13.7 cross-language library architecture (REQ-087)")
+	}
+	// The standard module-name registry must name the key common modules.
+	for _, mod := range []string{"`adapt`", "`mock`", "`virtual`", "module-name registry"} {
+		if !strings.Contains(s, mod) {
+			t.Errorf("§13.7 must reference %s", mod)
+		}
+	}
+}
+
 //fusa:test REQ-RELAY-074
 //fusa:test REQ-RELAY-075
 func TestFormalModelCoversLifecycle(t *testing.T) {

@@ -1,4 +1,4 @@
-# RELAY Specification — v1.8
+# RELAY Specification — v1.9
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -1283,6 +1283,52 @@ not the structs themselves. A future RELAY sub-package (`github.com/SoundMatt/RE
 for v0.1. If created, it MUST consolidate all canonical frame types and MUST
 remain importable without pulling in protocol-specific dependencies.
 
+### 13.7 Cross-language library architecture
+
+So that the *same* protocol implemented in different languages is structurally
+recognisable and interchangeable to maintainers, every implementation MUST
+organise its source around a common module taxonomy with **common names**. The
+packaging is idiomatic per language (a Go package directory, a Rust module, a
+C++ header/namespace), but the **names are identical across languages**.
+
+**13.7.1 Canonical modules (every protocol).** An implementation MUST provide,
+and name, these modules as follows:
+
+| Module | Contents | Go | Rust | C++ |
+|---|---|---|---|---|
+| core | canonical types (§15), validation, the §8 protocol interface | package root (`<proto>.go`) | `frame.rs`/`bus.rs` + `lib.rs` | `<proto>.hpp` |
+| `adapt` | the RELAY adapter — `adapt(<iface>) → relay.Node`/`Caller` and `ToMessage`/`FromMessage` (§13.6, §15.7) | `adapt.go` | `adapt.rs` | `adapt`/`relay.hpp` |
+| `mock` | in-process mock implementation (§7 Form 2 `New`) | `mock/` | `mock/` | `mock` |
+
+The RELAY adapter module MUST be named `adapt` (its entry point `adapt`) — not a
+protocol-prefixed name such as `can_relay`. The application `Node` interface is
+the language-idiomatic name (`relay.Node`, `relay::Node`; a C++ implementation
+implementing it MUST name it `relay::INode`).
+
+**13.7.2 Standard module-name registry.** If an implementation provides a module
+covering one of the following concerns, it MUST use the listed name (idiomatic
+packaging aside). Modules with no entry here are unconstrained.
+
+| Name | Concern | Applies to |
+|---|---|---|
+| `virtual` | in-process virtual bus/transport (not `virtual_bus`) | bus protocols |
+| `socketcan` | Linux SocketCAN transport | CAN |
+| `safety` | end-to-end / E2E safety protection | all |
+| `dbc` | DBC database parse/encode | CAN |
+| `isotp` | ISO 15765-2 transport | CAN |
+| `j1939` | SAE J1939 | CAN |
+| `obdii` / `uds` | OBD-II / UDS diagnostics | CAN |
+| `recorder` | capture/replay | all |
+| `codegen` | code generation | all |
+| `authz` / `e2e` / `federation` / `firmware` / `deadline` / `faultinject` / `iso21434` / `dyndata` / `certgap` / `config` / `admin` / `formal` | RCP control-plane concerns | RCP |
+| `capi` | C ABI / FFI surface | all |
+| `canbr` / `linbr` / `ddsbr` / `doipbr` / `grpcbridge` | protocol bridges | RCP |
+
+**13.7.3 RELAY types.** Until the language binding is published (`relay-rs`
+§18.3, `relay.hpp` §18.2), an implementation MUST bundle a local copy of the
+RELAY core types in a single module named `relay`; once the binding is
+published it MUST depend on the binding rather than the local copy.
+
 ---
 
 ## 14. Subscriber Defaults and Helpers
@@ -2391,11 +2437,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v1.8**
+Current version: **v1.9**
 
-**Go:** `const SpecVersion = "1.8"` (update in implementations targeting v1.8)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "1.8";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.8";`
+**Go:** `const SpecVersion = "1.9"` (update in implementations targeting v1.9)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "1.9";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.9";`
 
 ---
 

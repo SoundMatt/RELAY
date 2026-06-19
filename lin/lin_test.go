@@ -138,3 +138,14 @@ func TestCalcChecksumWraps(t *testing.T) {
 	// Enhanced with a large PID also folds.
 	_ = CalcChecksum(0xFF, []byte{0xFF, 0xFF}, EnhancedChecksum)
 }
+
+// FuzzValidateFrameNoPanic asserts LIN ValidateFrame never panics (SG-001).
+//
+//fusa:test REQ-RELAY-036
+func FuzzValidateFrameNoPanic(f *testing.F) {
+	f.Add(uint8(0x3C), []byte{1, 2, 3}, uint8(0), 0)
+	f.Add(uint8(0xFF), []byte(nil), uint8(255), 1)
+	f.Fuzz(func(t *testing.T, id uint8, data []byte, checksum uint8, ct int) {
+		_ = ValidateFrame(Frame{ID: id, Data: data, Checksum: checksum, ChecksumType: ChecksumType(ct % 2)})
+	})
+}

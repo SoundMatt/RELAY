@@ -425,9 +425,33 @@ Quality hardening (tooling/evidence PATCH; no normative spec change):
 
 ---
 
+## Phase 14 — Interoperability Build-out
+
+### v1.7 — `relay interop` + reference `relay convert` ✦ done
+
+**Goal:** Implement the v1.6 interop harness in Go, with RELAY as the reference
+participant.
+
+- ✅ `relay convert --protocol P` — reference canonical → `relay.Message`
+  conversion over the canonical Go types (golden oracle); stdin → stdout
+- ✅ `relay interop <binary>...` — diffs each binary's `convert` against the
+  in-process reference for every golden vector; per-vector equivalence matrix
+  (text/json/markdown); `--strict`; reference is an implicit participant
+- ✅ Golden vectors embedded (`relay.Vector`/`relay.VectorNames`)
+- ✅ Go fuzz/property tests: CAN validation totality + conversion losslessness,
+  LIN/SOME/IP validator totality (discharges an ASIL-D-uplift item)
+- ✅ Spec §11.2/§11.2.1 + capabilities; `SpecVersion = "1.7"`; REQ-082/083
+- ⬜ x-Net `convert` drivers remain tracked on each implementation (go-CAN#31,
+  rust-CAN#2, cpp-CAN#2, …) — once shipped, `relay interop` checks them against
+  the reference and each other
+
+Deliverables: `relay convert`, `relay interop` ✅
+
+---
+
 ## Roadmap complete
 
-All planned phases (1–13, v0.1 → v1.6, + v1.6.1 hardening) are delivered. Future work is demand-driven:
+All planned phases (1–14, v0.1 → v1.7) are delivered. Future work is demand-driven:
 new protocol extensions (additive MINOR releases), reference-implementation
 crates/headers (tracked issues), the `relay interop` build-out and its `convert`
 driver surface (tracked issues), and the incremental ASIL-D/DAL-A uplift work

@@ -46,6 +46,10 @@ func run(stdout, stderr io.Writer, args []string) error {
 		return runStatus(stdout, args[1:])
 	case "conform":
 		return runConform(stdout, stderr, args[1:])
+	case "convert":
+		return runConvert(os.Stdin, stdout, stderr, args[1:])
+	case "interop":
+		return runInterop(stdout, stderr, args[1:])
 	case "probe":
 		return runProbe(stdout, stderr, args[1:])
 	case "trace":
@@ -82,6 +86,8 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  capabilities    Print RELAY tooling capabilities document")
 	fmt.Fprintln(w, "  status          Print RELAY tooling status document")
 	fmt.Fprintln(w, "  conform <bin>   Verify that <bin> conforms to the RELAY spec")
+	fmt.Fprintln(w, "  convert         Reference canonical-value → relay.Message conversion (stdin→stdout)")
+	fmt.Fprintln(w, "  interop <bin>   Check implementations are behaviourally interchangeable")
 	fmt.Fprintln(w, "  probe           Discover RELAY-conformant binaries")
 	fmt.Fprintln(w, "  trace           Capture or replay a relay.Message stream")
 	fmt.Fprintln(w, "  report          Cross-implementation conformance report")
@@ -152,7 +158,7 @@ func runCapabilities(w io.Writer, _ []string) error {
 		Tool:               "relay",
 		Version:            toolVersion,
 		SpecVersion:        relay.SpecVersion,
-		Commands:           []string{"version", "capabilities", "status", "conform", "probe", "trace", "report", "sbom", "safety-case", "audit-pack", "compare", "versions", "serve"},
+		Commands:           []string{"version", "capabilities", "status", "conform", "convert", "interop", "probe", "trace", "report", "sbom", "safety-case", "audit-pack", "compare", "versions", "serve"},
 		Transports:         []string{},
 		Features:           []string{},
 		Interfaces:         []string{},

@@ -773,6 +773,26 @@
       "threat": "T-005",
       "mitigation": "M-005",
       "asil": "QM"
+    },
+    {
+      "id": "REQ-RELAY-082",
+      "title": "relay convert reference conversion",
+      "text": "relay convert --protocol P MUST read one canonical-type value for protocol P as JSON on stdin, validate it where a validator exists, and write the lossless relay.Message as JSON on stdout with a normalised timestamp; it is RELAY's reference implementation of the \u00a711.2 convert driver. It MUST exit 1 on invalid input and 2 on invalid arguments.",
+      "category": "functional",
+      "criticality": "medium",
+      "verification": "test",
+      "safety_goal": "SG-002",
+      "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-RELAY-083",
+      "title": "relay interop behavioural interchangeability",
+      "text": "relay interop MUST verify that implementations of the same protocol are behaviourally interchangeable by diffing each binary's convert output against RELAY's reference conversion for every golden vector, reporting a per-vector equivalence matrix; it MUST exit 0 when all equivalent, 1 on any mismatch or (with --strict) missing convert, and 2 when no vectors match or arguments are invalid.",
+      "category": "functional",
+      "criticality": "medium",
+      "verification": "test",
+      "safety_goal": "SG-006",
+      "asil": "ASIL-B"
     }
   ]
 }

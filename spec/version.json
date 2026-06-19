@@ -1,7 +1,18 @@
 {
-  "version": "1.6",
-  "date": "2026-06-18",
+  "version": "1.7",
+  "date": "2026-06-19",
   "status": "stable",
-  "networks": ["CAN", "DDS", "LIN", "MQTT", "RCP", "SOMEIP"],
-  "languages": ["go", "cpp", "rust"]
+  "networks": [
+    "CAN",
+    "DDS",
+    "LIN",
+    "MQTT",
+    "RCP",
+    "SOMEIP"
+  ],
+  "languages": [
+    "go",
+    "cpp",
+    "rust"
+  ]
 }

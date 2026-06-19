@@ -129,3 +129,14 @@ func TestFromMessageErrors(t *testing.T) {
 		t.Errorf("expected ErrInvalidID for non-numeric ID, got %v", err)
 	}
 }
+
+// FuzzValidateNoPanic asserts SOME/IP Message.Validate never panics (SG-001).
+//
+//fusa:test REQ-RELAY-043
+func FuzzValidateNoPanic(f *testing.F) {
+	f.Add(uint16(1), uint16(2), uint8(1), uint8(0), []byte{1})
+	f.Add(uint16(0), uint16(0), uint8(9), uint8(0xA1), []byte(nil))
+	f.Fuzz(func(t *testing.T, svc, meth uint16, pv, mt uint8, payload []byte) {
+		_ = Message{ServiceID: svc, MethodID: meth, ProtocolVersion: pv, MessageType: MessageType(mt), Payload: payload}.Validate()
+	})
+}

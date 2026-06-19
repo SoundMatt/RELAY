@@ -1,4 +1,4 @@
-# RELAY Specification — v1.6
+# RELAY Specification — v1.7
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -953,6 +953,11 @@ If the input fails the implementation's validator, `convert` MUST exit `1` and
 write the sentinel error name (§5) to stderr. Exit: `0` converted, `1` invalid
 input, `2` invalid args.
 
+The `relay` tool ships the **reference** `convert` (`relay convert --protocol
+P`), implemented over the canonical Go types (§15). It is the golden oracle used
+by `relay interop` (§11.2.1) and lets any single implementation be checked
+against the reference conversion without a second implementation present.
+
 ### 11.2.1 Observability commands (RELAY tooling)
 
 These are provided by the `relay` tool itself for cross-implementation
@@ -1043,10 +1048,13 @@ declared capabilities). For each input vector in `--vectors DIR` (default: the
 embedded golden vectors, §6 of the spec-vectors set) whose `protocol` matches
 `--protocol P` (or all protocols if omitted), `interop`:
 
-1. feeds the vector's canonical value to each binary via `<binary> convert
+1. computes the **reference** `relay.Message` in-process via `relay convert`
+   (§11.2), included as an implicit participant so a single binary can be
+   checked even when no second implementation is present;
+2. feeds the vector's canonical value to each binary via `<binary> convert
    --protocol P --format json` (§11.2);
-2. captures each binary's `relay.Message` output, normalising `timestamp`;
-3. compares the outputs pairwise.
+3. captures each binary's `relay.Message` output, normalising `timestamp`;
+4. compares each participant's output against the reference (and pairwise).
 
 Two implementations are **interop-equivalent** for a vector when their
 normalised `relay.Message` outputs are byte-identical. The canonical
@@ -2338,11 +2346,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v1.6**
+Current version: **v1.7**
 
-**Go:** `const SpecVersion = "1.6"` (update in implementations targeting v1.6)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "1.6";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.6";`
+**Go:** `const SpecVersion = "1.7"` (update in implementations targeting v1.7)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "1.7";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.7";`
 
 ---
 

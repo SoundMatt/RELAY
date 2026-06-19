@@ -1,5 +1,26 @@
 # RELAY Spec Changelog
 
+## v1.7 — 2026-06-19 (stable)
+
+Interoperability build-out — the v1.6 interop harness implemented in Go, with a
+reference `convert` driver. Additive (MINOR).
+
+- **`relay convert --protocol P`** (§11.2): RELAY's reference canonical-value →
+  `relay.Message` conversion over the canonical Go types — the golden oracle for
+  interop. Reads a canonical value as JSON on stdin, validates it, writes the
+  lossless `relay.Message` on stdout (normalised timestamp).
+- **`relay interop <binary>...`** (§11.2.1): drives each binary's `convert` and
+  diffs its output against RELAY's in-process reference for every golden vector,
+  reporting a per-vector equivalence matrix (text/json/markdown). The reference
+  is an implicit participant, so a single implementation can be checked without a
+  second present. `--strict` fails on missing `convert`.
+- Both commands added to the `relay capabilities` command set.
+- Golden vectors are now embedded (`relay.Vector`/`relay.VectorNames`).
+- Added Go fuzz/property tests: CAN `ValidateFrame` totality + `FromMessage∘
+  ToMessage = id` losslessness (5.9M execs clean), LIN/SOME/IP validator
+  totality — discharging an ASIL-D-uplift work item in Go.
+- `SpecVersion = "1.7"`; REQ-RELAY-082/083 traced and tested.
+
 ## v1.6.3 — 2026-06-19 (evidence/metadata; no normative change)
 
 Per-requirement ASIL allocation. Specification unchanged (`SpecVersion` stays

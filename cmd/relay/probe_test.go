@@ -76,6 +76,7 @@ func TestRunProbeNonConformant(t *testing.T) {
 }
 
 //fusa:test REQ-RELAY-060
+//fusa:test REQ-RELAY-081
 func TestRunProbeScan(t *testing.T) {
 	// Build relay, place it in an isolated dir, point PATH there, and scan.
 	bin := buildTestBinary(t) // runs `go build` before we touch PATH

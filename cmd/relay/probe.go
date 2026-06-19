@@ -34,6 +34,7 @@ type probeResult struct {
 // matching --match and reports the RELAY-conformant ones (spec §11).
 //
 //fusa:req REQ-RELAY-060
+//fusa:req REQ-RELAY-081
 func runProbe(stdout, stderr io.Writer, args []string) error {
 	fs := flag.NewFlagSet("probe", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)

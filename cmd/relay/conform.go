@@ -192,6 +192,8 @@ func schemaCheck(name, ref string, data []byte) (doc map[string]interface{}, fin
 // validateVersionDoc validates a version --format json response per §12.1.
 //
 //fusa:req REQ-RELAY-053
+//fusa:req REQ-RELAY-047
+//fusa:req REQ-RELAY-079
 func validateVersionDoc(data []byte) []conformFinding {
 	doc, fs := schemaCheck("cli-version", "§12.1", data)
 	if doc == nil {
@@ -208,6 +210,7 @@ func validateVersionDoc(data []byte) []conformFinding {
 // validateCapabilitiesDoc validates a capabilities response per §12.2.
 //
 //fusa:req REQ-RELAY-054
+//fusa:req REQ-RELAY-048
 func validateCapabilitiesDoc(data []byte) []conformFinding {
 	doc, fs := schemaCheck("cli-capabilities", "§12.2", data)
 	if doc == nil {
@@ -241,6 +244,7 @@ func validateCapabilitiesDoc(data []byte) []conformFinding {
 // validateStatusDoc validates a status response per §12.3.
 //
 //fusa:req REQ-RELAY-055
+//fusa:req REQ-RELAY-049
 func validateStatusDoc(data []byte) []conformFinding {
 	_, fs := schemaCheck("cli-status", "§12.3", data)
 	return fs

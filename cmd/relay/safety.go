@@ -44,6 +44,8 @@ type sbomDoc struct {
 // bill of materials from the embedded build information (spec §20 / v0.9).
 //
 //fusa:req REQ-RELAY-063
+//fusa:req REQ-RELAY-077
+//fusa:req REQ-RELAY-078
 func runSBOM(stdout, stderr io.Writer, args []string) error {
 	fs := flag.NewFlagSet("sbom", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -288,6 +290,7 @@ func worse(cur, next string, rank func(string) int) string {
 // embedded evidence artifact and JSON schema into a zip with a SHA-256 manifest.
 //
 //fusa:req REQ-RELAY-065
+//fusa:req REQ-RELAY-080
 func runAuditPack(stdout, stderr io.Writer, args []string) error {
 	fs := flag.NewFlagSet("audit-pack", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)

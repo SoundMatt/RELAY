@@ -48,11 +48,25 @@ jobs:
         run: go vet ./...
       - name: Test
         run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
-      - name: Coverage gate (80%)
+      - name: Coverage gate (80% total)
         run: |
           pct=$(go tool cover -func=coverage.out | awk '/^total:/{gsub(/%/,"",$3); print $3}')
-          echo "Coverage: ${pct}%"
-          awk -v p="$pct" 'BEGIN { if (p+0 < 80) { print "FAIL: coverage " p "% < 80%"; exit 1 } }'
+          echo "Total coverage: ${pct}%"
+          awk -v p="$pct" 'BEGIN { if (p+0 < 80) { print "FAIL: total coverage " p "% < 80%"; exit 1 } }'
+      - name: Per-package coverage floor (80%)
+        run: |
+          # Guard against dilution: every package must independently meet 80%,
+          # so a weak unit cannot hide behind high-coverage packages.
+          fail=0
+          while read -r pkg cov; do
+            v=${cov%\%}
+            if awk -v p="$v" 'BEGIN { exit !(p+0 < 80) }'; then
+              echo "FAIL: ${pkg} ${cov} < 80%"
+              fail=1
+            fi
+          done < <(go test -cover ./... | awk '/coverage:/{print $2, $5}')
+          [ "$fail" -eq 0 ] && echo "All packages >= 80%"
+          exit $fail
 
   lint:
     name: Lint
@@ -81,8 +95,10 @@ jobs:
         run: go install github.com/SoundMatt/go-FuSa/cmd/gofusa@latest
       - name: gofusa check (gate on ERROR findings)
         run: gofusa check
-      - name: gofusa trace (requirements traceability matrix)
-        run: gofusa trace
+      - name: gofusa cyber (cybersecurity analysis)
+        run: gofusa cyber
+      - name: gofusa trace (gate on full requirement traceability)
+        run: gofusa trace -req-coverage 100
 
   docker:
     name: Docker build

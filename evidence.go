@@ -11,16 +11,20 @@ import (
 
 // evidenceFS embeds the safety-evidence artifacts so the relay binary can
 // assemble a safety case and audit pack without access to the source tree.
-// This includes the TLA+ formal lifecycle model (§6), which is embedded and
-// bundled like the other evidence artifacts.
+// This includes the HARA (REQ-050), the normative specification (which defines
+// the §7 constructor contract levied on implementations, REQ-045/046), and the
+// TLA+ formal lifecycle model (§6).
 //
+//fusa:req REQ-RELAY-045
+//fusa:req REQ-RELAY-046
+//fusa:req REQ-RELAY-050
 //fusa:req REQ-RELAY-074
 //fusa:req REQ-RELAY-075
 //fusa:req REQ-RELAY-076
 //go:embed .fusa-reqs.json .fusa-hara.json .fusa-tara.json
 //go:embed spec/version.json docs/tool-safety-manual.md
 //go:embed docs/formal/RelayLifecycle.tla docs/formal/README.md
-//go:embed docs/asil-d-uplift.md
+//go:embed docs/asil-d-uplift.md spec/relay-spec.md
 var evidenceFS embed.FS
 
 // evidencePaths maps the logical evidence name to its embedded path.
@@ -33,6 +37,7 @@ var evidencePaths = map[string]string{
 	"formal-model":       "docs/formal/RelayLifecycle.tla",
 	"formal-model-doc":   "docs/formal/README.md",
 	"asil-d-uplift":      "docs/asil-d-uplift.md",
+	"specification":      "spec/relay-spec.md",
 }
 
 // Evidence returns the raw bytes of a named safety-evidence artifact, e.g.

@@ -1,5 +1,20 @@
 # RELAY Spec Changelog
 
+## v1.9 — 2026-06-19 (stable)
+
+Cross-language library-architecture convention. Additive (MINOR).
+
+- New **§13.7**: a normative module taxonomy with **names identical across
+  languages** (idiomatic packaging per language). Mandates the `adapt` adapter
+  module (not protocol-prefixed names like `can_relay`), `mock`, and a standard
+  module-name registry (`virtual` not `virtual_bus`, `socketcan`, `safety`,
+  `dbc`, `isotp`, `j1939`, `obdii`, `uds`, `recorder`, `codegen`, the RCP
+  control-plane set, bridges, …) so the same protocol in Go/Rust/C++ is
+  structurally consistent and interchangeable to maintainers.
+- §13.7.3: until the `relay-rs`/`relay.hpp` binding is published, an
+  implementation MUST bundle the RELAY core types in a single `relay` module.
+- `SpecVersion = "1.9"`; REQ-RELAY-087.
+
 ## v1.8.1 — 2026-06-19 (doc clarification; no normative change)
 
 - §15.7.1 (CAN `ToMessage`/`FromMessage`) now documents the CAN XL Meta keys

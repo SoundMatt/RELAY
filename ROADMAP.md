@@ -473,9 +473,28 @@ Deliverables: `router` library, `relay crossbar`, streaming sink ✅
 
 ---
 
+## Phase 16 — Cross-language consistency
+
+### v1.9 — Library architecture convention ✦ done
+
+**Goal:** Make the same protocol in different languages as structurally common
+as possible.
+
+- ✅ Spec §13.7: normative cross-language module taxonomy + identical module
+  names (the `adapt` adapter, `mock`, `virtual`, standard module-name registry),
+  and the local-`relay`-module rule pending published bindings
+- ✅ `SpecVersion = "1.9"`; REQ-RELAY-087
+- ⬜ x-Net alignment (rename `virtual_bus`→`virtual`, `can_relay`→`adapt`, C++
+  feature parity), spec-version uplift, and rust-RCP/rust-DDS conform fixes —
+  filed as issues
+
+Deliverables: §13.7 architecture convention ✅
+
+---
+
 ## Roadmap complete
 
-All planned phases (1–15, v0.1 → v1.8) are delivered. Future work is demand-driven:
+All planned phases (1–16, v0.1 → v1.9) are delivered. Future work is demand-driven:
 new protocol extensions (additive MINOR releases), reference-implementation
 crates/headers (tracked issues), the `relay interop` build-out and its `convert`
 driver surface (tracked issues), and the incremental ASIL-D/DAL-A uplift work

@@ -73,3 +73,25 @@ func TestMatchTopic(t *testing.T) {
 		}
 	}
 }
+
+//fusa:test REQ-RELAY-038
+func TestMatchTopicBranches(t *testing.T) {
+	cases := []struct {
+		filter, topic string
+		want          bool
+	}{
+		{"a/b/c", "a/b/c", true},     // exact
+		{"a/+/c", "a/x/c", true},     // single-level wildcard
+		{"a/+/c", "a/x/y", false},    // + does not span levels
+		{"a/#", "a/b/c/d", true},     // multi-level wildcard
+		{"#", "anything/here", true}, // root multi-level
+		{"a/b", "a/b/c", false},      // filter shorter, no #
+		{"a/b/c", "a/b", false},      // filter longer than topic
+		{"a/b", "a/b", true},         // equal length exact
+	}
+	for _, tc := range cases {
+		if got := MatchTopic(tc.filter, tc.topic); got != tc.want {
+			t.Errorf("MatchTopic(%q,%q) = %v, want %v", tc.filter, tc.topic, got, tc.want)
+		}
+	}
+}

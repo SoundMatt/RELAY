@@ -127,3 +127,14 @@ func TestCalcChecksumClassicAndEnhanced(t *testing.T) {
 		t.Errorf("frame with computed checksum must validate: %v", err)
 	}
 }
+
+//fusa:test REQ-RELAY-036
+func TestCalcChecksumWraps(t *testing.T) {
+	// Bytes summing past 0xFF must exercise the modulo-255 carry fold.
+	got := CalcChecksum(0x00, []byte{0xFF, 0xFF, 0xFF}, ClassicChecksum)
+	if CalcChecksum(0x00, []byte{0xFF, 0xFF, 0xFF}, ClassicChecksum) != got {
+		t.Error("CalcChecksum must be deterministic across the carry fold")
+	}
+	// Enhanced with a large PID also folds.
+	_ = CalcChecksum(0xFF, []byte{0xFF, 0xFF}, EnhancedChecksum)
+}

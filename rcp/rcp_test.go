@@ -108,3 +108,17 @@ func TestCommandFromMessage(t *testing.T) {
 		t.Errorf("Type = %v, want Set", cmd.Type)
 	}
 }
+
+//fusa:test REQ-RELAY-041
+func TestCommandFromMessageZones(t *testing.T) {
+	// Unknown zone name must error with ErrInvalidZone.
+	_, err := CommandFromMessage(relay.Message{ID: "Nowhere"})
+	if err == nil {
+		t.Fatal("expected error for unknown zone")
+	}
+	// The literal "Unknown" zone is valid (maps to ZoneUnknown, not an error).
+	cmd, err := CommandFromMessage(relay.Message{ID: "Unknown"})
+	if err != nil || cmd.Zone != ZoneUnknown {
+		t.Errorf("CommandFromMessage(Unknown) = %+v, %v; want ZoneUnknown, nil", cmd, err)
+	}
+}

@@ -92,3 +92,28 @@ func TestFromMessageInvalidID(t *testing.T) {
 		t.Errorf("must wrap ErrInvalidID, got %v", err)
 	}
 }
+
+//fusa:test REQ-RELAY-042
+func TestMessageTypeStringAllValues(t *testing.T) {
+	cases := map[MessageType]string{
+		MsgTypeRequest:           "request",
+		MsgTypeRequestNoReturn:   "request_no_return",
+		MsgTypeNotification:      "notification",
+		MsgTypeResponse:          "response",
+		MsgTypeError:             "error",
+		MsgTypeTPRequest:         "tp_request",
+		MsgTypeTPRequestNoReturn: "tp_request_no_return",
+		MsgTypeTPNotification:    "tp_notification",
+		MsgTypeTPResponse:        "tp_response",
+		MsgTypeTPError:           "tp_error",
+	}
+	for mt, want := range cases {
+		if got := mt.String(); got != want {
+			t.Errorf("MessageType(%#x).String() = %q, want %q", uint8(mt), got, want)
+		}
+	}
+	// Unknown values fall back to the numeric form.
+	if got := MessageType(0x42).String(); got != "66" {
+		t.Errorf("unknown MessageType.String() = %q, want %q", got, "66")
+	}
+}

@@ -412,9 +412,22 @@ Deliverables: interop harness spec (§11.2 `convert`, §11.2.1 `interop`) ✅
 
 ---
 
+### v1.6.1 — Traceability / coverage / cyber hardening ✦ done
+
+Quality hardening (tooling/evidence PATCH; no normative spec change):
+- ✅ All requirements traced **and** tested (closed 6 untraced); CI gates via
+  `gofusa trace -req-coverage 100`
+- ✅ 5 cybersecurity requirements (REQ-077…081) from the TARA mitigations,
+  traced + tested; CI runs `gofusa cyber`
+- ✅ Per-package 80% coverage floor (rcp 52%→98%; aggregate 86.7%)
+- ✅ Requirement `verification` method + safety-goal/threat links; spec embedded
+  as evidence
+
+---
+
 ## Roadmap complete
 
-All planned phases (1–13, v0.1 → v1.6) are delivered. Future work is demand-driven:
+All planned phases (1–13, v0.1 → v1.6, + v1.6.1 hardening) are delivered. Future work is demand-driven:
 new protocol extensions (additive MINOR releases), reference-implementation
 crates/headers (tracked issues), the `relay interop` build-out and its `convert`
 driver surface (tracked issues), and the incremental ASIL-D/DAL-A uplift work

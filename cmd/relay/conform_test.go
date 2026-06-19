@@ -31,6 +31,8 @@ func TestValidateVersionDocValid(t *testing.T) {
 }
 
 //fusa:test REQ-RELAY-053
+//fusa:test REQ-RELAY-047
+//fusa:test REQ-RELAY-079
 func TestValidateVersionDocMissingFields(t *testing.T) {
 	data := []byte(`{"tool":"x"}`) // missing version, spec_version, language, runtime
 	fs := validateVersionDoc(data)
@@ -135,6 +137,7 @@ func TestValidateCapabilitiesDocWrongKind(t *testing.T) {
 }
 
 //fusa:test REQ-RELAY-054
+//fusa:test REQ-RELAY-048
 func TestValidateCapabilitiesDocMissingCommand(t *testing.T) {
 	data := []byte(`{
 		"kind":"capabilities","tool":"t","version":"1.0","spec_version":"0.2",
@@ -196,6 +199,7 @@ func TestValidateStatusDocValid(t *testing.T) {
 }
 
 //fusa:test REQ-RELAY-055
+//fusa:test REQ-RELAY-049
 func TestValidateStatusDocMissingHealthy(t *testing.T) {
 	data := []byte(`{"tool":"t","version":"1.0","connected":false}`)
 	fs := validateStatusDoc(data)

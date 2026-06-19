@@ -29,3 +29,7 @@ Thumbs.db
 
 # Claude
 .claude/
+
+# go-FuSa generated reports
+cyber-report.json
+check-report.json

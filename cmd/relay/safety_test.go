@@ -16,6 +16,8 @@ import (
 )
 
 //fusa:test REQ-RELAY-063
+//fusa:test REQ-RELAY-077
+//fusa:test REQ-RELAY-078
 func TestRunSBOMJSON(t *testing.T) {
 	var out, errb bytes.Buffer
 	if err := runSBOM(&out, &errb, []string{"--format", "json"}); err != nil {
@@ -111,6 +113,7 @@ func TestRunSafetyCaseText(t *testing.T) {
 }
 
 //fusa:test REQ-RELAY-065
+//fusa:test REQ-RELAY-080
 func TestWriteAuditPackManifestHashes(t *testing.T) {
 	var buf bytes.Buffer
 	n, err := writeAuditPack(&buf)

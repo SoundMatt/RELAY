@@ -1,5 +1,34 @@
 # RELAY Spec Changelog
 
+## v1.6.1 — 2026-06-19 (tooling/evidence; no normative change)
+
+Requirements-traceability, test-coverage, and cybersecurity hardening. The
+specification text is unchanged (`SpecVersion` stays `1.6`); this is a module
+PATCH.
+
+- **Traceability:** closed the 6 untraced requirements — REQ-047/048/049 (CLI
+  document field validation) and REQ-079 annotated on the conform validators and
+  tests; REQ-050 (HARA) and REQ-045/046 (the spec's §7 constructor contract,
+  levied on implementations) traced to the embedded HARA and specification with
+  content tests. All requirements are now traced **and** tested; CI gates this
+  via `gofusa trace -req-coverage 100`.
+- **Cybersecurity:** added 5 cybersecurity requirements (REQ-077…081) derived
+  from the TARA mitigations M-001…M-005 (build provenance, dependency-free build
+  + SBOM, structural document validation, tamper-evident audit pack,
+  least-privilege probing), each traced to code and tested. CI now runs
+  `gofusa cyber` explicitly alongside the CYBER static-analysis rules in
+  `gofusa check`.
+- **Coverage:** raised `rcp` 52%→98%, and `relay`/`lin`/`someip` above 80%;
+  aggregate 82.7%→86.7%. CI adds a **per-package 80% floor** so a weak unit can
+  no longer hide behind high-coverage packages.
+- **Requirement metadata:** every requirement now carries a `verification`
+  method; safety and cybersecurity requirements link to their safety goal /
+  threat. The normative specification is embedded as the `specification`
+  evidence artifact and bundled by `relay audit-pack`.
+- **Known limitation:** `gofusa` reports `Sec-Tested: 0` because it measures
+  *independent* (different-author) verification, which a single-maintainer
+  project cannot satisfy; this is documented in `docs/asil-d-uplift.md`.
+
 ## v1.6 — 2026-06-18 (stable)
 
 Cross-implementation interoperability harness. Additive (MINOR release);

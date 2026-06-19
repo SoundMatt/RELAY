@@ -105,3 +105,25 @@ func TestFromMessageInvalidID(t *testing.T) {
 		t.Error("expected error for ID 64 (> 0x3F)")
 	}
 }
+
+//fusa:test REQ-RELAY-036
+func TestCalcChecksumClassicAndEnhanced(t *testing.T) {
+	data := []byte{0x01, 0x02, 0x03}
+	// Enhanced includes the PID in the sum; classic does not — they must differ
+	// for a non-trivial PID, and both must be single bytes.
+	classic := CalcChecksum(0x3C, data, ClassicChecksum)
+	enhanced := CalcChecksum(0x3C, data, EnhancedChecksum)
+	if classic == enhanced {
+		t.Errorf("classic and enhanced checksums should differ for PID 0x3C: both %#x", classic)
+	}
+	// Determinism.
+	if CalcChecksum(0x3C, data, EnhancedChecksum) != enhanced {
+		t.Error("CalcChecksum must be deterministic")
+	}
+	// VerifyPID/round-trip sanity: a frame validated with its computed checksum.
+	f := Frame{ID: 0x10, Data: data, ChecksumType: ClassicChecksum}
+	f.Checksum = CalcChecksum(ProtectID(f.ID), data, ClassicChecksum)
+	if err := ValidateFrame(f); err != nil {
+		t.Errorf("frame with computed checksum must validate: %v", err)
+	}
+}

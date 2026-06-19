@@ -18,7 +18,7 @@ func TestEvidenceNames(t *testing.T) {
 		"requirements": true, "hara": true, "tara": true,
 		"version": true, "tool-safety-manual": true,
 		"formal-model": true, "formal-model-doc": true,
-		"asil-d-uplift": true,
+		"asil-d-uplift": true, "specification": true,
 	}
 	if len(names) != len(want) {
 		t.Fatalf("EvidenceNames = %v, want %d entries", names, len(want))
@@ -27,6 +27,50 @@ func TestEvidenceNames(t *testing.T) {
 		if !want[n] {
 			t.Errorf("unexpected evidence name %q", n)
 		}
+	}
+}
+
+//fusa:test REQ-RELAY-050
+func TestHARAEvidence(t *testing.T) {
+	b, err := Evidence("hara")
+	if err != nil || len(b) == 0 {
+		t.Fatalf("hara evidence missing: %v", err)
+	}
+	var h struct {
+		Standard     string           `json:"standard"`
+		Hazards      []map[string]any `json:"hazards"`
+		SafetyGoals  []map[string]any `json:"safetyGoals"`
+		OperationalS []map[string]any `json:"operationalSituations"`
+	}
+	if err := json.Unmarshal(b, &h); err != nil {
+		t.Fatalf("hara is not valid JSON: %v", err)
+	}
+	if h.Standard == "" || len(h.Hazards) == 0 || len(h.SafetyGoals) == 0 {
+		t.Errorf("HARA must declare a standard, hazards, and safety goals; got %+v", h)
+	}
+}
+
+//fusa:test REQ-RELAY-045
+//fusa:test REQ-RELAY-046
+func TestSpecStatesConstructorContract(t *testing.T) {
+	// REQ-045/046 are levied by the spec on conformant implementations (not on
+	// the relay tool). RELAY's verification obligation is that the normative
+	// §7 constructor contract is stated in the embedded specification.
+	spec, err := Evidence("specification")
+	if err != nil || len(spec) == 0 {
+		t.Fatalf("specification evidence missing: %v", err)
+	}
+	s := string(spec)
+	if !strings.Contains(s, "## 7. Constructor Contract") {
+		t.Error("spec is missing §7 Constructor Contract")
+	}
+	// REQ-045: Form 1 endpoint-addressed New signature.
+	if !strings.Contains(s, "New(ctx context.Context, endpoint string") {
+		t.Error("spec §7 must state the Form 1 New(ctx, endpoint, ...) signature (REQ-045)")
+	}
+	// REQ-046: mandatory mock sub-package.
+	if !strings.Contains(s, "mock") || !strings.Contains(s, "Form 2") {
+		t.Error("spec §7 must require a mock sub-package with a Form 2 New (REQ-046)")
 	}
 }
 

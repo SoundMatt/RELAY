@@ -101,13 +101,13 @@ See `.fusa-hara.json` for the full HARA. Summary:
 
 | Artifact | Location | Purpose |
 |---|---|---|
-| Requirements | `.fusa-reqs.json` | Requirements REQ-RELAY-001..076, all traced + tested |
+| Requirements | `.fusa-reqs.json` | Requirements REQ-RELAY-001..081 (incl. 5 cybersecurity), all traced + tested, each with a `verification` method |
 | HARA | `.fusa-hara.json` | Hazard analysis and safety goals |
-| TARA | `.fusa-tara.json` | Cybersecurity threat analysis (ISO/SAE 21434) |
+| TARA | `.fusa-tara.json` | Cybersecurity threat analysis (ISO/SAE 21434); mitigations M-001..005 traced to REQ-077..081 |
 | Formal model | `docs/formal/RelayLifecycle.tla` | TLC-checked §6 lifecycle invariants |
+| Specification | `spec/relay-spec.md` | Normative interface and frame type definitions (embedded evidence) |
 | Test suite | `*_test.go` | Requirement traceability via `//fusa:test` |
-| CI | `.github/workflows/ci.yml` | Lint, test (80% coverage gate), go-FuSa, Docker |
-| Spec | `spec/relay-spec.md` | Normative interface and frame type definitions |
+| CI | `.github/workflows/ci.yml` | Lint, test (80% total + per-package coverage gate), go-FuSa (`check`, `cyber`, `trace -req-coverage 100`), CodeQL, Docker |
 | Changelog | `spec/CHANGELOG.md` | Version history and breaking changes |
 
 All evidence is embedded in the `relay` binary (`relay.Evidence`) and bundled by

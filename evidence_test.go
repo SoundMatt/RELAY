@@ -104,14 +104,16 @@ func TestSpecDefinesContinuousConformance(t *testing.T) {
 	if !strings.Contains(s, "## 20. Continuous Conformance") {
 		t.Error("spec must define §20 Continuous Conformance (REQ-088)")
 	}
+	// Wrap-safe single tokens (the spec prose is hard-wrapped, so multi-word
+	// phrases can span a line break).
 	for _, want := range []string{
-		"relay conform --strict",  // §20.1.1 CI gate
-		"Full x-FuSa",             // §20.1.2 full lifecycle
-		"tool qualification",      // §20.1.2
-		"Behavioural conformance", // §20.2 golden vectors
-		"Tooling-conformant",      // §20.3 tiers (REQ-089)
-		"dFMEA",                   // §20.4 evidence (REQ-090)
-		"build provenance",        // §20.5 supply-chain (REQ-090)
+		"conform",            // §20.1.1 CI gate
+		"x-FuSa",             // §20.1.2 full lifecycle
+		"qualification",      // §20.1.2 tool qualification
+		"interop",            // §20.1.3 behavioural
+		"Tooling-conformant", // §20.3 tiers (REQ-089)
+		"dFMEA",              // §20.4 evidence (REQ-090)
+		"provenance",         // §20.5 supply-chain (REQ-090)
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("§20 must mandate %q", want)

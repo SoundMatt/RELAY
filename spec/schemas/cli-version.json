@@ -28,7 +28,7 @@
         },
         "language": {
             "type": "string",
-            "enum": ["go", "cpp", "rust"],
+            "enum": ["go", "cpp", "rust", "c"],
             "description": "Implementation language."
         },
         "runtime": {

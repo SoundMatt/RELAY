@@ -92,6 +92,22 @@ func TestSpecDefinesLibraryArchitecture(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-091
+func TestSpecAcceptsCLanguage(t *testing.T) {
+	spec, err := Evidence("specification")
+	if err != nil || len(spec) == 0 {
+		t.Fatalf("specification evidence missing: %v", err)
+	}
+	s := string(spec)
+	// Wrap-safe single tokens (markdown hard-wraps prose — multi-word
+	// search strings can span a line break and false-fail).
+	for _, tok := range []string{`"rust"`, `"c"`, "MUST be one of"} {
+		if !strings.Contains(s, tok) {
+			t.Errorf("§12.1 language enum discussion must contain %q", tok)
+		}
+	}
+}
+
 //fusa:test REQ-RELAY-088
 //fusa:test REQ-RELAY-089
 //fusa:test REQ-RELAY-090

@@ -1128,7 +1128,7 @@ failure rather than a skip. Exit: `0` all equivalent, `1` any mismatch/error,
 }
 ```
 
-`language` MUST be one of: `"go"`, `"cpp"`, `"rust"`.
+`language` MUST be one of: `"go"`, `"cpp"`, `"rust"`, `"c"`.
 
 ### 12.2 Capabilities document
 
@@ -1235,7 +1235,7 @@ LABEL org.opencontainers.image.title="<tool>"
 LABEL org.opencontainers.image.source="https://github.com/SoundMatt/<repo>"
 LABEL org.opencontainers.image.licenses="MPL-2.0"
 LABEL io.relay.tool="<tool>"
-LABEL io.relay.language="go|cpp|rust"
+LABEL io.relay.language="go|cpp|rust|c"
 LABEL io.relay.binary="<binary>"
 LABEL io.relay.spec-version="0.1"
 ```
@@ -2437,7 +2437,7 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v1.11**
+Current version: **v1.12**
 
 **Go:** `const SpecVersion = "1.11"` (update in implementations targeting v1.11)
 **C++:** `constexpr std::string_view kRelaySpecVersion = "1.11";`  

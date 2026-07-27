@@ -1,6 +1,6 @@
 {
-  "version": "1.11",
-  "date": "2026-06-19",
+  "version": "1.12",
+  "date": "2026-07-27",
   "status": "stable",
   "networks": [
     "CAN",
@@ -13,6 +13,7 @@
   "languages": [
     "go",
     "cpp",
-    "rust"
+    "rust",
+    "c"
   ]
 }

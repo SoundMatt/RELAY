@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -275,6 +276,32 @@ func TestRunConformJSONFormat(t *testing.T) {
 }
 
 //fusa:test REQ-RELAY-052
+func TestRunConformJSONFormatFail(t *testing.T) {
+	// Regression test: --format json MUST still surface a non-zero exit code
+	// when the conformance result is FAIL, exactly like --format text does.
+	// Previously runConform returned right after enc.Encode(cr) in the "json"
+	// case, bypassing the sevFail exit-code check entirely.
+	bin := buildFailingBinary(t)
+	var out bytes.Buffer
+	var errbuf bytes.Buffer
+	err := runConform(&out, &errbuf, []string{"--format", "json", bin})
+	if err == nil {
+		t.Fatalf("expected non-nil error for FAIL result in --format json, got nil\noutput: %s", out.String())
+	}
+	var code exitCode
+	if !errors.As(err, &code) || int(code) != 1 {
+		t.Errorf("expected exitCode(1) for FAIL result in --format json, got %v", err)
+	}
+	var cr conformResult
+	if jsonErr := json.Unmarshal(out.Bytes(), &cr); jsonErr != nil {
+		t.Fatalf("conform --format json output is not valid JSON: %v\noutput: %s", jsonErr, out.String())
+	}
+	if cr.Result != sevFail {
+		t.Errorf("expected conformResult.Result=FAIL, got %s", cr.Result)
+	}
+}
+
+//fusa:test REQ-RELAY-052
 func TestRunConformNoArgs(t *testing.T) {
 	var out bytes.Buffer
 	var errbuf bytes.Buffer
@@ -304,6 +331,20 @@ func buildTestBinary(t *testing.T) string {
 	cmd := exec.Command("go", "build", "-o", bin, ".")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Skipf("could not build relay binary: %v\n%s", err, out)
+	}
+	return bin
+}
+
+// buildFailingBinary writes a shell script that always exits non-zero,
+// regardless of the arguments passed to it, so conformBinary's every step
+// (version/capabilities/status) fails and the overall result is FAIL.
+func buildFailingBinary(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	bin := filepath.Join(dir, "always-fail")
+	script := "#!/bin/sh\nexit 1\n"
+	if err := os.WriteFile(bin, []byte(script), 0o755); err != nil {
+		t.Fatalf("could not write failing test binary: %v", err)
 	}
 	return bin
 }

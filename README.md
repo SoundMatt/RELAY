@@ -29,12 +29,18 @@ Full specification: [`spec/relay-spec.md`](spec/relay-spec.md)
 Machine-readable version: [`spec/version.json`](spec/version.json)  
 Change history: [`spec/CHANGELOG.md`](spec/CHANGELOG.md)
 
-Current: **v0.1 (draft)**
+Current: **v1.11 (stable)**
 
 ## Install
 
 ```
 go get github.com/SoundMatt/RELAY@latest
+```
+
+Install the CLI:
+
+```
+go install github.com/SoundMatt/RELAY/cmd/relay@latest
 ```
 
 ## Usage
@@ -74,16 +80,33 @@ if caller, ok := node.(relay.Caller); ok {
 ## CLI
 
 ```
-relay version [--format text|json]
+Usage: relay <command> [flags]
 ```
+
+| Command | Description |
+|---|---|
+| `version [--format text\|json]` | Print tool and spec version |
+| `capabilities` | Print RELAY tooling capabilities document |
+| `status` | Print RELAY tooling status document |
+| `conform <bin>` | Verify that `<bin>` conforms to the RELAY spec |
+| `convert` | Reference canonical-value → `relay.Message` conversion (stdin→stdout) |
+| `interop <bin>...` | Check implementations are behaviourally interchangeable |
+| `crossbar` | Route `relay.Message`s between protocol spokes (`--config`) |
+| `probe` | Discover RELAY-conformant binaries |
+| `trace` | Capture or replay a `relay.Message` stream |
+| `report` | Cross-implementation conformance report |
+| `sbom` | Print the software bill of materials |
+| `safety-case` | Summarise the safety evidence set |
+| `audit-pack` | Bundle all safety evidence into a zip |
+| `compare` | Compare two implementations for interchangeability |
+| `versions` | List implementations and their spec alignment |
+| `serve` | Serve a web dashboard, JSON API, and status badge |
 
 ## Conformance
 
 ```
 relay conform <binary>
 ```
-
-(available from v0.5)
 
 ## Roadmap
 

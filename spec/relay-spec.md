@@ -2511,7 +2511,13 @@ this for the reference tooling.
 
 ---
 
-## Appendix A — Current project alignment
+## Appendix A — Project alignment as of v0.2 (2026-06-16); not maintained thereafter
+
+This table is a historical snapshot taken during the v0.2 milestone and has not
+been updated since; it does not reflect current x-Net implementation status. For
+current, machine-checked conformance, run `relay conform` against each
+implementation's binary or `relay report --scan` for a cross-implementation
+summary.
 
 | Requirement | go-CAN | go-DDS | go-LIN | go-mqtt | go-RCP | go-SOMEIP | cpp-RCP |
 |---|---|---|---|---|---|---|---|

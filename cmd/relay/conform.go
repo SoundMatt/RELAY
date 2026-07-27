@@ -75,7 +75,9 @@ func runConform(stdout, stderr io.Writer, args []string) error {
 	case "json":
 		enc := json.NewEncoder(stdout)
 		enc.SetIndent("", "    ")
-		return enc.Encode(cr)
+		if err := enc.Encode(cr); err != nil {
+			return err
+		}
 	case "text":
 		printConformText(stdout, cr)
 	default:

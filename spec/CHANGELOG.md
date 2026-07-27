@@ -1,5 +1,27 @@
 # RELAY Spec Changelog
 
+## v1.11.1 — 2026-07-27 (bug fix + doc correction; no normative change)
+
+- **`cmd/relay/conform.go`**: fixed `runConform` so `--format json` no longer
+  returns before the `sevFail` exit-code check; both `text` and `json` output
+  now fall through to the same unconditional check, so `relay conform --format
+  json` on a FAILing binary correctly exits 1 (previously exited 0, silently
+  hiding FAIL results from CI/scripts consuming JSON output). Added a
+  regression test covering `--format json` against a FAIL binary.
+- **README.md**: corrected the stale "v0.1 (draft)" status line to the actual
+  current spec version, added the missing `go install
+  .../cmd/relay@latest` CLI install instructions, and expanded the CLI section
+  from 2 to all 16 subcommands with one-line descriptions; removed the stale
+  "(available from v0.5)" annotation on `relay conform`.
+- **ROADMAP.md**: corrected the stale "✦ in progress" tags on the v0.1–v0.4
+  milestones (all four shipped) to "✦ done", matching every later milestone.
+- **spec/relay-spec.md Appendix A**: retitled from "Current project alignment"
+  to "Project alignment as of v0.2 (2026-06-16); not maintained thereafter" and
+  added a pointer to `relay conform`/`relay report --scan` for current status —
+  the table was frozen at v0.2-era data and read as misleadingly current.
+- `SpecVersion` unchanged (`1.11`); this is a tooling/doc patch release, not a
+  spec content change.
+
 ## v1.11 — 2026-06-19 (stable)
 
 Removed the C++ CLI conformance waiver.

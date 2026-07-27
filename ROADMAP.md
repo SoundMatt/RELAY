@@ -34,7 +34,7 @@ conformance, and provides observability tooling.
 
 ## Phase 1 — Foundation
 
-### v0.1 — Core types and CI ✦ in progress
+### v0.1 — Core types and CI ✦ done
 
 **Goal:** The RELAY Go module exists, defines the universal envelope, protocol
 enum, and application interfaces, and has CI running with quality gates.
@@ -57,7 +57,7 @@ Deliverables: `relay version`
 
 ---
 
-### v0.2 — Interface contracts ✦ in progress
+### v0.2 — Interface contracts ✦ done
 
 **Goal:** Optional interfaces defined in RELAY; x-Net compile-time assertions
 filed as issues; `relay capabilities` CLI command shipping.
@@ -78,7 +78,7 @@ Deliverables: `relay version`, `relay capabilities`
 
 ---
 
-### v0.3 — Canonical frame types and application interface ✦ in progress
+### v0.3 — Canonical frame types and application interface ✦ done
 
 **Goal:** All six protocol canonical types defined in RELAY sub-packages with
 validation and envelope conversion; `relay status` CLI command shipping.
@@ -106,7 +106,7 @@ Deliverables: `relay version`, `relay capabilities`, `relay status`
 
 ## Phase 2 — Safety Groundwork
 
-### v0.4 — Requirements and HARA ✦ in progress
+### v0.4 — Requirements and HARA ✦ done
 
 **Goal:** RELAY is developed as an ASIL-C tool. Full requirements traceability
 and hazard analysis in place before conformance tooling ships.

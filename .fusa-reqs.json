@@ -865,6 +865,15 @@
       "criticality": "low",
       "verification": "spec-review",
       "asil": "QM"
+    },
+    {
+      "id": "REQ-RELAY-092",
+      "title": "C++/Rust optional-interface and routing-key bindings",
+      "text": "The specification MUST provide C++ (relay::HealthProvider/MetricsProvider/Drainer, SubscriberOptions::event_id/topic_name) and Rust (HealthProvider/MetricsProvider/Drainer traits, SubscriberOptions::event_id/topic_name) bindings for the \u00a79 optional interfaces and \u00a714.1 SOMEIP/DDS routing keys, matching the Go reference (\u00a718.2, \u00a718.3).",
+      "category": "functional",
+      "criticality": "low",
+      "verification": "spec-review",
+      "asil": "QM"
     }
   ]
 }

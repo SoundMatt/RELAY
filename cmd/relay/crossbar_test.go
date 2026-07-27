@@ -53,6 +53,58 @@ esac`)
 	}
 }
 
+// TestCrossbarSendIsPersistentProcess proves the send sink is spawned once
+// and streamed to, not spawned fresh per message — spec §11.2's "streaming
+// JSON sink" MUST be "the egress dual of subscribe --format json" (read a
+// stream on stdin until EOF), not a one-shot invocation. A test that only
+// checks the sink's cumulative output (like TestCrossbarForwards) can't tell
+// these two designs apart, since both eventually produce the same bytes.
+//
+//fusa:test REQ-RELAY-086
+func TestCrossbarSendIsPersistentProcess(t *testing.T) {
+	dir := t.TempDir()
+	sinkOut := filepath.Join(dir, "sink.ndjson")
+	spawnMarks := filepath.Join(dir, "spawns")
+
+	// Source spoke: emit three messages.
+	src := writeScript(t, `case "$1" in
+subscribe) printf '%s\n' '{"protocol":1,"id":"1","payload":"AQ==","timestamp":"0001-01-01T00:00:00Z","meta":{}}' '{"protocol":1,"id":"2","payload":"Ag==","timestamp":"0001-01-01T00:00:00Z","meta":{}}' '{"protocol":1,"id":"3","payload":"Aw==","timestamp":"0001-01-01T00:00:00Z","meta":{}}' ;;
+esac`)
+	// Sink spoke: append one marker per `send` invocation (proving spawn
+	// count), then stream stdin to the record file (proving persistence —
+	// a one-shot process would only ever see one line before EOF).
+	sink := writeScript(t, `case "$1" in
+send) printf 'x' >> `+spawnMarks+`; cat >> `+sinkOut+` ;;
+esac`)
+
+	cfg := `{
+	  "spokes": [
+	    {"name":"src","binary":"` + src + `","protocol":"CAN"},
+	    {"name":"dst","binary":"` + sink + `","protocol":"CAN"}
+	  ],
+	  "routes": [ {"from":"src","to":["dst"]} ]
+	}`
+	cfgPath := filepath.Join(dir, "crossbar.json")
+	if err := os.WriteFile(cfgPath, []byte(cfg), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var out, errb bytes.Buffer
+	if err := runCrossbar(&out, &errb, []string{"--config", cfgPath, "--duration", "2s"}); err != nil {
+		t.Fatalf("runCrossbar: %v (%s)", err, errb.String())
+	}
+
+	spawns, _ := os.ReadFile(spawnMarks)
+	if got := len(spawns); got != 1 {
+		t.Errorf("send process spawned %d time(s), want exactly 1 (persistent stream, not one-shot per message)", got)
+	}
+	got, _ := os.ReadFile(sinkOut)
+	lines := strings.Count(strings.TrimSpace(string(got)), "\n") + 1
+	if len(got) == 0 || lines != 3 {
+		t.Errorf("expected 3 messages streamed to the single sink process, got %d line(s):\n%s", lines, got)
+	}
+}
+
 //fusa:test REQ-RELAY-086
 func TestCrossbarConfigErrors(t *testing.T) {
 	dir := t.TempDir()

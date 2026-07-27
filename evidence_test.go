@@ -108,6 +108,47 @@ func TestSpecAcceptsCLanguage(t *testing.T) {
 	}
 }
 
+// TestSpecTitleAndCurrentVersionMatchSpecVersion guards against a pattern
+// that recurred across three separate releases (v1.11.1, v1.12, and again
+// mid-way through v1.13 before this test was added): the spec document's
+// title line and its §19.4 "Current version" line drifting behind the real
+// SpecVersion constant. Both are checked directly against SpecVersion so
+// the next release can't silently repeat it.
+//
+//fusa:test REQ-RELAY-020
+func TestSpecTitleAndCurrentVersionMatchSpecVersion(t *testing.T) {
+	spec, err := Evidence("specification")
+	if err != nil || len(spec) == 0 {
+		t.Fatalf("specification evidence missing: %v", err)
+	}
+	s := string(spec)
+	title := "# RELAY Specification — v" + SpecVersion
+	if !strings.HasPrefix(s, title) {
+		t.Errorf("spec title must start with %q (matching SpecVersion %q)", title, SpecVersion)
+	}
+	current := "Current version: **v" + SpecVersion + "**"
+	if !strings.Contains(s, current) {
+		t.Errorf("§19.4 must contain %q (matching SpecVersion %q)", current, SpecVersion)
+	}
+}
+
+//fusa:test REQ-RELAY-092
+func TestSpecDefinesCppRustOptionalInterfaceBindings(t *testing.T) {
+	spec, err := Evidence("specification")
+	if err != nil || len(spec) == 0 {
+		t.Fatalf("specification evidence missing: %v", err)
+	}
+	s := string(spec)
+	for _, tok := range []string{
+		"class HealthProvider", "class MetricsProvider", "class Drainer", "event_id",
+		"pub trait HealthProvider", "pub trait Drainer", "topic_name",
+	} {
+		if !strings.Contains(s, tok) {
+			t.Errorf("§18.2/§18.3 optional-interface bindings must contain %q", tok)
+		}
+	}
+}
+
 //fusa:test REQ-RELAY-088
 //fusa:test REQ-RELAY-089
 //fusa:test REQ-RELAY-090

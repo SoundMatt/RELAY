@@ -29,6 +29,26 @@ func TestVersionText(t *testing.T) {
 	}
 }
 
+// TestToolVersionTracksSpecVersion guards against the recurring pattern of
+// toolVersion being left behind when SpecVersion is bumped (it happened
+// across v1.11.1 and again at v1.12 before this test was added) — every
+// release in this repo's history has bumped both together, so a MAJOR.MINOR
+// mismatch is a real drift, not a false positive.
+//
+//fusa:test REQ-RELAY-021
+func TestToolVersionTracksSpecVersion(t *testing.T) {
+	majorMinor := func(v string) string {
+		parts := strings.SplitN(v, ".", 3)
+		if len(parts) < 2 {
+			return v
+		}
+		return parts[0] + "." + parts[1]
+	}
+	if got, want := majorMinor(toolVersion), majorMinor(relay.SpecVersion); got != want {
+		t.Errorf("toolVersion %q (major.minor %q) has drifted from relay.SpecVersion %q (major.minor %q) — bump toolVersion in main.go", toolVersion, got, relay.SpecVersion, want)
+	}
+}
+
 //fusa:test REQ-RELAY-021
 func TestVersionTextExplicit(t *testing.T) {
 	var out bytes.Buffer

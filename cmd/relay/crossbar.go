@@ -14,7 +14,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -36,16 +35,26 @@ type cliNode struct {
 	subArgs  []string
 	sendArgs []string
 
-	mu     sync.Mutex
-	subCmd *exec.Cmd
-	closed bool
+	mu        sync.Mutex
+	subCmd    *exec.Cmd
+	closed    bool
+	done      chan struct{}
+	sendCmd   *exec.Cmd
+	sendStdin io.WriteCloser
 }
 
 func (n *cliNode) Protocol() relay.Protocol { return n.proto }
 
 // Subscribe spawns `<binary> subscribe --format json` and streams the decoded
-// relay.Message NDJSON on the returned channel until the node is closed.
-func (n *cliNode) Subscribe(_ ...relay.SubscriberOption) (<-chan relay.Message, error) {
+// relay.Message NDJSON on the returned channel until the node is closed. It
+// honors the caller's SubscriberOptions (channel depth and back-pressure
+// policy per §10.5) instead of hardcoding an always-blocking send — a
+// Block-policy subscriber that stops draining the channel no longer leaks the
+// forwarding goroutine forever, since it also selects on Close().
+func (n *cliNode) Subscribe(opts ...relay.SubscriberOption) (<-chan relay.Message, error) {
+	cfg := relay.ApplySubscriberOpts(opts)
+	depth := cfg.ChanDepth(64)
+
 	args := append([]string{"subscribe", "--format", "json"}, n.subArgs...)
 	cmd := exec.Command(n.binary, args...)
 	stdout, err := cmd.StdoutPipe()
@@ -57,17 +66,48 @@ func (n *cliNode) Subscribe(_ ...relay.SubscriberOption) (<-chan relay.Message, 
 	}
 	n.mu.Lock()
 	n.subCmd = cmd
+	if n.done == nil {
+		n.done = make(chan struct{})
+	}
+	done := n.done
 	n.mu.Unlock()
 
-	ch := make(chan relay.Message, 64)
+	ch := make(chan relay.Message, depth)
 	go func() {
 		defer close(ch)
 		sc := bufio.NewScanner(stdout)
 		sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 		for sc.Scan() {
 			var m relay.Message
-			if json.Unmarshal(sc.Bytes(), &m) == nil {
-				ch <- m
+			if json.Unmarshal(sc.Bytes(), &m) != nil {
+				continue
+			}
+			switch cfg.BackPressure {
+			case relay.DropNewest:
+				select {
+				case ch <- m:
+				default:
+					// channel full: drop the arriving sample
+				}
+			case relay.DropOldest:
+				select {
+				case ch <- m:
+				default:
+					select {
+					case <-ch: // evict the oldest buffered sample
+					default:
+					}
+					select {
+					case ch <- m:
+					default:
+					}
+				}
+			default: // relay.Block
+				select {
+				case ch <- m:
+				case <-done:
+					return
+				}
 			}
 		}
 		_ = cmd.Wait()
@@ -75,16 +115,79 @@ func (n *cliNode) Subscribe(_ ...relay.SubscriberOption) (<-chan relay.Message, 
 	return ch, nil
 }
 
-// Send writes msg as one NDJSON line to `<binary> send --format json`.
+// Send writes msg as one NDJSON line to a single persistent
+// `<binary> send --format json` process's stdin — spec §11.2's "streaming
+// JSON sink" is explicitly "the egress dual of subscribe --format json"
+// (a persistent process reading a stream until EOF), not one process spawned
+// per message. The process is started lazily on first use and kept alive
+// for the node's lifetime; a write failure (e.g. the sink process died) tears
+// it down so the next Send call restarts it.
 func (n *cliNode) Send(ctx context.Context, msg relay.Message) error {
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return err
 	}
+
+	stdin, startErr := n.sendPipe()
+	if startErr != nil {
+		return startErr
+	}
+
+	writeErrCh := make(chan error, 1)
+	go func() {
+		_, err := stdin.Write(append(data, '\n'))
+		writeErrCh <- err
+	}()
+	select {
+	case err := <-writeErrCh:
+		if err != nil {
+			n.teardownSend()
+		}
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// sendPipe returns the stdin pipe of the persistent send process, starting it
+// if it isn't already running.
+func (n *cliNode) sendPipe() (io.WriteCloser, error) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if n.closed {
+		return nil, fmt.Errorf("cliNode: send on closed node")
+	}
+	if n.sendStdin != nil {
+		return n.sendStdin, nil
+	}
 	args := append([]string{"send", "--format", "json"}, n.sendArgs...)
-	cmd := exec.CommandContext(ctx, n.binary, args...)
-	cmd.Stdin = strings.NewReader(string(data) + "\n")
-	return cmd.Run()
+	cmd := exec.Command(n.binary, args...)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	n.sendCmd = cmd
+	n.sendStdin = stdin
+	return stdin, nil
+}
+
+// teardownSend closes and forgets the persistent send process so the next
+// Send call restarts it, e.g. after a write to a dead process's pipe fails.
+func (n *cliNode) teardownSend() {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if n.sendStdin != nil {
+		_ = n.sendStdin.Close()
+		n.sendStdin = nil
+	}
+	if n.sendCmd != nil && n.sendCmd.Process != nil {
+		_ = n.sendCmd.Process.Kill()
+		_ = n.sendCmd.Wait()
+	}
+	n.sendCmd = nil
 }
 
 // Close terminates the subscribe process.
@@ -95,9 +198,21 @@ func (n *cliNode) Close() error {
 		return nil
 	}
 	n.closed = true
+	if n.done != nil {
+		close(n.done)
+	}
 	if n.subCmd != nil && n.subCmd.Process != nil {
 		_ = n.subCmd.Process.Kill()
 	}
+	if n.sendStdin != nil {
+		_ = n.sendStdin.Close()
+		n.sendStdin = nil
+	}
+	if n.sendCmd != nil && n.sendCmd.Process != nil {
+		_ = n.sendCmd.Process.Kill()
+		_ = n.sendCmd.Wait()
+	}
+	n.sendCmd = nil
 	return nil
 }
 
@@ -157,20 +272,37 @@ func runCrossbar(stdout, stderr io.Writer, args []string) error {
 		nodes[s.Name] = node
 	}
 	for _, rt := range cfg.Routes {
-		route := router.Route{From: rt.From, To: rt.To}
 		if rt.Converter != "" {
+			// Explicit converter: the user asked for one shared conversion
+			// across the whole fan-out — respect that as a single route.
 			conv, err := router.Lookup(rt.Converter)
 			if err != nil {
 				fmt.Fprintf(stderr, "relay crossbar: %v\n", err)
 				return exitCode(2)
 			}
-			route.Convert = conv
-		} else if len(rt.To) > 0 {
-			route.Convert = router.DefaultConverter(protoOf[rt.From], protoOf[rt.To[0]])
+			if err := r.AddRoute(router.Route{From: rt.From, To: rt.To, Convert: conv}); err != nil {
+				fmt.Fprintf(stderr, "relay crossbar: %v\n", err)
+				return exitCode(2)
+			}
+			continue
 		}
-		if err := r.AddRoute(route); err != nil {
-			fmt.Fprintf(stderr, "relay crossbar: %v\n", err)
-			return exitCode(2)
+		// No explicit converter: router.Route applies exactly one Convert to
+		// its entire To fan-out, so a single route picking a converter from
+		// only the first destination would silently mis-tag every other
+		// destination with a different protocol (e.g. a CAN source fanning
+		// out to [DDS, LIN] would re-tag the LIN copy as DDS too). Split into
+		// one single-destination route per target instead, each with its own
+		// correctly-inferred converter — same fan-out behavior, correct per
+		// destination, no change to router.Route's public shape.
+		for _, dst := range rt.To {
+			route := router.Route{From: rt.From, To: []string{dst}, Filter: nil}
+			if protoOf[rt.From] != protoOf[dst] {
+				route.Convert = router.DefaultConverter(protoOf[rt.From], protoOf[dst])
+			}
+			if err := r.AddRoute(route); err != nil {
+				fmt.Fprintf(stderr, "relay crossbar: %v\n", err)
+				return exitCode(2)
+			}
 		}
 	}
 

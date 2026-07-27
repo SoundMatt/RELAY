@@ -6,7 +6,6 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -89,6 +88,10 @@ func runTrace(stdout, stderr io.Writer, args []string) error {
 		fmt.Fprintln(stderr, "Usage: relay trace [--protocol P] [--count N] [--output FILE] [--format ndjson|json|text] <binary>")
 		return exitCode(2)
 	}
+	if fs.NArg() > 1 {
+		fmt.Fprintf(stderr, "relay trace: unexpected extra arguments %v — flags must precede <binary>\n", fs.Args()[1:])
+		return exitCode(2)
+	}
 	binary := fs.Arg(0)
 
 	subArgs := []string{"subscribe", "--format", "json"}
@@ -96,7 +99,13 @@ func runTrace(stdout, stderr io.Writer, args []string) error {
 		subArgs = append(subArgs, "--count", fmt.Sprintf("%d", *count))
 	}
 
-	cmd := exec.CommandContext(context.Background(), binary, subArgs...)
+	// signalContext (crossbar.go) cancels on SIGINT/SIGTERM, which
+	// exec.CommandContext then uses to kill the child — without this,
+	// Ctrl+C during live-mode trace killed the relay process but left the
+	// spawned `<binary> subscribe` process running as an orphan.
+	ctx, cancel := signalContext(0)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, binary, subArgs...)
 	pipe, err := cmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("relay trace: %w", err)

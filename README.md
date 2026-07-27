@@ -4,8 +4,8 @@
 
 RELAY is the shared specification and library for the SoundMatt embedded network
 protocol ecosystem. CAN, DDS, LIN, MQTT, RCP, and SOME/IP implementations in Go,
-Rust, and C++ build against RELAY to share canonical types, interface contracts,
-error semantics, and a common application API.
+C, C++, and Rust build against RELAY to share canonical types, interface
+contracts, error semantics, and a common application API.
 
 [![CI](https://github.com/SoundMatt/RELAY/actions/workflows/ci.yml/badge.svg)](https://github.com/SoundMatt/RELAY/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/SoundMatt/RELAY.svg)](https://pkg.go.dev/github.com/SoundMatt/RELAY)
@@ -14,14 +14,14 @@ error semantics, and a common application API.
 
 ## Protocol coverage
 
-| Protocol | Go | C++ | Rust |
-|---|---|---|---|
-| CAN | [go-CAN](https://github.com/SoundMatt/go-CAN) | — | — |
-| DDS | [go-DDS](https://github.com/SoundMatt/go-DDS) | — | — |
-| LIN | [go-LIN](https://github.com/SoundMatt/go-LIN) | — | — |
-| MQTT | [go-MQTT](https://github.com/SoundMatt/go-mqtt) | — | — |
-| RCP | [go-RCP](https://github.com/SoundMatt/go-RCP) | [cpp-RCP](https://github.com/SoundMatt/cpp-RCP) | — |
-| SOME/IP | [go-SOMEIP](https://github.com/SoundMatt/go-SOMEIP) | — | — |
+| Protocol | Go | C | C++ | Rust |
+|---|---|---|---|---|
+| CAN | [go-CAN](https://github.com/SoundMatt/go-CAN) | — | [cpp-CAN](https://github.com/SoundMatt/cpp-CAN) | [rust-CAN](https://github.com/SoundMatt/rust-CAN) |
+| DDS | [go-DDS](https://github.com/SoundMatt/go-DDS) | — | [cpp-DDS](https://github.com/SoundMatt/cpp-DDS) | [rust-DDS](https://github.com/SoundMatt/rust-DDS) |
+| LIN | [go-LIN](https://github.com/SoundMatt/go-LIN) | — | [cpp-LIN](https://github.com/SoundMatt/cpp-LIN) | [rust-LIN](https://github.com/SoundMatt/rust-LIN) |
+| MQTT | [go-MQTT](https://github.com/SoundMatt/go-mqtt) | — | [cpp-MQTT](https://github.com/SoundMatt/cpp-MQTT) | [rust-MQTT](https://github.com/SoundMatt/rust-MQTT) |
+| RCP | [go-RCP](https://github.com/SoundMatt/go-RCP) | [c-RCP](https://github.com/SoundMatt/c-RCP) | [cpp-RCP](https://github.com/SoundMatt/cpp-RCP) | [rust-RCP](https://github.com/SoundMatt/rust-RCP) |
+| SOME/IP | [go-SOMEIP](https://github.com/SoundMatt/go-SOMEIP) | — | — | — |
 
 ## Specification
 

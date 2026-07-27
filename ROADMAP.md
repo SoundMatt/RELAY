@@ -527,3 +527,33 @@ new protocol extensions (additive MINOR releases), reference-implementation
 crates/headers (tracked issues), the `relay interop` build-out and its `convert`
 driver surface (tracked issues), and the incremental ASIL-D/DAL-A uplift work
 items above.
+
+---
+
+## Planned — DDS cross-language architecture alignment
+
+**Goal:** go-DDS (~24 packages, ~40k LOC, including a real RTPS wire-protocol
+stack) and cpp-DDS/rust-DDS (currently mock-only, ~1k LOC each) are wildly
+asymmetric. This phase brings all three to feature parity under one shared
+module taxonomy, and gives go-DDS itself the multi-module split its own
+maturity already calls for.
+
+- ⬜ **Spec:** add a DDS entry to §13.7.2's module-name registry (`rtps`,
+  `xtypes`, `tsn`, `idl`, `cdr`, `shmem`, plus proposed bridge names) — tracked
+  as RELAY #59, draft names not yet ratified.
+- ⬜ **go-DDS:** execute its own multi-module split (`core`/`bridges`/`tools`/
+  `observability`/`safety`) per go-DDS#71 — this becomes the target skeleton
+  the other two languages mirror, not just a paper plan.
+- ⬜ **cpp-DDS / rust-DDS:** tiered build-out to parity, same five-group
+  architecture in each language's idiomatic form (Cargo workspace / CMake
+  library targets):
+  - Tier 1 — full RTPS wire-protocol port (the actual interop-critical gap;
+    go-DDS's `rtps` package as the correctness reference)
+  - Tier 2 — `safety` (E2E protection), `security`
+  - Tier 3 — `xtypes`, `tsn`, `idl`/`cdr`
+  - Tier 4 — bridges (mqtt/wan/rest/grpc/domain)
+  - Tier 5 — observability (otel/admin/monitor/record/services)
+  - Detailed per-repo roadmaps: go-DDS ROADMAP.md, cpp-DDS ROADMAP.md,
+    rust-DDS ROADMAP.md.
+
+No SpecVersion bump until §13.7.2's DDS entry is actually ratified and merged.

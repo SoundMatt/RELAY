@@ -137,6 +137,34 @@ jobs:
             gofusa-audit-pack.zip
           if-no-files-found: ignore
 
+  conformance:
+    name: Self-conformance (relay conform / relay interop)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.0'
+          cache: true
+      - name: Build relay
+        run: go build -o relay ./cmd/relay
+      # RELAY is itself required to be a conformant implementation (spec §20.1
+      # makes both of these MUST for a conformant implementation's own CI),
+      # but until this job existed, RELAY never actually ran either of its
+      # two flagship gates against itself — only x-Net implementations did.
+      #
+      # Non-strict for conform: RELAY's own binary is a general-purpose
+      # multi-protocol tool (not a single-protocol implementation) and does
+      # not export Adapt(), so it legitimately produces two WARNs (null
+      # protocol, adapt=false) that --strict would otherwise treat as
+      # permanent, expected FAILs — those are correct classifications for
+      # this binary, not defects. relay conform still gates on genuine FAILs.
+      - name: relay conform (self)
+        run: ./relay conform ./relay
+      - name: relay interop --strict (self, reference vs reference)
+        run: ./relay interop --strict ./relay
+
   docker:
     name: Docker build
     runs-on: ubuntu-latest

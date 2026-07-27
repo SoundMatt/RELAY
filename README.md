@@ -29,7 +29,7 @@ Full specification: [`spec/relay-spec.md`](spec/relay-spec.md)
 Machine-readable version: [`spec/version.json`](spec/version.json)  
 Change history: [`spec/CHANGELOG.md`](spec/CHANGELOG.md)
 
-Current: **v1.11 (stable)**
+Current: **v1.13 (stable)**
 
 ## Install
 

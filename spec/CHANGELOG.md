@@ -1,5 +1,59 @@
 # RELAY Spec Changelog
 
+## v1.13 — 2026-07-27 (stable)
+
+Deep-audit fix pass: two live CLI conformance-gate bugs, several tooling
+correctness fixes, and C++/Rust language-binding gaps.
+
+**Bugs fixed:**
+- **`relay interop`** with zero binary arguments silently reported PASS/exit 0
+  instead of the spec-mandated exit 2 ("no candidates").
+- **`relay conform`**: `--strict` placed after the binary path (e.g.
+  `relay conform mybinary --strict`) was silently dropped instead of applied,
+  because Go's flag parser stops at the first positional argument — this
+  could downgrade a should-FAIL CI gate to a passing WARN. `relay conform`
+  and `relay trace` now reject unexpected extra positional arguments instead
+  of silently ignoring them.
+- **`cmd/relay`'s `toolVersion`** had drifted behind `SpecVersion` again
+  (the exact class of bug v1.11.1 fixed once already) — bumped, and a test
+  now gates on the two staying in sync.
+- **Golden error vectors** (`spec/vectors/errors/*.json`) were unreachable
+  through RELAY's own `go:embed`-based `Vector`/`VectorNames` API (a bare
+  `*.json` glob doesn't recurse into subdirectories) — meaning `relay interop`
+  could never exercise any implementation's reject-path behavior, only the
+  happy path. Fixed the embed and taught `relay interop`/`relay convert`'s
+  golden-vector test to drive the reject-path comparison correctly.
+- **`relay crossbar`**: a route fanning out to multiple destinations of
+  different protocols with no explicit converter picked one converter (tuned
+  to the first destination) and applied it to every destination, silently
+  mislabeling the rest. Split into one route per destination internally.
+- **`relay crossbar`**'s send sink spawned a fresh subprocess per message;
+  spec §11.2's streaming JSON sink is explicitly "the egress dual of
+  `subscribe --format json`" — a single persistent process reading a stream
+  until EOF. Fixed to match, and `cliNode.Subscribe` now honors the caller's
+  configured back-pressure policy instead of always blocking.
+- **`router.Router.AddSpoke`/`AddRoute`** mutated shared state without
+  holding the package's own mutex — a real data race for concurrent use.
+- **SOME/IP**: malformed-ID errors from `FromMessage` now also wrap the
+  spec-mandated `ErrMalformedMessage` sentinel (which wraps
+  `relay.ErrPayloadTooLarge` per §5.4), in addition to the existing
+  `ErrInvalidID` (kept for backwards compatibility).
+- `relay convert`'s stdin read is now bounded (512 MiB) instead of unbounded.
+- `relay trace`'s live-mode child process is now killed on Ctrl+C instead of
+  orphaned.
+
+**Spec content (additive, non-breaking):**
+- §17: corrected the `relay conform` coverage claim — it is a black-box CLI
+  tool and cannot verify source-level requirements (error sentinels, mock
+  presence, frame constraints, etc.); the text now says precisely what is and
+  isn't checked, instead of overclaiming.
+- §18.2/§18.3: added the missing C++/Rust `HealthProvider`/`MetricsProvider`/
+  `Drainer` bindings and `SubscriberOptions::event_id`/`topic_name` fields —
+  present in Go (§14.1) but absent from both other language sections.
+- §15.2: removed a duplicate, differently-cased `relay::dds::BackPressurePolicy`
+  — the type is canonical for all protocols (§14) and lives once in `relay::`.
+- `SpecVersion = "1.13"`.
+
 ## v1.12 — 2026-07-27 (stable)
 
 Add `"c"` as a valid CLI `language` value.

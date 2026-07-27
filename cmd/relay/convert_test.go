@@ -20,7 +20,7 @@ func TestConvertGoldenVectors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("VectorNames: %v", err)
 	}
-	tested := 0
+	tested, testedErrors := 0, 0
 	for _, name := range names {
 		raw, err := relay.Vector(name)
 		if err != nil {
@@ -28,6 +28,7 @@ func TestConvertGoldenVectors(t *testing.T) {
 		}
 		var v struct {
 			Type  string          `json:"type"`
+			Kind  string          `json:"kind"`
 			Value json.RawMessage `json:"value"`
 		}
 		if json.Unmarshal(raw, &v) != nil {
@@ -35,8 +36,23 @@ func TestConvertGoldenVectors(t *testing.T) {
 		}
 		proto, ok := typeProtocol[v.Type]
 		if !ok {
+			// e.g. errors/dds-domain-out-of-range: a bare Domain int, not a
+			// convert-shaped canonical value — not exercisable here.
 			continue
 		}
+
+		if v.Kind == "error" {
+			// Reject-path vector (spec/vectors/errors/*.json): convert MUST
+			// fail on this input — that's the entire point of the fixture.
+			testedErrors++
+			var out, errb bytes.Buffer
+			err = runConvert(bytes.NewReader(v.Value), &out, &errb, []string{"--protocol", proto})
+			if err == nil {
+				t.Errorf("convert %s (%s): expected failure (invalid input), got success: %s", name, proto, out.String())
+			}
+			continue
+		}
+
 		tested++
 		var out, errb bytes.Buffer
 		err = runConvert(bytes.NewReader(v.Value), &out, &errb, []string{"--protocol", proto})
@@ -54,6 +70,9 @@ func TestConvertGoldenVectors(t *testing.T) {
 	}
 	if tested == 0 {
 		t.Fatal("no golden vectors exercised convert")
+	}
+	if testedErrors == 0 {
+		t.Fatal("no error vectors exercised convert's reject path")
 	}
 }
 

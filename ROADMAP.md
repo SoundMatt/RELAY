@@ -518,11 +518,48 @@ Deliverables: §20 Continuous Conformance + full-lifecycle RELAY CI ✅
 
 Deliverables: stricter §17.7 CLI conformance ✅
 
+### v1.12 — "c" language support ✦ done
+
+- ✅ §12.1: added `"c"` as a valid CLI `language` value — the sole existing
+  C99 x-Net implementation (c-RCP) no longer has to misreport itself as
+  `"cpp"` to pass `relay conform --strict`. Additive, non-breaking.
+- ✅ `SpecVersion = "1.12"`; REQ-RELAY-091
+
+Deliverables: §12.1 language enum gains `"c"` ✅
+
+### v1.13 — Deep-audit fix pass ✦ done
+
+- ✅ Two live CLI conformance-gate bugs fixed: `relay interop` with zero
+  binaries silently PASSed instead of exit 2; `relay conform --strict` placed
+  after the binary path was silently dropped instead of applied.
+- ✅ Golden error vectors (`spec/vectors/errors/*.json`) are now reachable
+  through the embedded `Vector`/`VectorNames` API — `relay interop` can now
+  exercise implementations' reject-path behavior, not just the happy path.
+- ✅ `relay crossbar`: per-destination converter inference (was silently
+  mislabeling mixed-protocol fan-outs), a genuinely persistent send-sink
+  process (was spawning one subprocess per message, contradicting §11.2's
+  streaming-sink contract), and back-pressure-policy-honoring subscribe.
+- ✅ `router.Router` thread-safety fix (`AddSpoke`/`AddRoute` now correctly
+  synchronized).
+- ✅ SOME/IP `FromMessage` now wraps the spec-mandated `ErrMalformedMessage`
+  sentinel (§5.4) alongside the existing `ErrInvalidID`.
+- ✅ §17's `relay conform` coverage claim corrected (was overclaiming —
+  it's a black-box CLI tool and cannot verify source-level requirements).
+- ✅ §18.2/§18.3: added the missing C++/Rust `HealthProvider`/`MetricsProvider`/
+  `Drainer` bindings and `SubscriberOptions` routing-key fields.
+- ✅ Removed a duplicate, differently-cased `relay::dds::BackPressurePolicy`
+  (canonical type now lives once, in `relay::`, per §14).
+- ✅ `SpecVersion = "1.13"`; REQ-RELAY-092. Durable drift guards added for
+  `toolVersion`↔`SpecVersion` and spec-title↔`SpecVersion` staleness, after
+  both recurred across three separate releases.
+
+Deliverables: CLI conformance-gate correctness + C++/Rust binding parity ✅
+
 ---
 
 ## Roadmap complete
 
-All planned phases (1–18, v0.1 → v1.11) are delivered. Future work is demand-driven:
+All planned phases (1–18, v0.1 → v1.13) are delivered. Future work is demand-driven:
 new protocol extensions (additive MINOR releases), reference-implementation
 crates/headers (tracked issues), the `relay interop` build-out and its `convert`
 driver surface (tracked issues), and the incremental ASIL-D/DAL-A uplift work

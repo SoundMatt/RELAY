@@ -21,6 +21,12 @@ import (
 	"github.com/SoundMatt/RELAY/someip"
 )
 
+// maxConvertInputBytes bounds how much of stdin `relay convert` will read
+// before validation, so an unbounded/adversarial input stream can't exhaust
+// memory. 512 MiB comfortably exceeds spec §16's largest single-message
+// payload (MQTT v5, 268,435,455 bytes) plus base64/JSON overhead.
+const maxConvertInputBytes = 512 * 1024 * 1024
+
 // referenceConvert is RELAY's reference implementation of the §11.2 convert
 // driver: it decodes a canonical-type value for protocol p, validates it where
 // a validator exists, and returns the lossless relay.Message with a zeroed
@@ -113,10 +119,19 @@ func runConvert(stdin io.Reader, stdout, stderr io.Writer, args []string) error 
 		fmt.Fprintf(stderr, "relay convert: unsupported format %q\n", *format)
 		return exitCode(2)
 	}
-	value, err := io.ReadAll(stdin)
+	// Cap stdin at maxConvertInputBytes so a runaway/adversarial input stream
+	// can't exhaust memory before validation ever runs. The limit is set well
+	// above the largest legitimate single-message payload spec §16 allows
+	// (MQTT v5's 268,435,455 bytes), plus room for base64/JSON overhead.
+	limited := io.LimitReader(stdin, maxConvertInputBytes+1)
+	value, err := io.ReadAll(limited)
 	if err != nil {
 		fmt.Fprintf(stderr, "relay convert: read stdin: %v\n", err)
 		return exitCode(1)
+	}
+	if int64(len(value)) > maxConvertInputBytes {
+		fmt.Fprintf(stderr, "relay convert: stdin exceeds %d byte limit\n", maxConvertInputBytes)
+		return exitCode(2)
 	}
 	msg, err := referenceConvert(*protocol, value)
 	if err != nil {

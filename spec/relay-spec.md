@@ -1,4 +1,4 @@
-# RELAY Specification — v1.11
+# RELAY Specification — v1.13
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -1881,8 +1881,32 @@ An implementation is **RELAY-conformant** if and only if:
     - SOMEIP: `ProtocolVersion` MUST be validated as 0x01 on send and receive.
 12. **SpecVersion constant.** Package exports `SpecVersion` equal to the spec version being targeted. The authoritative current value is defined in §19.4 (`spec/version.json`).
 
-`relay conform <binary>` verifies requirements 1, 3, 5 (mock presence), 6, 7, 8, and 12.
-Requirements 2, 4, 9, 10, and 11 are verified by the implementation's own test suite.
+`relay conform <binary>` is a **black-box CLI tool**: it can only observe what
+the built binary's `version`/`capabilities`/`status` commands print, not the
+implementation's source. Its actual coverage is narrower than the full
+requirement list:
+
+- **Requirement 7** (CLI mandatory commands) is fully verified: all three
+  commands run and their JSON output is schema-validated against §12.
+- **Requirement 1** (protocol declaration) is partially verified: `spec_version`
+  presence is always schema-checked; `protocol` is schema-checked when present,
+  but its absence is only a WARN (multi-protocol tooling may legitimately omit
+  it).
+- **Requirement 6** (`Adapt()`/`"adapt": true`) is partially verified: the
+  `capabilities` document's `adapt` field is checked, but `adapt: false` is
+  only a WARN, not a FAIL — `relay conform` does not currently treat exporting
+  `Adapt()` as strictly mandatory.
+- **Requirement 12** (`SpecVersion` constant) is shape-checked only: the
+  `spec_version` field's presence and string format are validated, but whether
+  it genuinely equals the implementation's compiled-in constant cannot be
+  observed from outside the binary.
+
+Requirements 2 (protocol interfaces), 3 (error sentinels), 4 (lifecycle
+invariants), 5 (constructor contract / mock presence), 8 (frame constraints),
+9 (envelope conversion), 10 (subscriber helpers), and 11 (protocol-specific
+constraints) are **source-level Go API contracts that `relay conform` cannot
+observe through a CLI** and MUST be verified by the implementation's own test
+suite instead.
 
 ---
 
@@ -1943,6 +1967,8 @@ enum class BackPressurePolicy { drop_newest = 0, drop_oldest = 1, block = 2 };
 struct SubscriberOptions {
     std::size_t       channel_depth  = 64;
     BackPressurePolicy back_pressure = BackPressurePolicy::drop_newest;
+    std::uint32_t      event_id      = 0;  // SOMEIP event group; ignored by all other adapters
+    std::string        topic_name;         // DDS topic name; ignored by all other adapters
 };
 
 } // namespace relay
@@ -1951,6 +1977,11 @@ struct SubscriberOptions {
 `SubscriberOptions` is the C++ equivalent of Go's `relay.SubscriberConfig` (§14.1).
 Concurrency guarantee: `Channel<T>::push()` is safe to call from a single writer
 thread. Multiple concurrent writers MUST be serialised with a `std::mutex`.
+`event_id`/`topic_name` follow the same routing-key rules as §14.1: a SOMEIP
+`Adapt(Service).subscribe()` MUST read `event_id` and return `errc::not_connected`
+if it is zero; a DDS `Adapt(Participant).subscribe()` MUST read `topic_name` and
+return `errc::not_connected` if it is empty; all other protocol adapters MUST
+ignore both fields.
 
 #### relay::Node and relay::Caller (C++)
 
@@ -1977,6 +2008,55 @@ public:
 
 } // namespace relay
 ```
+
+#### Optional interfaces (C++)
+
+§9's `HealthProvider`/`MetricsProvider`/`Drainer` are applicable to all
+protocols; a C++ implementation exposing them MUST use these shapes:
+
+```cpp
+namespace relay {
+
+enum class HealthStatus { ok = 0, degraded = 1, down = 2 };
+
+struct Health {
+    HealthStatus status;
+    std::string  details; // optional, empty if none
+};
+
+class HealthProvider {
+public:
+    virtual Health health() const = 0;
+    virtual ~HealthProvider() = default;
+};
+
+struct Metrics {
+    std::uint64_t write_count      = 0;
+    std::uint64_t deliver_count    = 0;
+    std::uint64_t drop_count       = 0;
+    std::uint64_t bytes_written    = 0;
+    std::uint64_t bytes_delivered  = 0;
+    std::uint64_t error_count      = 0;
+};
+
+class MetricsProvider {
+public:
+    virtual Metrics metrics() const = 0;
+    virtual ~MetricsProvider() = default;
+};
+
+// CloseWithDrain semantics: §9.2, verbatim.
+class Drainer {
+public:
+    virtual std::error_code close_with_drain(Context ctx) = 0;
+    virtual ~Drainer() = default;
+};
+
+} // namespace relay
+```
+
+`Metrics`' field semantics are identical to Go's (§9.1) — same counting rules,
+same cross-protocol comparability guarantee.
 
 #### Error codes
 
@@ -2085,7 +2165,8 @@ struct Sample {
 };
 enum class ReliabilityKind : int { BestEffort = 0, Reliable = 1 };
 enum class DurabilityKind  : int { Volatile = 0, TransientLocal = 1 };
-enum class BackPressurePolicy : int { DropNewest = 0, DropOldest = 1, Block = 2 };
+// BackPressurePolicy is NOT redefined here — it is canonical for all
+// protocols (§14) and lives once in relay:: (§18.2), not per-namespace.
 } // namespace relay::dds
 
 namespace relay::lin {
@@ -2185,10 +2266,17 @@ impl Default for BackPressurePolicy {
 pub struct SubscriberOptions {
     pub channel_depth:  usize,              // 0 = use default (64)
     pub back_pressure:  BackPressurePolicy,
+    pub event_id:       u32,                // SOMEIP event group; ignored by all other adapters
+    pub topic_name:     Option<String>,     // DDS topic name; ignored by all other adapters
 }
 ```
 
 `SubscriberOptions` is the Rust equivalent of Go's `relay.SubscriberConfig` (§14.1).
+`event_id`/`topic_name` follow the same routing-key rules as §14.1: a SOMEIP
+`Adapt(Service).subscribe()` MUST read `event_id` and return `Error::NotConnected`
+if it is zero; a DDS `Adapt(Participant).subscribe()` MUST read `topic_name` and
+return `Error::NotConnected` if it is `None`/empty; all other protocol adapters
+MUST ignore both fields.
 
 #### relay::Node and relay::Caller (Rust)
 
@@ -2209,6 +2297,49 @@ pub trait Caller: Node {
     async fn call(&self, ctx: Context, req: Message) -> Result<Message, Error>;
 }
 ```
+
+#### Optional interfaces (Rust)
+
+§9's `HealthProvider`/`MetricsProvider`/`Drainer` are applicable to all
+protocols; a Rust implementation exposing them MUST use these shapes:
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HealthStatus { Ok = 0, Degraded = 1, Down = 2 }
+
+#[derive(Clone, Debug)]
+pub struct Health {
+    pub status:  HealthStatus,
+    pub details: Option<String>,
+}
+
+pub trait HealthProvider: Send + Sync {
+    fn health(&self) -> Health;
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Metrics {
+    pub write_count:     u64,
+    pub deliver_count:   u64,
+    pub drop_count:      u64,
+    pub bytes_written:   u64,
+    pub bytes_delivered: u64,
+    pub error_count:     u64,
+}
+
+pub trait MetricsProvider: Send + Sync {
+    fn metrics(&self) -> Metrics;
+}
+
+// CloseWithDrain semantics: §9.2, verbatim.
+#[async_trait]
+pub trait Drainer: Send + Sync {
+    async fn close_with_drain(&self, ctx: Context) -> Result<(), Error>;
+}
+```
+
+`Metrics`' field semantics are identical to Go's (§9.1) — same counting rules,
+same cross-protocol comparability guarantee.
 
 #### Context
 
@@ -2437,11 +2568,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v1.12**
+Current version: **v1.13**
 
-**Go:** `const SpecVersion = "1.11"` (update in implementations targeting v1.11)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "1.11";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.11";`
+**Go:** `const SpecVersion = "1.13"` (update in implementations targeting v1.13)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "1.13";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.13";`
 
 ---
 

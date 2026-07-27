@@ -127,6 +127,13 @@ type Message struct {
 // ErrInvalidID is returned by FromMessage when msg.ID cannot be parsed.
 var ErrInvalidID = fmt.Errorf("someip: invalid service/method ID format")
 
+// ErrMalformedMessage is the spec §5.4-mandated sentinel for "header or
+// payload malformed" — it wraps relay.ErrPayloadTooLarge per the §5.4 table.
+// FromMessage returns an error wrapping both ErrInvalidID (kept for
+// backwards compatibility — renaming an exported v1.0+ sentinel would be a
+// breaking change requiring a MAJOR bump) and ErrMalformedMessage.
+var ErrMalformedMessage = fmt.Errorf("someip: malformed message: %w", relay.ErrPayloadTooLarge)
+
 // ErrWrongProtocolVersion is returned when ProtocolVersion ≠ SOMEIPProtocolVersion.
 var ErrWrongProtocolVersion = fmt.Errorf("someip: wrong protocol version")
 
@@ -164,18 +171,20 @@ func (m Message) ToMessage() relay.Message {
 }
 
 // FromMessage converts a relay.Message to a Message per §15.7.6.
-// Returns ErrInvalidID if msg.ID is not in "serviceID/methodID" decimal form.
+// Returns an error wrapping both ErrInvalidID and the spec-mandated
+// ErrMalformedMessage (which itself wraps relay.ErrPayloadTooLarge, §5.4) if
+// msg.ID is not in "serviceID/methodID" decimal form.
 //
 //fusa:req REQ-RELAY-043
 func FromMessage(msg relay.Message) (Message, error) {
 	parts := strings.SplitN(msg.ID, "/", 2)
 	if len(parts) != 2 {
-		return Message{}, fmt.Errorf("someip: ID %q must be \"svcID/methodID\": %w", msg.ID, ErrInvalidID)
+		return Message{}, fmt.Errorf("someip: ID %q must be \"svcID/methodID\": %w: %w", msg.ID, ErrInvalidID, ErrMalformedMessage)
 	}
 	svc, err1 := strconv.ParseUint(parts[0], 10, 16)
 	meth, err2 := strconv.ParseUint(parts[1], 10, 16)
 	if err1 != nil || err2 != nil {
-		return Message{}, fmt.Errorf("someip: ID %q: %w", msg.ID, ErrInvalidID)
+		return Message{}, fmt.Errorf("someip: ID %q: %w: %w", msg.ID, ErrInvalidID, ErrMalformedMessage)
 	}
 	m := Message{
 		ServiceID:       uint16(svc),

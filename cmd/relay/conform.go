@@ -68,6 +68,15 @@ func runConform(stdout, stderr io.Writer, args []string) error {
 		fmt.Fprintln(stderr, "Usage: relay conform [--format text|json] [--strict] <binary>")
 		return exitCode(2)
 	}
+	if fs.NArg() > 1 {
+		// Go's flag package stops parsing at the first non-flag argument, so
+		// `relay conform <binary> --strict` would otherwise silently leave
+		// "--strict" as an unconsumed extra positional argument instead of
+		// being parsed as a flag — silently downgrading a FAIL-worthy check
+		// to a passing one. Reject it explicitly rather than ignore it.
+		fmt.Fprintf(stderr, "relay conform: unexpected extra arguments %v — flags must precede <binary>\n", fs.Args()[1:])
+		return exitCode(2)
+	}
 
 	cr := conformBinary(fs.Arg(0), *strict)
 

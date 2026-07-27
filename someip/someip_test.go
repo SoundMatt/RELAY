@@ -91,6 +91,14 @@ func TestFromMessageInvalidID(t *testing.T) {
 	if !errors.Is(err, ErrInvalidID) {
 		t.Errorf("must wrap ErrInvalidID, got %v", err)
 	}
+	// §5.4: FromMessage's malformed-ID error MUST also reach the spec-mandated
+	// ErrMalformedMessage sentinel, which itself wraps relay.ErrPayloadTooLarge.
+	if !errors.Is(err, ErrMalformedMessage) {
+		t.Errorf("must wrap ErrMalformedMessage, got %v", err)
+	}
+	if !errors.Is(err, relay.ErrPayloadTooLarge) {
+		t.Errorf("must reach relay.ErrPayloadTooLarge per §5.4, got %v", err)
+	}
 }
 
 //fusa:test REQ-RELAY-042

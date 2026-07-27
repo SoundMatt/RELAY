@@ -28,11 +28,16 @@ var typeProtocol = map[string]string{
 }
 
 // interopVector is the subset of a golden vector that interop drives with.
+// Kind is empty for a canonical (accept-path) vector or "error" for a
+// spec/vectors/errors/*.json reject-path vector (ExpectedError names the
+// sentinel the reference implementation returns).
 type interopVector struct {
-	Name     string          `json:"name"`
-	Type     string          `json:"type"`
-	Protocol string          `json:"-"`
-	Value    json.RawMessage `json:"value"`
+	Name          string          `json:"name"`
+	Type          string          `json:"type"`
+	Protocol      string          `json:"-"`
+	Value         json.RawMessage `json:"value"`
+	Kind          string          `json:"kind"`
+	ExpectedError string          `json:"error"`
 }
 
 // interopCell is one participant's result for one vector.
@@ -76,6 +81,10 @@ func runInterop(stdout, stderr io.Writer, args []string) error {
 		return fmt.Errorf("relay interop: %w", err)
 	}
 	binaries := fs.Args()
+	if len(binaries) == 0 {
+		fmt.Fprintln(stderr, "Usage: relay interop [--protocol P] [--vectors DIR] [--strict] [--format text|json|markdown] <binary>...")
+		return exitCode(2)
+	}
 
 	vecs, err := loadInteropVectors(*vectorsDir, *protocol)
 	if err != nil {
@@ -104,6 +113,48 @@ func runInterop(stdout, stderr io.Writer, args []string) error {
 	doc := interopDoc{Reference: "relay (reference)", Result: "PASS"}
 	for _, v := range vecs {
 		row := interopVectorResult{Vector: v.Name, Protocol: v.Protocol}
+
+		if v.Kind == "error" {
+			// Reject-path vector: referenceConvert MUST fail (that's the
+			// entire point of the fixture) — if it unexpectedly succeeds,
+			// that's a bug in RELAY's own reference validation, not a
+			// binary's problem.
+			_, refErr := referenceConvert(v.Protocol, v.Value)
+			if refErr == nil {
+				row.Cells = append(row.Cells, interopCell{Participant: doc.Reference, Detail: fmt.Sprintf("reference convert unexpectedly SUCCEEDED on an invalid %q fixture (expected %s)", v.Name, v.ExpectedError)})
+				doc.Result = "FAIL"
+				doc.Vectors = append(doc.Vectors, row)
+				continue
+			}
+			row.Cells = append(row.Cells, interopCell{Participant: doc.Reference, OK: true, Equivalent: true, Detail: "correctly rejected: " + refErr.Error()})
+
+			for _, bin := range binaries {
+				cell := interopCell{Participant: filepath.Base(bin)}
+				_, err := runConvertBinary(bin, v.Protocol, v.Value)
+				switch {
+				case err != nil:
+					// Binary also rejected it — behavioural equivalence on
+					// the reject path. We check reject-vs-accept, not literal
+					// error-string equality, since sentinel names are not
+					// spelled identically across languages.
+					cell.OK = true
+					cell.Equivalent = true
+					cell.Detail = "correctly rejected (expected " + v.ExpectedError + ")"
+				case !advertisesConvert[bin] && !*strict:
+					cell.Skipped = true
+					cell.Detail = "convert not advertised (skipped)"
+				default:
+					// Binary accepted input the reference correctly rejects —
+					// a real conformance failure, not a skip.
+					cell.Detail = fmt.Sprintf("binary ACCEPTED invalid input that should have been rejected as %s", v.ExpectedError)
+					doc.Result = "FAIL"
+				}
+				row.Cells = append(row.Cells, cell)
+			}
+			doc.Vectors = append(doc.Vectors, row)
+			continue
+		}
+
 		// Reference conversion is computed in-process from RELAY's canonical types.
 		ref, refErr := referenceConvert(v.Protocol, v.Value)
 		if refErr != nil {

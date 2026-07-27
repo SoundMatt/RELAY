@@ -1,5 +1,19 @@
 # RELAY Spec Changelog
 
+## v1.12 — 2026-07-27 (stable)
+
+Add `"c"` as a valid CLI `language` value.
+
+- **§12.1**: `language` MUST now be one of `"go"`, `"cpp"`, `"rust"`, `"c"` (was
+  missing plain C, forcing the one existing C99 implementation, c-RCP, to
+  misreport itself as `"cpp"` just to pass `relay conform --strict`'s schema
+  validation).
+- `spec/schemas/cli-version.json`'s `language` enum, the §13.5 Docker
+  `io.relay.language` label pattern, and `spec/version.json`'s `languages`
+  array all updated to match.
+- `SpecVersion = "1.12"`. Additive, non-breaking — no existing go/cpp/rust
+  implementation is affected.
+
 ## v1.11.1 — 2026-07-27 (bug fix + doc correction; no normative change)
 
 - **`cmd/relay/conform.go`**: fixed `runConform` so `--format json` no longer

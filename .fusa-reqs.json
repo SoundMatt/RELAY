@@ -434,7 +434,7 @@
     {
       "id": "REQ-RELAY-047",
       "title": "Version document schema \u2014 all fields",
-      "text": "The version --format json output MUST include all fields: tool, protocol, protocol_int, version, spec_version, language (one of go/cpp/rust), runtime (spec \u00a712.1).",
+      "text": "The version --format json output MUST include all fields: tool, protocol, protocol_int, version, spec_version, language (one of go/cpp/rust/c), runtime (spec \u00a712.1).",
       "category": "functional",
       "criticality": "medium",
       "verification": "test",
@@ -493,7 +493,7 @@
     {
       "id": "REQ-RELAY-053",
       "title": "Validate version document against \u00a712.1",
-      "text": "relay conform MUST validate that the version --format json output contains all required fields: tool, version, spec_version, language, runtime. It MUST FAIL if any required field is absent or empty. It MUST FAIL if language is not one of {go, cpp, rust}. A null protocol field MUST produce a WARN (multi-protocol tools may omit it) rather than a FAIL (spec \u00a712.1).",
+      "text": "relay conform MUST validate that the version --format json output contains all required fields: tool, version, spec_version, language, runtime. It MUST FAIL if any required field is absent or empty. It MUST FAIL if language is not one of {go, cpp, rust, c}. A null protocol field MUST produce a WARN (multi-protocol tools may omit it) rather than a FAIL (spec \u00a712.1).",
       "category": "functional",
       "criticality": "medium",
       "verification": "test",
@@ -853,6 +853,15 @@
       "title": "Implementation evidence and supply-chain",
       "text": "The specification MUST require (\u00a720.4/\u00a720.5) that a conformant implementation carry a traced+tested requirements registry, a HARA, a dFMEA, and a TARA where it processes untrusted input, and MUST produce an SBOM and build provenance for each release from signed reviewed commits.",
       "category": "safety",
+      "criticality": "low",
+      "verification": "spec-review",
+      "asil": "QM"
+    },
+    {
+      "id": "REQ-RELAY-091",
+      "title": "CLI language field supports C",
+      "text": "The specification MUST accept \"c\" as a valid CLI version/capabilities language value (spec \u00a712.1), alongside go/cpp/rust, so that plain-C implementations (e.g. c-RCP) can self-report accurately instead of misreporting as \"cpp\" to pass schema validation.",
+      "category": "functional",
       "criticality": "low",
       "verification": "spec-review",
       "asil": "QM"

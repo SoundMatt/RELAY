@@ -1,5 +1,32 @@
 # RELAY Spec Changelog
 
+## v1.14 — 2026-07-28 (stable)
+
+§13.7.2 module-name registry expansion, prompted by observed naming drift
+across the four independent go/cpp/rust/c-RCP implementations now replacing
+their protocol core with the real OPEN Alliance TC18 Remote Control Protocol.
+
+Comparing the four repos directly found the same underlying concepts named
+differently across languages — e.g. the AVTPDU/ACF wire-framing layer as
+`avtp` (go), `wire`/`legacy_wire` (cpp), `avtpdu`+`acf` (rust), `avtp`+`acf`
+(c); the E2E/safe-points mechanism as `crcsafe` (go, incorrectly — `e2e` was
+already the mandated name), `e2e` (cpp/rust, correct), `safept` (c,
+incorrectly). Root cause: each implementation's replacement plan was
+designed independently against the abstract spec text, with no reference
+implementation to structurally anchor against and no registry entries for
+these new concerns (§13.7.2 previously only covered the RCP *control-plane*
+concerns of the old, now-superseded protocol generation). A comparison
+sweep across go/cpp/rust-DDS's already-converged RTPS internals
+(`cdr`/`spdp`/`sedp`/`reliable`/`persist`/`transport`/`guid`/`locator`/
+`wildcard`) found no equivalent drift there — those names were never
+mandated by the registry either, but stayed consistent because that
+build-out was framed as porting go-DDS's actual file structure rather than
+independently interpreting spec prose. Added registry entries for both:
+the new RCP protocol-core concerns (`avtp`, `acf`, `lifecycle`, `regmap`,
+`discovery`, `request`, `fragment`) and the DDS RTPS internals, formalizing
+what DDS already had by convention and giving RCP's four implementations an
+explicit target to converge on. REQ-RELAY-093.
+
 ## v1.13 — 2026-07-27 (stable)
 
 Deep-audit fix pass: two live CLI conformance-gate bugs, several tooling

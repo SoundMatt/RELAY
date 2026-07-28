@@ -1,4 +1,4 @@
-# RELAY Specification — v1.13
+# RELAY Specification — v1.14
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -1323,6 +1323,21 @@ packaging aside). Modules with no entry here are unconstrained.
 | `authz` / `e2e` / `federation` / `firmware` / `deadline` / `faultinject` / `iso21434` / `dyndata` / `certgap` / `config` / `admin` / `formal` | RCP control-plane concerns | RCP |
 | `capi` | C ABI / FFI surface | all |
 | `canbr` / `linbr` / `ddsbr` / `doipbr` / `grpcbridge` | protocol bridges | RCP |
+| `avtp` | IEEE 1722 AVTPDU header framing (NTSCF/TSCF, stream_id/byte_bus_id addressing) | RCP |
+| `acf` | ACF_ABB/ACF_GBB message format (byte_message_info, request/response/acknowledge encoding) | RCP |
+| `lifecycle` | RC Server lifecycle state machine | RCP |
+| `regmap` | RC Server register-map model (generic + functional config, EP0) | RCP |
+| `discovery` | RC Server discovery mechanism | RCP |
+| `request` | conditional-request taxonomy (compound, compound-wait, triggered, chained, timed) and sequencers | RCP |
+| `fragment` | multi-frame message fragmentation and reassembly | RCP, DDS |
+| `cdr` | CDR/XCDR wire serialization | DDS |
+| `spdp` | RTPS Simple Participant Discovery Protocol | DDS |
+| `sedp` | RTPS Simple Endpoint Discovery Protocol | DDS |
+| `reliable` | RTPS reliable-QoS delivery (HEARTBEAT/ACKNACK) | DDS |
+| `persist` | RTPS TransientLocal durability persistence | DDS |
+| `transport` | RTPS/UDP wire transport | DDS |
+| `guid` / `locator` | RTPS entity GUID and network-locator types | DDS |
+| `wildcard` | topic wildcard matching | DDS |
 
 **13.7.3 RELAY types.** Until the language binding is published (`relay-rs`
 §18.3, `relay.hpp` §18.2), an implementation MUST bundle a local copy of the
@@ -2568,11 +2583,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v1.13**
+Current version: **v1.14**
 
-**Go:** `const SpecVersion = "1.13"` (update in implementations targeting v1.13)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "1.13";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.13";`
+**Go:** `const SpecVersion = "1.14"` (update in implementations targeting v1.14)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "1.14";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.14";`
 
 ---
 

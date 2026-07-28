@@ -94,7 +94,7 @@ jobs:
           go-version: '1.25.0'
           cache: true
       - name: Install gofusa
-        run: go install github.com/SoundMatt/go-FuSa/cmd/gofusa@latest
+        run: go install github.com/SoundMatt/go-FuSa/cmd/gofusa@v0.36.0
       # ── Gating stages (fail the build) ──────────────────────────────────────
       - name: gofusa check (gate on ERROR findings)
         run: gofusa check

@@ -122,7 +122,7 @@ func TestGoldenVectorsConformToSchemas(t *testing.T) {
 		"dds.Sample":     "dds-sample",
 		"lin.Frame":      "lin-frame",
 		"mqtt.Message":   "mqtt-message",
-		"rcp.Status":     "rcp-status",
+		"rcp.Message":    "rcp-message",
 		"someip.Message": "someip-message",
 	}
 

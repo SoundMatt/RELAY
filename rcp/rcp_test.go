@@ -5,120 +5,91 @@
 package rcp
 
 import (
+	"errors"
 	"testing"
 
 	relay "github.com/SoundMatt/RELAY"
 )
 
-//fusa:test REQ-RELAY-040
-func TestZoneString(t *testing.T) {
-	cases := []struct {
-		z    Zone
-		want string
-	}{
-		{ZoneFrontLeft, "FrontLeft"},
-		{ZoneFrontRight, "FrontRight"},
-		{ZoneRearLeft, "RearLeft"},
-		{ZoneRearRight, "RearRight"},
-		{ZoneCentral, "Central"},
-		{ZoneUnknown, "Unknown"},
-	}
-	for _, tc := range cases {
-		if got := tc.z.String(); got != tc.want {
-			t.Errorf("Zone(%d).String() = %q, want %q", tc.z, got, tc.want)
+//fusa:test REQ-RELAY-041
+func TestEndpointIDRoundTrip(t *testing.T) {
+	for _, addr := range []ByteBusID{0, 9, 255} {
+		s := EndpointIDString(addr)
+		got, err := ParseEndpointID(s)
+		if err != nil {
+			t.Fatalf("ParseEndpointID(%q): %v", s, err)
 		}
-	}
-}
-
-//fusa:test REQ-RELAY-040
-func TestZoneFromString(t *testing.T) {
-	for _, z := range []Zone{ZoneFrontLeft, ZoneFrontRight, ZoneRearLeft, ZoneRearRight, ZoneCentral} {
-		if got := ZoneFromString(z.String()); got != z {
-			t.Errorf("ZoneFromString(%q) = %v, want %v", z.String(), got, z)
+		if got != addr {
+			t.Errorf("round-trip mismatch: got %d, want %d", got, addr)
 		}
-	}
-	if ZoneFromString("nonsense") != ZoneUnknown {
-		t.Error("unknown zone name must return ZoneUnknown")
 	}
 }
 
 //fusa:test REQ-RELAY-041
-func TestStatusRoundTrip(t *testing.T) {
-	orig := Status{Zone: ZoneFrontLeft, Seq: 7, Healthy: true, Payload: []byte{1}}
+func TestParseEndpointIDRejectsInvalid(t *testing.T) {
+	for _, id := range []string{"", "nonsense", "-1", "256", "9.5"} {
+		if _, err := ParseEndpointID(id); !errors.Is(err, ErrNotFound) {
+			t.Errorf("ParseEndpointID(%q) error = %v, want ErrNotFound", id, err)
+		}
+	}
+}
+
+//fusa:test REQ-RELAY-041
+func TestMessageToMessageRoundTrip(t *testing.T) {
+	orig := Message{ByteBusID: 9, Control: FlagWrite, Body: []byte{0xAA}}
 	msg := orig.ToMessage()
 	if msg.Protocol != relay.RCP {
 		t.Errorf("Protocol = %v, want RCP", msg.Protocol)
 	}
-	if msg.ID != "FrontLeft" {
-		t.Errorf("ID = %q, want FrontLeft", msg.ID)
+	if msg.ID != "9" {
+		t.Errorf("ID = %q, want 9", msg.ID)
 	}
-	if msg.Meta["rcp.healthy"] != "true" {
-		t.Errorf("rcp.healthy = %q", msg.Meta["rcp.healthy"])
+	if msg.Meta["rcp.op"] != "write" {
+		t.Errorf("rcp.op = %q, want write", msg.Meta["rcp.op"])
 	}
-	if msg.Seq != 7 {
-		t.Errorf("Seq = %d, want 7", msg.Seq)
+	if msg.Meta["rcp.error"] != "false" {
+		t.Errorf("rcp.error = %q, want false", msg.Meta["rcp.error"])
 	}
 
-	got, err := StatusFromMessage(msg)
+	got, err := FromMessage(msg)
 	if err != nil {
-		t.Fatalf("StatusFromMessage: %v", err)
+		t.Fatalf("FromMessage: %v", err)
 	}
-	if got.Zone != ZoneFrontLeft || !got.Healthy || got.Seq != 7 {
+	if got.ByteBusID != 9 || !got.Control.Has(FlagWrite) || got.Control.Has(FlagError) {
 		t.Errorf("round-trip mismatch: %+v", got)
 	}
 }
 
 //fusa:test REQ-RELAY-041
-func TestResponseToMessage(t *testing.T) {
-	r := Response{CommandID: 1, Zone: ZoneRearRight, Status: StatusOK, Payload: []byte{9}}
-	msg := r.ToMessage()
-	if msg.Protocol != relay.RCP {
-		t.Errorf("Protocol = %v, want RCP", msg.Protocol)
+func TestFromMessageDefaultsOpFromPayload(t *testing.T) {
+	write, err := FromMessage(relay.Message{ID: "1", Payload: []byte{1}})
+	if err != nil || !write.Control.Has(FlagWrite) {
+		t.Errorf("FromMessage(non-empty payload) = %+v, %v; want FlagWrite", write, err)
 	}
-	if msg.ID != "RearRight" {
-		t.Errorf("ID = %q, want RearRight", msg.ID)
-	}
-	if msg.Meta["rcp.status"] != "0" {
-		t.Errorf("rcp.status = %q, want 0", msg.Meta["rcp.status"])
+	read, err := FromMessage(relay.Message{ID: "1"})
+	if err != nil || !read.Control.Has(FlagRead) {
+		t.Errorf("FromMessage(empty payload) = %+v, %v; want FlagRead", read, err)
 	}
 }
 
 //fusa:test REQ-RELAY-041
-func TestCommandFromMessage(t *testing.T) {
-	msg := relay.Message{
-		Protocol: relay.RCP,
-		ID:       "Central",
-		Payload:  []byte{5},
-		Meta: map[string]string{
-			"rcp.priority": "high",
-			"rcp.cmd_type": "set",
-		},
+func TestFromMessageError(t *testing.T) {
+	if _, err := FromMessage(relay.Message{ID: "Nowhere"}); !errors.Is(err, ErrNotFound) {
+		t.Errorf("FromMessage(bad id) error = %v, want ErrNotFound", err)
 	}
-	cmd, err := CommandFromMessage(msg)
+}
+
+//fusa:test REQ-RELAY-041
+func TestMessageToMessageError(t *testing.T) {
+	msg := Message{ByteBusID: 9, Control: FlagResponse | FlagError, Body: []byte{1}}.ToMessage()
+	if msg.Meta["rcp.error"] != "true" {
+		t.Errorf("rcp.error = %q, want true", msg.Meta["rcp.error"])
+	}
+	got, err := FromMessage(msg)
 	if err != nil {
-		t.Fatalf("CommandFromMessage: %v", err)
+		t.Fatalf("FromMessage: %v", err)
 	}
-	if cmd.Zone != ZoneCentral {
-		t.Errorf("Zone = %v, want Central", cmd.Zone)
-	}
-	if cmd.Priority != PriorityHigh {
-		t.Errorf("Priority = %v, want High", cmd.Priority)
-	}
-	if cmd.Type != CmdSet {
-		t.Errorf("Type = %v, want Set", cmd.Type)
-	}
-}
-
-//fusa:test REQ-RELAY-041
-func TestCommandFromMessageZones(t *testing.T) {
-	// Unknown zone name must error with ErrInvalidZone.
-	_, err := CommandFromMessage(relay.Message{ID: "Nowhere"})
-	if err == nil {
-		t.Fatal("expected error for unknown zone")
-	}
-	// The literal "Unknown" zone is valid (maps to ZoneUnknown, not an error).
-	cmd, err := CommandFromMessage(relay.Message{ID: "Unknown"})
-	if err != nil || cmd.Zone != ZoneUnknown {
-		t.Errorf("CommandFromMessage(Unknown) = %+v, %v; want ZoneUnknown, nil", cmd, err)
+	if !got.Control.Has(FlagError) {
+		t.Errorf("FlagError not preserved through round-trip: %+v", got)
 	}
 }

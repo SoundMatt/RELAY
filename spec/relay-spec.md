@@ -1,4 +1,4 @@
-# RELAY Specification — v1.14
+# RELAY Specification — v2.0
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -175,7 +175,7 @@ The canonical routing key serialised as a string:
 | DDS | Topic name | `"vehicle/speed"` |
 | LIN | Decimal frame ID (0–63) | `"42"` |
 | MQTT | Topic string | `"sensors/temp"` |
-| RCP | Zone name | `"FrontLeft"` |
+| RCP | Decimal `ByteBusID` (0–255) | `"9"` |
 | SOMEIP | `"serviceID/methodID"` decimal | `"4660/22136"` |
 
 ### 4.3 Meta field
@@ -193,10 +193,8 @@ The canonical routing key serialised as a string:
 | LIN | `lin.checksum` | Decimal uint8 |
 | MQTT | `mqtt.qos` | `0` \| `1` \| `2` |
 | MQTT | `mqtt.retained` | `true` \| `false` |
-| RCP | `rcp.priority` | `normal` \| `high` \| `critical` |
-| RCP | `rcp.cmd_type` | `noop` \| `set` \| `get` \| `reset` \| `watchdog` \| `sleep` \| `wake` |
-| RCP | `rcp.healthy` | `true` \| `false` |
-| RCP | `rcp.status` | Decimal uint8 (ResponseStatus) |
+| RCP | `rcp.op` | `read` \| `write` |
+| RCP | `rcp.error` | `true` \| `false` |
 | SOMEIP | `someip.client_id` | Decimal uint16 |
 | SOMEIP | `someip.session_id` | Decimal uint16 |
 | SOMEIP | `someip.msg_type` | Decimal uint8 (numeric MessageType, for lossless round-trip) |
@@ -351,10 +349,7 @@ mandatory sentinel with `%w` so `errors.Is` reaches the RELAY sentinel.
 | LIN | `ErrNoResponse` | `ErrTimeout` | No slave responded within schedule window |
 | MQTT | `ErrTopicEmpty` | `ErrNotConnected` | Topic string is empty |
 | MQTT | `ErrQoSUnsupported` | `ErrNotConnected` | QoS level not supported by broker |
-| RCP | `ErrNotFound` | `ErrNotConnected` | Zone not in registry |
-| RCP | `ErrAlreadyExists` | — (not a relay sentinel) | Zone already registered; uniqueness violation |
-| RCP | `ErrBusy` | `ErrTimeout` | Zone controller busy |
-| RCP | `ErrZoneMismatch` | `ErrNotConnected` | Command zone ≠ controller zone |
+| RCP | `ErrNotFound` | `ErrNotConnected` | `Message.ID` does not parse to a valid `ByteBusID` (0–255) |
 | SOMEIP | `ErrUnknownService` | `ErrNotConnected` | Service ID not registered |
 | SOMEIP | `ErrUnknownMethod` | `ErrNotConnected` | Method ID not registered |
 | SOMEIP | `ErrMalformedMessage` | `ErrPayloadTooLarge` | Header or payload malformed |
@@ -548,26 +543,30 @@ func MatchTopic(filter, topic string) bool
 
 ### 8.5 RCP
 
+`Controller` is the narrow interface `Adapt` wraps: a TC18 client capable of
+one synchronous request/response round trip against a single already-dialed
+RC Server, presenting one fixed `StreamID` identity on every request. Unlike
+the retired `Registry`/`Zone` model, there is no built-in multi-server
+lookup — an application holding several `Controller`s (one per RC Server)
+wraps each with its own `Adapt` call.
+
 ```go
 type Controller interface {
-    Zone() Zone
-    Send(ctx context.Context, cmd *Command) (*Response, error)
-    Subscribe(ctx context.Context) (<-chan *Status, error)
+    StreamID() StreamID
+    Request(ctx context.Context, addr ByteBusID, control ControlFlags, body []byte) (Message, error)
     Close() error
 }
 
-type Registry interface {
-    Register(ctrl Controller) error
-    Deregister(zone Zone) error
-    Lookup(zone Zone) (Controller, error)
-    Controllers() []Controller
-    Close() error
+type Loan struct {
+    Payload []byte
+    release func()
 }
+func (l *Loan) Return() { if l.release != nil { l.release() } }
 
 type LoaningController interface {
     Controller
     Loan(size int) (*Loan, error)
-    SendLoaned(ctx context.Context, cmd *Command) (*Response, error)
+    RequestLoaned(ctx context.Context, addr ByteBusID, control ControlFlags, body []byte) (Message, error)
 }
 ```
 
@@ -771,7 +770,7 @@ protocol. These rules define the mapping:
 | DDS | String → topic name for `Publisher.Write()` | `dds.reliability` etc. ignored (set at Participant level) | `Sample.ToMessage()` per §15.2 |
 | LIN | Parse decimal uint8 → frame ID for `Bus.Publish()` | — | `Frame.ToMessage()` per §15.3 |
 | MQTT | String → topic for `Client.Publish()` | `mqtt.qos` → QoS level; `mqtt.retained` ignored on send | `Message.ToMessage()` per §15.4 |
-| RCP | Zone name → `Zone` enum for `Controller.Send()` | `rcp.priority` → `Priority`; `rcp.cmd_type` → `CommandType` | `Status.ToMessage()` per §15.5 |
+| RCP | Parse decimal uint8 → `ByteBusID` for `Controller.Request()` | `rcp.op` → `FlagRead`/`FlagWrite` | N/A — `Subscribe()` returns a permanently-empty stream, no server-initiated push exists (§15.7.5) |
 | SOMEIP | `"svcID/methodID"` → parse to `ServiceID`/`MethodID` | `someip.msg_type` → selects `Call()` vs `CallNoReturn()` | `Message.ToMessage()` per §15.6 |
 
 ### 10.5 Adapt() goroutine model
@@ -850,7 +849,7 @@ Applications that need these features MUST use the protocol-specific interface d
 |---|---|---|
 | Typed samples (`TypedPublisher[T]`) | DDS | Node operates on raw `[]byte` |
 | QoS per-write override | DDS | QoS is set at `Participant` level |
-| Response payload from `Controller.Send()` | RCP | `Node.Send()` discards the response; use `Caller.Call()` |
+| Response payload from `Controller.Request()` | RCP | `Node.Send()` discards the response; use `Caller.Call()` |
 | Per-publish QoS | MQTT | Reads `mqtt.qos` from Meta; broker-enforced floor applies |
 | DDS `TryRead()` / `WaitSet` | DDS | Only the channel interface is exposed |
 | LIN `MasterBus.SendHeader()` | LIN | Master scheduling not available via Node |
@@ -872,7 +871,7 @@ func publish(ctx context.Context, node relay.Node, payload []byte) error {
 func request(ctx context.Context, c relay.Caller, payload []byte) (relay.Message, error) {
     return c.Call(ctx, relay.Message{
         Protocol: c.Protocol(),
-        ID:       "FrontLeft",  // RCP zone / SOMEIP: "svcID/methodID"
+        ID:       "9",  // RCP: decimal ByteBusID / SOMEIP: "svcID/methodID"
         Payload:  payload,
     })
 }
@@ -928,7 +927,7 @@ Sends a single message. Protocol-specific required flags:
 | DDS | `--topic <string>` `--payload <bytes>` |
 | LIN | `--id <uint>` `--data <hex>` |
 | MQTT | `--topic <string>` `--payload <bytes>` `[--qos 0\|1\|2]` |
-| RCP | `--zone <name>` `--type <cmdtype>` `[--payload <hex>]` |
+| RCP | `--byte-bus-id <uint8>` `[--op read\|write]` `[--payload <hex>]` |
 | SOMEIP | `--service <uint>` `--method <uint>` `[--payload <bytes>]` |
 
 Exit: `0` sent, `1` error.
@@ -1626,65 +1625,55 @@ const ( AtMostOnce QoS = 0; AtLeastOnce QoS = 1; ExactlyOnce QoS = 2 )
 
 ---
 
-### 15.5 RCP — `Command`, `Response`, `Status`, `Loan`
+### 15.5 RCP — `StreamID`, `ByteBusID`, `TransactionNum`, `ControlFlags`, `Message`
 
-Underlying types match go-RCP for zero-copy casting. JSON tags shown are the
-canonical names; go-RCP currently lacks JSON tags (tracked gap in Appendix A).
+**Breaking change from RELAY v1.14 and earlier (the reason this ships as
+v2.0).** RCP now means the real OPEN Alliance TC18 Remote Control Protocol
+Specification v0.5.1_RC — an IEEE 1722 AVTPDU/ACF wire protocol addressing
+individually-configured Endpoints on a remote RC Server — not the earlier
+RELAY-internal placeholder protocol (`Zone`/`Command`/`Response`/`Status`/
+`Priority`/`CommandType`) those names described through v1.14. There is no
+compatibility shim: an
+implementation conformant with this section does not also speak the retired
+protocol. Underlying types match go-RCP for zero-copy casting.
 
 ```go
-type Command struct {
-    ID       uint32      `json:"id"`
-    Zone     Zone        `json:"zone"`
-    Type     CommandType `json:"type"`
-    Priority Priority    `json:"priority"`
-    Payload  []byte      `json:"payload,omitempty"`
-}
+// StreamID is an AVTP stream_id: a sender's 6-byte MAC address followed by
+// a 2-byte, sender-assigned suffix distinguishing multiple streams the same
+// sender originates. It addresses an AVTPDU as a whole; ByteBusID and
+// TransactionNum are only meaningful relative to the StreamID of the AVTPDU
+// that carried them.
+type StreamID [8]byte
 
-type Response struct {
-    CommandID uint32         `json:"command_id"`
-    Zone      Zone           `json:"zone"`
-    Status    ResponseStatus `json:"status"`
-    Payload   []byte         `json:"payload,omitempty"`
-}
+// ByteBusID addresses a single Endpoint on an RC Server. Unique only within
+// the StreamID of the AVTPDU that carries it — the same value on two
+// different streams may address two different endpoints.
+type ByteBusID uint8
 
-type Status struct {
-    Zone    Zone   `json:"zone"`
-    Seq     uint32 `json:"seq"`
-    Healthy bool   `json:"healthy"`
-    Payload []byte `json:"payload,omitempty"`
-}
+// TransactionNum correlates a request with its eventual response, scoped to
+// the enclosing stream.
+type TransactionNum uint16
 
-type Loan struct {
-    Payload []byte
-    release func()
-}
-
-func (l *Loan) Return() {
-    if l.release != nil { l.release() }
-}
-
-type Zone uint8
+// ControlFlags are an ACF message's request-descriptor control bits.
+type ControlFlags uint8
 const (
-    ZoneUnknown    Zone = 0; ZoneFrontLeft  Zone = 1; ZoneFrontRight Zone = 2
-    ZoneRearLeft   Zone = 3; ZoneRearRight  Zone = 4; ZoneCentral    Zone = 5
+    FlagAck          ControlFlags = 1 << 7
+    FlagRead         ControlFlags = 1 << 6
+    FlagWrite        ControlFlags = 1 << 5
+    FlagResponse     ControlFlags = 1 << 4
+    FlagError        ControlFlags = 1 << 3
+    FlagMoreSegments ControlFlags = 1 << 2
 )
 
-type Priority uint8
-const ( PriorityNormal Priority = 0; PriorityHigh Priority = 1; PriorityCritical Priority = 2 )
-
-type CommandType uint16
-const (
-    CmdNoop CommandType = 0; CmdSet CommandType = 1; CmdGet     CommandType = 2
-    CmdReset CommandType = 3; CmdWatchdog CommandType = 4
-    CmdSleep CommandType = 5; CmdWake CommandType = 6
-)
-
-type ResponseStatus uint8
-const (
-    StatusOK      ResponseStatus = 0; StatusError   ResponseStatus = 1
-    StatusTimeout ResponseStatus = 2; StatusBusy    ResponseStatus = 3
-    StatusUnknown ResponseStatus = 4
-)
+// Message is a decoded ACF_ABB/ACF_GBB request, response, or acknowledge.
+type Message struct {
+    ByteBusID         ByteBusID
+    TransactionNum    TransactionNum
+    Control           ControlFlags
+    ReadSizeOrSegment uint16 // read size (no FlagMoreSegments) or segment number
+    Timestamp         uint64 // meaningful only for the ACF_GBB (timestamped) encoding
+    Body              []byte
+}
 ```
 
 ---
@@ -1812,33 +1801,39 @@ uint32, return `ErrInvalidFrame`.
 
 `FromMessage`: `msg.ID` → `Topic`; `msg.Payload` → `Payload`. Parse `mqtt.qos` meta if present.
 
-**15.7.5 RCP `Status.ToMessage()` / `FromMessage()`** (Subscribe direction)
+**15.7.5 RCP `Message` ↔ `relay.Message`** (`Caller.Call()`/`Caller.Send()` direction —
+RCP has no server-initiated push; `Subscribe()` returns a well-behaved,
+permanently-empty stream, per 15.5's breaking-change note)
 
-| relay.Message field | Status field | Notes |
+`relay.Message` → an addressed ACF request, consumed by an already-dialed
+`Controller` (one `StreamID` per `Controller` instance — see 8.5's `Adapt`
+signature; the `StreamID` is therefore not itself part of `Message.ID`):
+
+| relay.Message field | RCP field | Notes |
+|---|---|---|
+| `ID` | `ByteBusID` | Decimal string, e.g. `"9"`; `strconv.Atoi`, range 0-255 |
+| `Payload` | `Body` | Direct copy |
+| `Meta["rcp.op"]` | `Control` (`FlagRead` / `FlagWrite`) | `"read"` / `"write"`; if absent, defaults to write when `Payload` is non-empty, else read |
+
+Response `Message` → `relay.Message`:
+
+| relay.Message field | RCP field | Notes |
 |---|---|---|
 | `Protocol` | — | Always `relay.RCP` |
-| `ID` | `Status.Zone.String()` | Zone name, e.g. `"FrontLeft"` |
-| `Payload` | `Status.Payload` | Direct copy |
+| `ID` | `ByteBusID` | Same decimal-string encoding as the request |
+| `Payload` | `Body` | Direct copy |
 | `Timestamp` | — | `time.Now()` on receive |
-| `Seq` | `Status.Seq` | Direct copy |
-| `Meta["rcp.healthy"]` | `Status.Healthy` | `"true"` / `"false"` |
+| `Meta["rcp.error"]` | `Control` (`FlagError`) | `"true"` / `"false"` |
 
-For `Caller.Call()` direction, `relay.Message` → `rcp.Command`:
-
-| relay.Message field | Command field | Notes |
-|---|---|---|
-| `ID` | `Zone` | Parse via `ZoneFromString(msg.ID)` |
-| `Payload` | `Payload` | Direct copy |
-| `Meta["rcp.priority"]` | `Priority` | `"normal"` / `"high"` / `"critical"` |
-| `Meta["rcp.cmd_type"]` | `Type` | `"noop"` / `"set"` / `"get"` etc. |
-
-Response `*rcp.Response` → `relay.Message`:
-
-| relay.Message field | Response field | Notes |
-|---|---|---|
-| `ID` | `Response.Zone.String()` | Zone name |
-| `Payload` | `Response.Payload` | Direct copy |
-| `Meta["rcp.status"]` | `Response.Status` | Decimal uint8 string |
+An implementation whose `Adapt`-wrapped type can itself receive requests
+from more than one `StreamID` concurrently (e.g. adapting an RC Server
+rather than a single-stream client `Controller`) MUST extend `ID`'s
+encoding to disambiguate the stream — this section does not mandate one
+fixed multi-stream `ID` format, since the common case (adapting a client
+already dialed to one server over one stream) does not need one; a
+conformant multi-stream encoding MUST be unambiguous, round-trip losslessly
+through `ID`, and be documented in the implementation's own `Adapt` doc
+comment.
 
 **15.7.6 SOME/IP `Message.ToMessage()` / `FromMessage()`**
 
@@ -2217,19 +2212,18 @@ struct Message {
 } // namespace relay::mqtt
 
 namespace relay::rcp {
-enum class Zone : std::uint8_t { Unknown = 0, FrontLeft = 1, FrontRight = 2,
-    RearLeft = 3, RearRight = 4, Central = 5 };
-enum class Priority : std::uint8_t { Normal = 0, High = 1, Critical = 2 };
-enum class CommandType : std::uint16_t { Noop = 0, Set = 1, Get = 2, Reset = 3,
-    Watchdog = 4, Sleep = 5, Wake = 6 };
-enum class ResponseStatus : std::uint8_t { Ok = 0, Error = 1, Timeout = 2,
-    Busy = 3, Unknown = 4 };
-struct Command  { std::uint32_t id; Zone zone; CommandType type; Priority priority;
-    std::vector<std::uint8_t> payload; };
-struct Response { std::uint32_t command_id; Zone zone; ResponseStatus status;
-    std::vector<std::uint8_t> payload; };
-struct Status   { Zone zone; std::uint32_t seq; bool healthy;
-    std::vector<std::uint8_t> payload; };
+using StreamID = std::array<std::uint8_t, 8>;
+using ByteBusID = std::uint8_t;
+using TransactionNum = std::uint16_t;
+enum class ControlFlags : std::uint8_t {
+    Ack = 1 << 7, Read = 1 << 6, Write = 1 << 5, Response = 1 << 4,
+    Error = 1 << 3, MoreSegments = 1 << 2 };
+struct Message {
+    ByteBusID byte_bus_id; TransactionNum transaction_num;
+    ControlFlags control; std::uint16_t read_size_or_segment;
+    std::uint64_t timestamp; // meaningful only for the ACF_GBB (timestamped) encoding
+    std::vector<std::uint8_t> body;
+};
 } // namespace relay::rcp
 
 namespace relay::someip {
@@ -2486,22 +2480,19 @@ pub struct Message {
 }
 
 // relay::rcp
+pub type StreamId = [u8; 8];
+pub type ByteBusId = u8;
+pub type TransactionNum = u16;
 #[repr(u8)] #[derive(Clone, Copy, Debug)]
-pub enum Zone { Unknown = 0, FrontLeft = 1, FrontRight = 2, RearLeft = 3, RearRight = 4, Central = 5 }
-#[repr(u8)] #[derive(Clone, Copy, Debug)] pub enum Priority { Normal = 0, High = 1, Critical = 2 }
-#[repr(u16)] #[derive(Clone, Copy, Debug)]
-pub enum CommandType { Noop = 0, Set = 1, Get = 2, Reset = 3, Watchdog = 4, Sleep = 5, Wake = 6 }
-#[repr(u8)] #[derive(Clone, Copy, Debug)]
-pub enum ResponseStatus { Ok = 0, Error = 1, Timeout = 2, Busy = 3, Unknown = 4 }
+pub enum ControlFlags { Ack = 1 << 7, Read = 1 << 6, Write = 1 << 5, Response = 1 << 4,
+    Error = 1 << 3, MoreSegments = 1 << 2 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Command { pub id: u32, pub zone: Zone, #[serde(rename = "type")] pub kind: CommandType,
-    pub priority: Priority, #[serde(default, skip_serializing_if = "Vec::is_empty")] pub payload: Vec<u8> }
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Response { pub command_id: u32, pub zone: Zone, pub status: ResponseStatus,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")] pub payload: Vec<u8> }
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Status { pub zone: Zone, pub seq: u32, pub healthy: bool,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")] pub payload: Vec<u8> }
+pub struct Message {
+    pub byte_bus_id: ByteBusId, pub transaction_num: TransactionNum,
+    pub control: ControlFlags, pub read_size_or_segment: u16,
+    pub timestamp: u64, // meaningful only for the ACF_GBB (timestamped) encoding
+    #[serde(default, skip_serializing_if = "Vec::is_empty")] pub body: Vec<u8>,
+}
 
 // relay::someip
 #[repr(u8)] #[derive(Clone, Copy, Debug)]
@@ -2583,11 +2574,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v1.14**
+Current version: **v2.0**
 
-**Go:** `const SpecVersion = "1.14"` (update in implementations targeting v1.14)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "1.14";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "1.14";`
+**Go:** `const SpecVersion = "2.0"` (update in implementations targeting v2.0)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "2.0";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.0";`
 
 ---
 

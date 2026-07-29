@@ -126,14 +126,14 @@ func convert(t *testing.T, v vector) (msg relay.Message, back interface{}) {
 			t.Fatalf("mqtt.FromMessage: %v", err)
 		}
 		return m.ToMessage(), b
-	case "rcp.Status":
-		var s rcp.Status
-		mustUnmarshal(t, v.Value, &s)
-		b, err := rcp.StatusFromMessage(s.ToMessage())
+	case "rcp.Message":
+		var m rcp.Message
+		mustUnmarshal(t, v.Value, &m)
+		b, err := rcp.FromMessage(m.ToMessage())
 		if err != nil {
-			t.Fatalf("rcp.StatusFromMessage: %v", err)
+			t.Fatalf("rcp.FromMessage: %v", err)
 		}
-		return s.ToMessage(), b
+		return m.ToMessage(), b
 	case "someip.Message":
 		var m someip.Message
 		mustUnmarshal(t, v.Value, &m)

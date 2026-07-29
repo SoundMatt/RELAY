@@ -7,52 +7,16 @@ package rcp
 import "testing"
 
 //fusa:test REQ-RELAY-040
-func TestPriorityStringRoundTrip(t *testing.T) {
-	cases := []struct {
-		p    Priority
-		want string
-	}{
-		{PriorityNormal, "normal"},
-		{PriorityHigh, "high"},
-		{PriorityCritical, "critical"},
+func TestControlFlagsHas(t *testing.T) {
+	f := FlagResponse | FlagWrite | FlagError
+	if !f.Has(FlagResponse) || !f.Has(FlagWrite) || !f.Has(FlagError) {
+		t.Errorf("Has() missed a set bit: %08b", f)
 	}
-	for _, tc := range cases {
-		if got := tc.p.String(); got != tc.want {
-			t.Errorf("Priority(%d).String() = %q, want %q", tc.p, got, tc.want)
-		}
-		if got := priorityFromString(tc.want); got != tc.p {
-			t.Errorf("priorityFromString(%q) = %v, want %v", tc.want, got, tc.p)
-		}
+	if f.Has(FlagRead) || f.Has(FlagAck) || f.Has(FlagMoreSegments) {
+		t.Errorf("Has() reported an unset bit: %08b", f)
 	}
-	if priorityFromString("nonsense") != PriorityNormal {
-		t.Error("unknown priority must default to PriorityNormal")
-	}
-}
-
-//fusa:test REQ-RELAY-040
-func TestCommandTypeStringRoundTrip(t *testing.T) {
-	cases := []struct {
-		c    CommandType
-		want string
-	}{
-		{CmdNoop, "noop"},
-		{CmdSet, "set"},
-		{CmdGet, "get"},
-		{CmdReset, "reset"},
-		{CmdWatchdog, "watchdog"},
-		{CmdSleep, "sleep"},
-		{CmdWake, "wake"},
-	}
-	for _, tc := range cases {
-		if got := tc.c.String(); got != tc.want {
-			t.Errorf("CommandType(%d).String() = %q, want %q", tc.c, got, tc.want)
-		}
-		if got := cmdTypeFromString(tc.want); got != tc.c {
-			t.Errorf("cmdTypeFromString(%q) = %v, want %v", tc.want, got, tc.c)
-		}
-	}
-	if cmdTypeFromString("nonsense") != CmdNoop {
-		t.Error("unknown command type must default to CmdNoop")
+	if !f.Has(FlagWrite | FlagError) {
+		t.Error("Has() must accept a multi-bit want mask")
 	}
 }
 

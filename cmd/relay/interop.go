@@ -24,7 +24,7 @@ import (
 // typeProtocol maps a golden-vector canonical type to its protocol name.
 var typeProtocol = map[string]string{
 	"can.Frame": "CAN", "dds.Sample": "DDS", "lin.Frame": "LIN",
-	"mqtt.Message": "MQTT", "rcp.Status": "RCP", "someip.Message": "SOMEIP",
+	"mqtt.Message": "MQTT", "rcp.Message": "RCP", "someip.Message": "SOMEIP",
 }
 
 // interopVector is the subset of a golden vector that interop drives with.

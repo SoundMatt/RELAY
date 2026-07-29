@@ -3,7 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 // Package rcp defines the canonical RCP types and relay.Message conversion
-// per RELAY spec §15.5.
+// per RELAY spec §15.5. RCP means the OPEN Alliance TC18 Remote Control
+// Protocol Specification v0.5.1_RC as of RELAY v1.15 — a breaking change
+// from the placeholder Zone/Command/Response/Status protocol these type
+// names described through v1.14, with no compatibility shim.
 package rcp
 
 import (
@@ -14,189 +17,46 @@ import (
 	relay "github.com/SoundMatt/RELAY"
 )
 
-// Zone identifies a physical zone in the vehicle.
-// String() returns PascalCase names as required by §15.7.5 routing.
+// ByteBusID addresses a single Endpoint on an RC Server. Unique only within
+// the StreamID of the AVTPDU that carries it.
 //
 //fusa:req REQ-RELAY-040
-type Zone uint8
+type ByteBusID uint8
 
-// Zone values.
+// TransactionNum correlates a request with its eventual response, scoped to
+// the enclosing stream.
+//
+//fusa:req REQ-RELAY-040
+type TransactionNum uint16
+
+// ControlFlags are an ACF message's request-descriptor control bits.
+//
+//fusa:req REQ-RELAY-040
+type ControlFlags uint8
+
+// ControlFlags values.
 const (
-	ZoneUnknown    Zone = 0
-	ZoneFrontLeft  Zone = 1
-	ZoneFrontRight Zone = 2
-	ZoneRearLeft   Zone = 3
-	ZoneRearRight  Zone = 4
-	ZoneCentral    Zone = 5
+	FlagAck          ControlFlags = 1 << 7
+	FlagRead         ControlFlags = 1 << 6
+	FlagWrite        ControlFlags = 1 << 5
+	FlagResponse     ControlFlags = 1 << 4
+	FlagError        ControlFlags = 1 << 3
+	FlagMoreSegments ControlFlags = 1 << 2
 )
 
-// String returns the PascalCase zone name required for relay.Message.ID routing.
-func (z Zone) String() string {
-	switch z {
-	case ZoneFrontLeft:
-		return "FrontLeft"
-	case ZoneFrontRight:
-		return "FrontRight"
-	case ZoneRearLeft:
-		return "RearLeft"
-	case ZoneRearRight:
-		return "RearRight"
-	case ZoneCentral:
-		return "Central"
-	default:
-		return "Unknown"
-	}
-}
+// Has reports whether all bits of want are set in f.
+func (f ControlFlags) Has(want ControlFlags) bool { return f&want == want }
 
-// ZoneFromString parses a PascalCase zone name. Returns ZoneUnknown if unrecognised.
-func ZoneFromString(s string) Zone {
-	switch s {
-	case "FrontLeft":
-		return ZoneFrontLeft
-	case "FrontRight":
-		return ZoneFrontRight
-	case "RearLeft":
-		return ZoneRearLeft
-	case "RearRight":
-		return ZoneRearRight
-	case "Central":
-		return ZoneCentral
-	default:
-		return ZoneUnknown
-	}
-}
-
-// Priority is the RCP command priority level.
+// Message is a decoded ACF_ABB/ACF_GBB request, response, or acknowledge.
 //
 //fusa:req REQ-RELAY-040
-type Priority uint8
-
-// Priority values.
-const (
-	PriorityNormal   Priority = 0
-	PriorityHigh     Priority = 1
-	PriorityCritical Priority = 2
-)
-
-func (p Priority) String() string {
-	switch p {
-	case PriorityHigh:
-		return "high"
-	case PriorityCritical:
-		return "critical"
-	default:
-		return "normal"
-	}
-}
-
-func priorityFromString(s string) Priority {
-	switch s {
-	case "high":
-		return PriorityHigh
-	case "critical":
-		return PriorityCritical
-	default:
-		return PriorityNormal
-	}
-}
-
-// CommandType identifies the RCP command variant.
-//
-//fusa:req REQ-RELAY-040
-type CommandType uint16
-
-// CommandType values.
-const (
-	CmdNoop     CommandType = 0
-	CmdSet      CommandType = 1
-	CmdGet      CommandType = 2
-	CmdReset    CommandType = 3
-	CmdWatchdog CommandType = 4
-	CmdSleep    CommandType = 5
-	CmdWake     CommandType = 6
-)
-
-func (c CommandType) String() string {
-	switch c {
-	case CmdSet:
-		return "set"
-	case CmdGet:
-		return "get"
-	case CmdReset:
-		return "reset"
-	case CmdWatchdog:
-		return "watchdog"
-	case CmdSleep:
-		return "sleep"
-	case CmdWake:
-		return "wake"
-	default:
-		return "noop"
-	}
-}
-
-func cmdTypeFromString(s string) CommandType {
-	switch s {
-	case "set":
-		return CmdSet
-	case "get":
-		return CmdGet
-	case "reset":
-		return CmdReset
-	case "watchdog":
-		return CmdWatchdog
-	case "sleep":
-		return CmdSleep
-	case "wake":
-		return CmdWake
-	default:
-		return CmdNoop
-	}
-}
-
-// ResponseStatus is the RCP response status code.
-//
-//fusa:req REQ-RELAY-040
-type ResponseStatus uint8
-
-// ResponseStatus values.
-const (
-	StatusOK      ResponseStatus = 0
-	StatusError   ResponseStatus = 1
-	StatusTimeout ResponseStatus = 2
-	StatusBusy    ResponseStatus = 3
-	StatusUnknown ResponseStatus = 4
-)
-
-// Command is a RCP control command sent to a zone controller.
-//
-//fusa:req REQ-RELAY-040
-type Command struct {
-	ID       uint32      `json:"id"`
-	Zone     Zone        `json:"zone"`
-	Type     CommandType `json:"type"`
-	Priority Priority    `json:"priority"`
-	Payload  []byte      `json:"payload,omitempty"`
-}
-
-// Response is the reply from a zone controller to a Command.
-//
-//fusa:req REQ-RELAY-040
-type Response struct {
-	CommandID uint32         `json:"command_id"`
-	Zone      Zone           `json:"zone"`
-	Status    ResponseStatus `json:"status"`
-	Payload   []byte         `json:"payload,omitempty"`
-}
-
-// Status is a periodic status broadcast from a zone controller.
-//
-//fusa:req REQ-RELAY-040
-type Status struct {
-	Zone    Zone   `json:"zone"`
-	Seq     uint32 `json:"seq"`
-	Healthy bool   `json:"healthy"`
-	Payload []byte `json:"payload,omitempty"`
+type Message struct {
+	ByteBusID         ByteBusID      `json:"byte_bus_id"`
+	TransactionNum    TransactionNum `json:"transaction_num,omitempty"`
+	Control           ControlFlags   `json:"control"`
+	ReadSizeOrSegment uint16         `json:"read_size_or_segment,omitempty"`
+	Timestamp         uint64         `json:"timestamp,omitempty"`
+	Body              []byte         `json:"body,omitempty"`
 }
 
 // Loan is a zero-copy payload buffer from LoaningController.Loan().
@@ -215,65 +75,80 @@ func (l *Loan) Return() {
 	}
 }
 
-// ErrInvalidZone is returned when a zone name cannot be parsed.
-var ErrInvalidZone = fmt.Errorf("rcp: invalid zone name")
+// ErrNotFound is returned when a relay.Message.ID does not parse to a
+// valid ByteBusID (0-255).
+var ErrNotFound = fmt.Errorf("rcp: endpoint id not found: %w", relay.ErrNotConnected)
 
-// ToMessage converts s to a relay.Message per §15.7.5 (Subscribe direction).
+// EndpointIDString renders addr as the relay.Message.ID string
+// FromMessage/ToMessage use to address one Endpoint.
 //
 //fusa:req REQ-RELAY-041
-func (s Status) ToMessage() relay.Message {
+func EndpointIDString(addr ByteBusID) string {
+	return strconv.Itoa(int(addr))
+}
+
+// ParseEndpointID parses a relay.Message.ID string produced by
+// EndpointIDString back into a ByteBusID. Returns ErrNotFound for a
+// malformed string or a value outside 0-255.
+//
+//fusa:req REQ-RELAY-041
+func ParseEndpointID(id string) (ByteBusID, error) {
+	n, err := strconv.Atoi(id)
+	if err != nil || n < 0 || n > 255 {
+		return 0, fmt.Errorf("rcp: endpoint id %q: %w", id, ErrNotFound)
+	}
+	return ByteBusID(n), nil
+}
+
+// FromMessage converts a relay.Message into an addressed request Message
+// per §15.7.5 (Caller.Call()/Send() direction). msg.ID supplies ByteBusID
+// (see ParseEndpointID); Meta["rcp.op"] ("read" or "write") supplies
+// Control, defaulting to write when msg.Payload is non-empty, else read.
+//
+//fusa:req REQ-RELAY-041
+func FromMessage(msg relay.Message) (Message, error) {
+	addr, err := ParseEndpointID(msg.ID)
+	if err != nil {
+		return Message{}, err
+	}
+	var control ControlFlags
+	switch msg.Meta["rcp.op"] {
+	case "read":
+		control = FlagRead
+	case "write":
+		control = FlagWrite
+	default:
+		if len(msg.Payload) > 0 {
+			control = FlagWrite
+		} else {
+			control = FlagRead
+		}
+	}
+	if msg.Meta["rcp.error"] == "true" {
+		control |= FlagError
+	}
+	return Message{ByteBusID: addr, Control: control, Body: msg.Payload}, nil
+}
+
+// ToMessage converts a Message to a relay.Message per §15.7.5.
+// Meta["rcp.op"] mirrors m.Control's FlagRead/FlagWrite bit and
+// Meta["rcp.error"] mirrors its FlagError bit, so ToMessage/FromMessage
+// round-trip losslessly for any Control combination this package sets.
+//
+//fusa:req REQ-RELAY-041
+func (m Message) ToMessage() relay.Message {
+	op := "read"
+	if m.Control.Has(FlagWrite) {
+		op = "write"
+	}
 	return relay.Message{
 		Protocol:  relay.RCP,
-		ID:        s.Zone.String(),
-		Payload:   s.Payload,
-		Timestamp: time.Now(),
-		Seq:       uint64(s.Seq),
-		Meta: map[string]string{
-			"rcp.healthy": strconv.FormatBool(s.Healthy),
-		},
-	}
-}
-
-// StatusFromMessage converts a relay.Message to a Status.
-//
-//fusa:req REQ-RELAY-041
-func StatusFromMessage(msg relay.Message) (Status, error) {
-	z := ZoneFromString(msg.ID)
-	return Status{
-		Zone:    z,
-		Seq:     uint32(msg.Seq),
-		Healthy: msg.Meta["rcp.healthy"] == "true",
-		Payload: msg.Payload,
-	}, nil
-}
-
-// CommandFromMessage converts a relay.Message to a Command per §15.7.5 (Call direction).
-//
-//fusa:req REQ-RELAY-041
-func CommandFromMessage(msg relay.Message) (Command, error) {
-	z := ZoneFromString(msg.ID)
-	if z == ZoneUnknown && msg.ID != "Unknown" {
-		return Command{}, fmt.Errorf("rcp: unknown zone %q: %w", msg.ID, ErrInvalidZone)
-	}
-	return Command{
-		Zone:     z,
-		Priority: priorityFromString(msg.Meta["rcp.priority"]),
-		Type:     cmdTypeFromString(msg.Meta["rcp.cmd_type"]),
-		Payload:  msg.Payload,
-	}, nil
-}
-
-// ToMessage converts a Response to a relay.Message per §15.7.5.
-//
-//fusa:req REQ-RELAY-041
-func (r Response) ToMessage() relay.Message {
-	return relay.Message{
-		Protocol:  relay.RCP,
-		ID:        r.Zone.String(),
-		Payload:   r.Payload,
+		ID:        EndpointIDString(m.ByteBusID),
+		Payload:   m.Body,
 		Timestamp: time.Now(),
 		Meta: map[string]string{
-			"rcp.status": strconv.FormatUint(uint64(r.Status), 10),
+			"rcp.op":    op,
+			"rcp.error": strconv.FormatBool(m.Control.Has(FlagError)),
 		},
 	}
 }

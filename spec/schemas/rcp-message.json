@@ -1,0 +1,45 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/rcp-message.json",
+    "title": "rcp.Message",
+    "description": "RCP canonical message type (spec §15.5) — a decoded ACF_ABB/ACF_GBB request, response, or acknowledge.",
+    "type": "object",
+    "properties": {
+        "byte_bus_id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
+            "description": "Addresses a single Endpoint on an RC Server, scoped to the enclosing stream_id."
+        },
+        "transaction_num": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535,
+            "description": "Correlates a request with its eventual response, scoped to the enclosing stream. Omitted from JSON when zero."
+        },
+        "control": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
+            "description": "Request-descriptor control bits: Ack=0x80, Read=0x40, Write=0x20, Response=0x10, Error=0x08, MoreSegments=0x04."
+        },
+        "read_size_or_segment": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535,
+            "description": "Read size (no MoreSegments) or segment number. Omitted from JSON when zero."
+        },
+        "timestamp": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Meaningful only for the ACF_GBB (timestamped) encoding. Omitted from JSON when zero."
+        },
+        "body": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "description": "Request/response payload bytes, base64-encoded. Omitted from JSON when empty."
+        }
+    },
+    "required": ["byte_bus_id", "control"],
+    "additionalProperties": false
+}

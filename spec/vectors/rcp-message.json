@@ -1,0 +1,25 @@
+{
+    "name": "rcp-message",
+    "description": "RCP write request addressed to ByteBusID 9",
+    "type": "rcp.Message",
+    "value": {
+        "byte_bus_id": 9,
+        "control": 32,
+        "body": "qg=="
+    },
+    "message": {
+        "protocol": 5,
+        "version": {
+            "major": 0,
+            "minor": 0,
+            "patch": 0
+        },
+        "id": "9",
+        "payload": "qg==",
+        "timestamp": "0001-01-01T00:00:00Z",
+        "meta": {
+            "rcp.op": "write",
+            "rcp.error": "false"
+        }
+    }
+}

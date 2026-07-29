@@ -1,5 +1,55 @@
 # RELAY Spec Changelog
 
+## v2.0 — 2026-07-29 (stable) — BREAKING CHANGE
+
+Replaces §15.5/§15.7.5's RCP canonical types and conversion mapping
+entirely. RCP now means the real OPEN Alliance TC18 Remote Control Protocol
+Specification v0.5.1_RC (an IEEE 1722 AVTPDU/ACF wire protocol addressing
+individually-configured Endpoints on a remote RC Server), not the earlier
+RELAY-internal placeholder protocol (`Zone`/`Command`/`Response`/`Status`/
+`Priority`/`CommandType`) those names described through v1.14. No
+compatibility shim — this is a genuine MAJOR bump per §19.3's stability
+guarantee, since canonical types are one of the sections that guarantee
+covers.
+
+**Why now:** go-RCP (one of four x-Net RCP implementations independently
+replacing their protocol core against the same target spec) reached full
+TC18 conformance cutover (v1.0.0) and explicitly disclosed that RELAY's own
+RCP schemas/golden vector were stale as of v1.14 — correctly leaving the
+RELAY-side update out of its own scope. rust-RCP also reached v1.0.0, but
+was found to have a real gap (no RC Client/network controller was ever
+scoped into its roadmap, only the RC Server side) and isn't a reliable
+second reference yet (tracked: rust-RCP#87) — this rework is designed
+against go-RCP alone.
+
+**New canonical types** (§15.5): `StreamID` (AVTP stream_id), `ByteBusID`
+(endpoint address, scoped to a stream), `TransactionNum`, `ControlFlags`
+(Ack/Read/Write/Response/Error/MoreSegments bits), `Message` (a decoded
+ACF_ABB/ACF_GBB request/response/acknowledge). Replaces `Command`,
+`Response`, `Status`, `Zone`, `Priority`, `CommandType`, `ResponseStatus`.
+`Loan` is unchanged in shape.
+
+**New `ToMessage()`/`FromMessage()` mapping** (§15.7.5): `Message.ID` is a
+decimal `ByteBusID` string (was the Zone's PascalCase name). New `Meta`
+keys `rcp.op` (`"read"`/`"write"`) and `rcp.error` (`"true"`/`"false"`)
+replace `rcp.priority`/`rcp.cmd_type`/`rcp.healthy`/`rcp.status`. RCP has no
+server-initiated push in the new protocol — `Subscribe()` returns a
+permanently-empty stream (this was already true in spirit, just now
+explicit). An implementation adapting something that can receive from more
+than one stream concurrently (e.g. an RC Server rather than a single-stream
+client `Controller`) MUST extend `ID`'s encoding to disambiguate the stream
+— no single multi-stream format is mandated, since the common case doesn't
+need one.
+
+**Also updated:** the `Adapt`-wrapped `Controller`/`LoaningController`
+interfaces (§8.5), the RCP error-sentinel table (§5) collapses to a single
+`ErrNotFound` (the old Zone-specific sentinels have no TC18 equivalent),
+the CLI `send` flags (§11.2: `--byte-bus-id`/`--op`/`--payload`, was
+`--zone`/`--type`/`--payload`), the C++ (§18.2) and Rust (§18.3) binding
+type definitions, and the embedded golden vector (`rcp-status.json` →
+`rcp-message.json`, and its JSON Schema). REQ-RELAY-040/041 rewritten,
+REQ-RELAY-094 added.
+
 ## v1.14 — 2026-07-28 (stable)
 
 §13.7.2 module-name registry expansion, prompted by observed naming drift

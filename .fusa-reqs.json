@@ -367,7 +367,7 @@
     {
       "id": "REQ-RELAY-040",
       "title": "RCP canonical types",
-      "text": "The rcp sub-package shall define Command, Response, Status, Loan, Zone (with PascalCase String() and ZoneFromString), Priority, CommandType, ResponseStatus per spec \u00a715.5.",
+      "text": "The rcp sub-package shall define Message, ByteBusID, TransactionNum, ControlFlags, Loan per spec \u00a715.5 (OPEN Alliance TC18 Remote Control Protocol).",
       "category": "functional",
       "criticality": "high",
       "verification": "test",
@@ -376,7 +376,7 @@
     {
       "id": "REQ-RELAY-041",
       "title": "RCP conversion functions",
-      "text": "Status.ToMessage() and Response.ToMessage() shall produce relay.Messages per \u00a715.7.5. CommandFromMessage and StatusFromMessage shall invert the conversions.",
+      "text": "Message.ToMessage() shall produce a relay.Message per \u00a715.7.5, encoding Meta[\"rcp.op\"] and Meta[\"rcp.error\"]. FromMessage shall invert the conversion given ID, Payload, and Meta[\"rcp.op\"]/Meta[\"rcp.error\"].",
       "category": "functional",
       "criticality": "high",
       "verification": "test",
@@ -881,6 +881,15 @@
       "text": "The \u00a713.7.2 standard module-name registry MUST include canonical names for the RCP protocol-core concerns introduced by the OPEN Alliance TC18 wire protocol (avtp, acf, lifecycle, regmap, discovery, request, fragment) and for the DDS RTPS wire-protocol internals already converged on by existing implementations (cdr, spdp, sedp, reliable, persist, transport, guid, locator, wildcard), so that independently-developed language implementations of the same protocol do not diverge on naming for the same concern.",
       "category": "functional",
       "criticality": "low",
+      "verification": "spec-review",
+      "asil": "QM"
+    },
+    {
+      "id": "REQ-RELAY-094",
+      "title": "RCP canonical types replaced for TC18 conformance",
+      "text": "The specification MUST replace \u00a715.5/\u00a715.7.5's RCP canonical types and ToMessage/FromMessage mapping to describe the real OPEN Alliance TC18 Remote Control Protocol Specification v0.5.1_RC, superseding the earlier RELAY-internal placeholder protocol (Zone/Command/Response/Status/Priority/CommandType), as a MAJOR version increment (v2.0) per \u00a719.3's stability guarantee, with no compatibility shim.",
+      "category": "functional",
+      "criticality": "medium",
       "verification": "spec-review",
       "asil": "QM"
     }

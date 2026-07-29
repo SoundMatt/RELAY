@@ -68,11 +68,11 @@ func referenceConvert(protocol string, value []byte) (relay.Message, error) {
 		}
 		msg = m.ToMessage()
 	case "RCP":
-		s, err := decode[rcp.Status](value)
+		m, err := decode[rcp.Message](value)
 		if err != nil {
 			return msg, err
 		}
-		msg = s.ToMessage()
+		msg = m.ToMessage()
 	case "SOMEIP":
 		m, err := decode[someip.Message](value)
 		if err != nil {

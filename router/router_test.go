@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 // mockNode is an in-memory relay.Node for exercising the router.

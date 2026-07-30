@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 // conformSeverity is the severity of a conformance finding.

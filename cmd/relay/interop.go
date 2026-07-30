@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 // typeProtocol maps a golden-vector canonical type to its protocol name.

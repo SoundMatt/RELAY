@@ -8,7 +8,7 @@ C, C++, and Rust build against RELAY to share canonical types, interface
 contracts, error semantics, and a common application API.
 
 [![CI](https://github.com/SoundMatt/RELAY/actions/workflows/ci.yml/badge.svg)](https://github.com/SoundMatt/RELAY/actions/workflows/ci.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/SoundMatt/RELAY.svg)](https://pkg.go.dev/github.com/SoundMatt/RELAY)
+[![Go Reference](https://pkg.go.dev/badge/github.com/SoundMatt/RELAY/v2.svg)](https://pkg.go.dev/github.com/SoundMatt/RELAY/v2)
 
 ---
 
@@ -34,19 +34,19 @@ Current: **v2.0 (stable)**
 ## Install
 
 ```
-go get github.com/SoundMatt/RELAY@latest
+go get github.com/SoundMatt/RELAY/v2@latest
 ```
 
 Install the CLI:
 
 ```
-go install github.com/SoundMatt/RELAY/cmd/relay@latest
+go install github.com/SoundMatt/RELAY/v2/cmd/relay@latest
 ```
 
 ## Usage
 
 ```go
-import relay "github.com/SoundMatt/RELAY"
+import relay "github.com/SoundMatt/RELAY/v2"
 
 // All protocol adapters satisfy relay.Node
 var node relay.Node = can.Adapt(bus)

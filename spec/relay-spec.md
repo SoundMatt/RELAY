@@ -1207,11 +1207,13 @@ Lowercase: `go-can`, `cpp-rcp`, `rust-someip`.
 ### 13.4 Go module paths
 
 Protocol implementations: `github.com/SoundMatt/<RepoName>`  
-RELAY package: `github.com/SoundMatt/RELAY`
+RELAY package: `github.com/SoundMatt/RELAY/v2` (major-version suffix required
+by Go's semantic import versioning once `SpecVersion` reaches 2.0+; see
+CHANGELOG v2.0.4)
 
 Implementations import:
 ```go
-import relay "github.com/SoundMatt/RELAY"
+import relay "github.com/SoundMatt/RELAY/v2"
 ```
 
 ### 13.5 Docker image base
@@ -1253,11 +1255,11 @@ Images MUST be published to `ghcr.io/soundmatt/<tool-lowercase>`.
 
 ### 13.6 Package layout
 
-The RELAY Go module (`github.com/SoundMatt/RELAY`) is the **root package**. It
+The RELAY Go module (`github.com/SoundMatt/RELAY/v2`) is the **root package**. It
 exports only the types visible to both RELAY tooling and protocol implementations:
 
 ```
-github.com/SoundMatt/RELAY          ← relay.Protocol, relay.Message, relay.Node,
+github.com/SoundMatt/RELAY/v2       ← relay.Protocol, relay.Message, relay.Node,
                                         relay.Caller, relay.ErrClosed etc., relay.SpecVersion,
                                         relay.SubscriberConfig / SubscriberOption helpers
 ```
@@ -1943,7 +1945,7 @@ suite instead.
 
 ### 18.1 Go (canonical)
 
-The RELAY Go package (`github.com/SoundMatt/RELAY`) exports all types from §3,
+The RELAY Go package (`github.com/SoundMatt/RELAY/v2`) exports all types from §3,
 §4, §5, §8, §9, §10, §14, and §15.
 
 ### 18.2 C++

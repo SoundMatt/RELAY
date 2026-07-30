@@ -20,7 +20,7 @@ import (
 	"sort"
 	"sync"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 // Converter rewrites a message as it crosses a route. A nil converter on a

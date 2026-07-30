@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 // Identity is the same-protocol converter used by a repeat route: it forwards

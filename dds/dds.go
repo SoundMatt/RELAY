@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"time"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 // GUID is a 16-byte DDS writer GUID.

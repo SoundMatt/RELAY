@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
-	relay "github.com/SoundMatt/RELAY"
-	"github.com/SoundMatt/RELAY/can"
-	"github.com/SoundMatt/RELAY/dds"
-	"github.com/SoundMatt/RELAY/lin"
-	"github.com/SoundMatt/RELAY/mqtt"
-	"github.com/SoundMatt/RELAY/rcp"
-	"github.com/SoundMatt/RELAY/someip"
+	relay "github.com/SoundMatt/RELAY/v2"
+	"github.com/SoundMatt/RELAY/v2/can"
+	"github.com/SoundMatt/RELAY/v2/dds"
+	"github.com/SoundMatt/RELAY/v2/lin"
+	"github.com/SoundMatt/RELAY/v2/mqtt"
+	"github.com/SoundMatt/RELAY/v2/rcp"
+	"github.com/SoundMatt/RELAY/v2/someip"
 )
 
 // maxConvertInputBytes bounds how much of stdin `relay convert` will read

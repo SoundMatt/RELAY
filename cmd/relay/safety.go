@@ -17,7 +17,7 @@ import (
 	"sort"
 	"strings"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 // --- relay sbom ---
@@ -82,7 +82,7 @@ func buildSBOM() sbomDoc {
 		Format:      "relay-sbom/1",
 		Tool:        "relay",
 		SpecVersion: relay.SpecVersion,
-		Module:      "github.com/SoundMatt/RELAY",
+		Module:      "github.com/SoundMatt/RELAY/v2",
 		GoVersion:   "unknown",
 		Components:  []sbomComponent{},
 	}

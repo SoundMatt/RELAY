@@ -133,6 +133,9 @@ func (r *Router) Run(ctx context.Context) error {
 		return fmt.Errorf("router: no routes configured")
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	var wg sync.WaitGroup
 	for _, src := range sources {
 		r.mu.Lock()
@@ -140,6 +143,8 @@ func (r *Router) Run(ctx context.Context) error {
 		r.mu.Unlock()
 		ch, err := node.Subscribe()
 		if err != nil {
+			cancel()
+			wg.Wait()
 			return fmt.Errorf("router: subscribe to %q: %w", src, err)
 		}
 		wg.Add(1)

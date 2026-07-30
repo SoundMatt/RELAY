@@ -35,13 +35,13 @@ COPY --from=build /bin/relay /usr/local/bin/relay
 
 LABEL org.opencontainers.image.title="RELAY" \
       org.opencontainers.image.description="Real-time Embedded Link Abstraction Yoke — conformance and observability CLI" \
-      org.opencontainers.image.version="1.13.0" \
+      org.opencontainers.image.version="2.0.0" \
       org.opencontainers.image.source="https://github.com/SoundMatt/RELAY" \
       org.opencontainers.image.licenses="MPL-2.0" \
       io.relay.tool="RELAY" \
       io.relay.language="go" \
       io.relay.binary="relay" \
-      io.relay.spec-version="1.13"
+      io.relay.spec-version="2.0"
 
 # Mount your project at /project for relay conform and relay trace.
 WORKDIR /project

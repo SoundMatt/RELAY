@@ -16,9 +16,10 @@ import (
 
 // mockNode is an in-memory relay.Node for exercising the router.
 type mockNode struct {
-	proto   relay.Protocol
-	in      chan relay.Message
-	sendErr error
+	proto        relay.Protocol
+	in           chan relay.Message
+	sendErr      error
+	subscribeErr error
 
 	mu   sync.Mutex
 	sent []relay.Message
@@ -30,6 +31,9 @@ func newMock(p relay.Protocol) *mockNode {
 
 func (m *mockNode) Protocol() relay.Protocol { return m.proto }
 func (m *mockNode) Subscribe(...relay.SubscriberOption) (<-chan relay.Message, error) {
+	if m.subscribeErr != nil {
+		return nil, m.subscribeErr
+	}
 	return m.in, nil
 }
 func (m *mockNode) Close() error { return nil }
@@ -59,6 +63,20 @@ func waitFor(t *testing.T, cond func() bool) {
 		time.Sleep(2 * time.Millisecond)
 	}
 	t.Fatal("condition not met within deadline")
+}
+
+// staysFalseFor polls cond for the given window and fails if it ever becomes
+// true — used to assert something does NOT happen (e.g. a stopped goroutine
+// does not keep consuming/forwarding).
+func staysFalseFor(t *testing.T, window time.Duration, cond func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(window)
+	for time.Now().Before(deadline) {
+		if cond() {
+			t.Fatal("condition became true; want it to stay false")
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
 }
 
 //fusa:test REQ-RELAY-084
@@ -104,6 +122,35 @@ func TestRunNoRoutes(t *testing.T) {
 	if err := r.Run(context.Background()); err == nil {
 		t.Error("Run with no routes must error")
 	}
+}
+
+// TestRunSubscribeFailureStopsAlreadyStartedGoroutines checks that when a
+// later source's Subscribe fails, Run doesn't just return the error and
+// leak the goroutine(s) it already started for earlier sources — those
+// goroutines must be stopped (and Run must wait for them to actually stop)
+// before Run returns (REQ-RELAY-084).
+func TestRunSubscribeFailureStopsAlreadyStartedGoroutines(t *testing.T) {
+	src1 := newMock(relay.CAN) // sorts before src2; subscribes fine
+	src2 := newMock(relay.CAN)
+	src2.subscribeErr = errors.New("boom")
+	dest := newMock(relay.CAN)
+
+	r := New()
+	_ = r.AddSpoke("src1", src1)
+	_ = r.AddSpoke("src2", src2)
+	_ = r.AddSpoke("dest", dest)
+	_ = r.AddRoute(Route{From: "src1", To: []string{"dest"}})
+	_ = r.AddRoute(Route{From: "src2", To: []string{"dest"}})
+
+	if err := r.Run(context.Background()); err == nil {
+		t.Fatal("Run must return the Subscribe error")
+	}
+
+	// Run has returned, so its per-source goroutine for src1 must already
+	// have stopped. If it leaked, it would still be reading src1.in and
+	// forwarding to dest.
+	src1.in <- relay.Message{Protocol: relay.CAN, ID: "1", Payload: []byte{1}}
+	staysFalseFor(t, 100*time.Millisecond, func() bool { return len(dest.received()) > 0 })
 }
 
 //fusa:test REQ-RELAY-084

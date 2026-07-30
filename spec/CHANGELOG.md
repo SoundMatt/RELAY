@@ -1,5 +1,26 @@
 # RELAY Spec Changelog
 
+## v2.0.3 — 2026-07-30 (bug fix + doc correction; no normative change)
+
+- **`router/router.go`**: `Router.Run` leaked the goroutine(s) already
+  started for earlier sources when a later source's `Subscribe` failed —
+  it returned the error immediately without stopping them. Now derives a
+  cancellable child context, cancels it and waits for all started
+  goroutines to actually stop before returning the error. Added
+  `TestRunSubscribeFailureStopsAlreadyStartedGoroutines`, confirmed to
+  fail against the pre-fix code and pass against the fix.
+- **README.md**: stale "Current: v1.13 (stable)" corrected to v2.0.
+- **Dockerfile**: stale `org.opencontainers.image.version="1.13.0"` /
+  `io.relay.spec-version="1.13"` OCI labels corrected to `2.0.0`/`2.0`.
+- **§15.7.4**: added an explicit note that MQTT v5 properties
+  (`PacketID`/`ResponseTopic`/`CorrelationData`/`UserProperties`/
+  `ContentType`/`ExpiryInterval`) are intentionally not carried through
+  `relay.Message`, matching the RCP §15.7.5 subset-mapping style — closes
+  the doc gap NEW-R-02 flagged (the underlying field-dropping itself
+  remains tracked separately as RELAY-13/#87).
+- `SpecVersion` unchanged (`2.0`); this is a tooling/doc/bug-fix patch
+  release.
+
 ## v2.0.2 — 2026-07-30 (doc correction; no normative change)
 
 - **`rcp/rcp.go`**: the `ToMessage` doc comment claimed "ToMessage/FromMessage

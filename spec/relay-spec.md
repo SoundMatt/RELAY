@@ -1801,6 +1801,13 @@ uint32, return `ErrInvalidFrame`.
 
 `FromMessage`: `msg.ID` → `Topic`; `msg.Payload` → `Payload`. Parse `mqtt.qos` meta if present.
 
+The MQTT v5 properties modelled on `mqtt.Message` — `PacketID`, `ResponseTopic`,
+`CorrelationData`, `UserProperties`, `ContentType`, and `ExpiryInterval` — are
+intentionally NOT carried through `relay.Message` (matching the RCP §15.7.5
+subset-mapping style): only `qos` and `retained` survive a Node hop. Applications
+that rely on v5 request/response correlation (`ResponseTopic` / `CorrelationData`)
+MUST use the protocol-specific MQTT interface directly (§10.6).
+
 **15.7.5 RCP `Message` ↔ `relay.Message`** (`Caller.Call()`/`Caller.Send()` direction —
 RCP has no server-initiated push; `Subscribe()` returns a well-behaved,
 permanently-empty stream, per 15.5's breaking-change note)

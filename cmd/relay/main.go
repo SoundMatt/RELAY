@@ -18,7 +18,7 @@ import (
 	relay "github.com/SoundMatt/RELAY"
 )
 
-const toolVersion = "2.0.2"
+const toolVersion = "2.0.3"
 
 func main() {
 	if err := run(os.Stdout, os.Stderr, os.Args[1:]); err != nil {

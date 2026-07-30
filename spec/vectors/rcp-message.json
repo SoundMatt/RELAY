@@ -1,10 +1,12 @@
 {
     "name": "rcp-message",
-    "description": "RCP write request addressed to ByteBusID 9",
+    "description": "RCP write request addressed to ByteBusID 9, transaction 42, read/segment size 4",
     "type": "rcp.Message",
     "value": {
         "byte_bus_id": 9,
+        "transaction_num": 42,
         "control": 32,
+        "read_size_or_segment": 4,
         "body": "qg=="
     },
     "message": {
@@ -19,7 +21,9 @@
         "timestamp": "0001-01-01T00:00:00Z",
         "meta": {
             "rcp.op": "write",
-            "rcp.error": "false"
+            "rcp.error": "false",
+            "rcp.transaction_num": "42",
+            "rcp.read_size_or_segment": "4"
         }
     }
 }

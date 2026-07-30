@@ -1,5 +1,33 @@
 # RELAY Spec Changelog
 
+## v2.0.1 — 2026-07-30 (bug fix + doc correction; no normative change)
+
+- **§15.7.5**: added the `Meta["rcp.transaction_num"]`/`Meta["rcp.read_size_or_segment"]`
+  mapping rows and documented `ToMessage()`'s single, direction-agnostic
+  behavior (it always sets both `rcp.op`/`rcp.error` together, and now also
+  `rcp.transaction_num`/`rcp.read_size_or_segment`, regardless of request vs
+  response direction). This closes a gap against §15.7's pre-existing
+  "MUST be lossless for all mandatory fields" rule — `TransactionNum` and
+  `ReadSizeOrSegment` are existing `rcp.Message` fields that were silently
+  dropped by `ToMessage`/`FromMessage` and never round-tripped, though the
+  general lossless mandate already covered them; no new field was added to
+  `rcp.Message` and no existing conformant behavior is invalidated. Also
+  documented that `Message.Timestamp` (the native AVTP presentation
+  timestamp) is intentionally not carried into `relay.Message.Timestamp`,
+  matching every other protocol in §15.7.
+- **`rcp/rcp.go`**: `FromMessage`/`ToMessage` now carry `TransactionNum` and
+  `ReadSizeOrSegment` through `Meta`; fixed the package doc comment's
+  reference to a nonexistent "RELAY v1.15" (the TC18 replacement shipped in
+  the v2.0 MAJOR release, per REQ-RELAY-094).
+- **`spec/vectors/rcp-message.json`**: populated `transaction_num` and
+  `read_size_or_segment` with non-zero values so `TestGoldenVectorsRoundTrip`
+  actually exercises the previously-dropped fields instead of passing
+  vacuously at their zero default.
+- **README.md**: replaced the stale "RCP zone…" comment and the pre-v2.0
+  symbolic `ID: "FrontLeft"` quickstart example (which `ParseEndpointID`
+  rejects) with the current decimal `ByteBusID` encoding.
+- `SpecVersion` unchanged (`2.0`); this is a tooling/doc patch release.
+
 ## v2.0 — 2026-07-29 (stable) — BREAKING CHANGE
 
 Replaces §15.5/§15.7.5's RCP canonical types and conversion mapping

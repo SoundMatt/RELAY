@@ -6,6 +6,7 @@ package rcp
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	relay "github.com/SoundMatt/RELAY"
@@ -36,7 +37,7 @@ func TestParseEndpointIDRejectsInvalid(t *testing.T) {
 
 //fusa:test REQ-RELAY-041
 func TestMessageToMessageRoundTrip(t *testing.T) {
-	orig := Message{ByteBusID: 9, Control: FlagWrite, Body: []byte{0xAA}}
+	orig := Message{ByteBusID: 9, TransactionNum: 42, Control: FlagWrite, ReadSizeOrSegment: 4, Body: []byte{0xAA}}
 	msg := orig.ToMessage()
 	if msg.Protocol != relay.RCP {
 		t.Errorf("Protocol = %v, want RCP", msg.Protocol)
@@ -50,13 +51,19 @@ func TestMessageToMessageRoundTrip(t *testing.T) {
 	if msg.Meta["rcp.error"] != "false" {
 		t.Errorf("rcp.error = %q, want false", msg.Meta["rcp.error"])
 	}
+	if msg.Meta["rcp.transaction_num"] != "42" {
+		t.Errorf("rcp.transaction_num = %q, want 42", msg.Meta["rcp.transaction_num"])
+	}
+	if msg.Meta["rcp.read_size_or_segment"] != "4" {
+		t.Errorf("rcp.read_size_or_segment = %q, want 4", msg.Meta["rcp.read_size_or_segment"])
+	}
 
 	got, err := FromMessage(msg)
 	if err != nil {
 		t.Fatalf("FromMessage: %v", err)
 	}
-	if got.ByteBusID != 9 || !got.Control.Has(FlagWrite) || got.Control.Has(FlagError) {
-		t.Errorf("round-trip mismatch: %+v", got)
+	if !reflect.DeepEqual(got, orig) {
+		t.Errorf("round-trip mismatch: got %+v, want %+v", got, orig)
 	}
 }
 

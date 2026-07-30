@@ -1,5 +1,25 @@
 # RELAY Spec Changelog
 
+## v2.0.2 — 2026-07-30 (doc correction; no normative change)
+
+- **`rcp/rcp.go`**: the `ToMessage` doc comment claimed "ToMessage/FromMessage
+  round-trip losslessly for any Message this package produces." False:
+  `Control`'s `FlagAck`/`FlagResponse`/`FlagMoreSegments` bits and
+  `Timestamp` were never carried (this was already true before v2.0.1;
+  v2.0.1 fixed `TransactionNum`/`ReadSizeOrSegment` but kept the same
+  overclaiming sentence). The *behavior* was already spec-conformant —
+  §15.7.5 only ever mapped op/error/transaction_num/read_size_or_segment —
+  the defect was the docstring contradicting both the code and the spec's
+  deliberate subset mapping, dangerous in a functional-safety codebase
+  where such invariants may be relied on. Softened the comment to state
+  exactly which fields round-trip and which three Control bits don't.
+- **`rcp/rcp_test.go`**: `TestMessageToMessageError` previously round-tripped
+  `FlagResponse | FlagError` but only asserted `FlagError` survived,
+  written in a way that didn't notice `FlagResponse` silently became
+  `FlagRead`. Strengthened to assert the full `Control` value, so the
+  documented gap stays visible instead of being accidentally hidden.
+- `SpecVersion` unchanged (`2.0`); this is a doc-only patch release.
+
 ## v2.0.1 — 2026-07-30 (bug fix + doc correction; no normative change)
 
 - **§15.7.5**: added the `Meta["rcp.transaction_num"]`/`Meta["rcp.read_size_or_segment"]`

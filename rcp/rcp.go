@@ -153,16 +153,20 @@ func FromMessage(msg relay.Message) (Message, error) {
 // Meta["rcp.error"] mirrors its FlagError bit, and
 // Meta["rcp.transaction_num"] / Meta["rcp.read_size_or_segment"] carry
 // TransactionNum and ReadSizeOrSegment as decimal strings — so
-// ToMessage/FromMessage round-trip losslessly for any Message this
-// package produces. ToMessage is a single, direction-agnostic converter:
-// it always sets both rcp.op and rcp.error regardless of whether m
-// represents an outbound request or an inbound response; §15.7.5's
-// request/response tables describe which of the two keys is semantically
-// meaningful in each direction, not that the other is ever absent from
-// Meta. m.Timestamp (the native AVTP presentation timestamp) is
-// intentionally not carried into relay.Message.Timestamp, which — as for
-// every other protocol in §15.7 — always reflects local receipt time, not
-// a wire-native timestamp.
+// ToMessage/FromMessage round-trip exactly the fields §15.7.5 maps:
+// ByteBusID, Body, TransactionNum, ReadSizeOrSegment, and the
+// read/write/error bits of Control. m.Control's other defined bits —
+// FlagAck, FlagResponse, FlagMoreSegments — are NOT carried and do not
+// survive a round trip (a Message built with, say, FlagResponse set
+// comes back with only FlagRead/FlagWrite and FlagError as sent by
+// ToMessage/FromMessage); neither is m.Timestamp (the native AVTP
+// presentation timestamp) — relay.Message.Timestamp always reflects
+// local receipt time instead, as for every other protocol in §15.7.
+// ToMessage is a single, direction-agnostic converter: it always sets
+// both rcp.op and rcp.error regardless of whether m represents an
+// outbound request or an inbound response; §15.7.5's request/response
+// tables describe which of the two keys is semantically meaningful in
+// each direction, not that the other is ever absent from Meta.
 //
 //fusa:req REQ-RELAY-041
 func (m Message) ToMessage() relay.Message {

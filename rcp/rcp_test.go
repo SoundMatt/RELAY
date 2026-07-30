@@ -99,4 +99,14 @@ func TestMessageToMessageError(t *testing.T) {
 	if !got.Control.Has(FlagError) {
 		t.Errorf("FlagError not preserved through round-trip: %+v", got)
 	}
+	// FlagResponse is one of the three Control bits §15.7.5 does not map
+	// (alongside FlagAck/FlagMoreSegments) — it must NOT survive the round
+	// trip. This asserts the documented gap stays visible instead of being
+	// hidden by only checking the bit the test happens to care about.
+	if got.Control.Has(FlagResponse) {
+		t.Errorf("FlagResponse unexpectedly preserved through round-trip (§15.7.5 does not map it): %+v", got)
+	}
+	if want := FlagRead | FlagError; got.Control != want {
+		t.Errorf("Control = %v, want %v (FlagResponse is dropped, not preserved as FlagRead/FlagWrite; see the ToMessage doc comment)", got.Control, want)
+	}
 }

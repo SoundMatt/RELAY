@@ -1,5 +1,22 @@
 # RELAY Spec Changelog
 
+## v2.0.4 — 2026-07-30 (bug fix; no semantic change)
+
+- **`go.mod`**: module path was still `github.com/SoundMatt/RELAY` after the
+  v2.0 MAJOR bump. Per Go's semantic import versioning rules, a v2+ tagged
+  module with a `go.mod` file must carry a `/v2` path suffix or it becomes
+  uninstallable via ordinary `go install`/`go get` tooling
+  (`go install .../RELAY/cmd/relay@v2.0.3` failed with `invalid version:
+  module contains a go.mod file, so module path must match major version`).
+  Renamed to `github.com/SoundMatt/RELAY/v2`; updated all 30 internal
+  package imports, README install/usage snippets, and §13.4's module-path
+  guidance accordingly. Closes #70 — independently rediscovered by three
+  downstream repos (rust-RCP, rust-MQTT, go-mqtt), all of which had worked
+  around it with a commit-hash pin instead of a normal version tag; they can
+  now move to a standard `github.com/SoundMatt/RELAY/v2 v2.0.4` require.
+- `SpecVersion` unchanged (`2.0`); this is a Go-tooling installability fix,
+  not a wire-format or behavioral change.
+
 ## v2.0.3 — 2026-07-30 (bug fix + doc correction; no normative change)
 
 - **`router/router.go`**: `Router.Run` leaked the goroutine(s) already

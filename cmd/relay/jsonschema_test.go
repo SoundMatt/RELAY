@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 func mustValidate(t *testing.T, schema string, jsonDoc string) []string {

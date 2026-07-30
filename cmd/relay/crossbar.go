@@ -18,8 +18,8 @@ import (
 	"syscall"
 	"time"
 
-	relay "github.com/SoundMatt/RELAY"
-	"github.com/SoundMatt/RELAY/router"
+	relay "github.com/SoundMatt/RELAY/v2"
+	"github.com/SoundMatt/RELAY/v2/router"
 )
 
 // cliNode is a relay.Node backed by an x-Net binary's CLI: it sources messages

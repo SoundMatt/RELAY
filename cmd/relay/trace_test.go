@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 // ndjsonOf marshals messages to newline-delimited JSON, the on-wire trace format.

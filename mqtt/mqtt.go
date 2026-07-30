@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 // QoS is the MQTT quality-of-service level.

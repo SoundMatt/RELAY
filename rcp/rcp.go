@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"time"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 // ByteBusID addresses a single Endpoint on an RC Server. Unique only within

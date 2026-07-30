@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 // SOMEIPProtocolVersion is the only valid SOME/IP protocol version (§15.6).

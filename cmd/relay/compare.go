@@ -13,7 +13,7 @@ import (
 	"sort"
 	"strings"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 // capsDoc is the parsed capabilities document used by compare and versions.

@@ -4,9 +4,10 @@
 
 // Package rcp defines the canonical RCP types and relay.Message conversion
 // per RELAY spec §15.5. RCP means the OPEN Alliance TC18 Remote Control
-// Protocol Specification v0.5.1_RC as of RELAY v1.15 — a breaking change
-// from the placeholder Zone/Command/Response/Status protocol these type
-// names described through v1.14, with no compatibility shim.
+// Protocol Specification v0.5.1_RC as of the RELAY v2.0 MAJOR release — a
+// breaking change (per REQ-RELAY-094) from the placeholder
+// Zone/Command/Response/Status protocol these type names described before
+// v2.0, with no compatibility shim.
 package rcp
 
 import (
@@ -104,6 +105,9 @@ func ParseEndpointID(id string) (ByteBusID, error) {
 // per §15.7.5 (Caller.Call()/Send() direction). msg.ID supplies ByteBusID
 // (see ParseEndpointID); Meta["rcp.op"] ("read" or "write") supplies
 // Control, defaulting to write when msg.Payload is non-empty, else read.
+// Meta["rcp.transaction_num"] and Meta["rcp.read_size_or_segment"], each a
+// decimal uint16 string, supply TransactionNum and ReadSizeOrSegment;
+// absent or malformed values default to 0.
 //
 //fusa:req REQ-RELAY-041
 func FromMessage(msg relay.Message) (Message, error) {
@@ -127,13 +131,38 @@ func FromMessage(msg relay.Message) (Message, error) {
 	if msg.Meta["rcp.error"] == "true" {
 		control |= FlagError
 	}
-	return Message{ByteBusID: addr, Control: control, Body: msg.Payload}, nil
+	var txn TransactionNum
+	if n, err := strconv.ParseUint(msg.Meta["rcp.transaction_num"], 10, 16); err == nil {
+		txn = TransactionNum(n)
+	}
+	var readSize uint16
+	if n, err := strconv.ParseUint(msg.Meta["rcp.read_size_or_segment"], 10, 16); err == nil {
+		readSize = uint16(n)
+	}
+	return Message{
+		ByteBusID:         addr,
+		TransactionNum:    txn,
+		Control:           control,
+		ReadSizeOrSegment: readSize,
+		Body:              msg.Payload,
+	}, nil
 }
 
 // ToMessage converts a Message to a relay.Message per §15.7.5.
-// Meta["rcp.op"] mirrors m.Control's FlagRead/FlagWrite bit and
-// Meta["rcp.error"] mirrors its FlagError bit, so ToMessage/FromMessage
-// round-trip losslessly for any Control combination this package sets.
+// Meta["rcp.op"] mirrors m.Control's FlagRead/FlagWrite bit,
+// Meta["rcp.error"] mirrors its FlagError bit, and
+// Meta["rcp.transaction_num"] / Meta["rcp.read_size_or_segment"] carry
+// TransactionNum and ReadSizeOrSegment as decimal strings — so
+// ToMessage/FromMessage round-trip losslessly for any Message this
+// package produces. ToMessage is a single, direction-agnostic converter:
+// it always sets both rcp.op and rcp.error regardless of whether m
+// represents an outbound request or an inbound response; §15.7.5's
+// request/response tables describe which of the two keys is semantically
+// meaningful in each direction, not that the other is ever absent from
+// Meta. m.Timestamp (the native AVTP presentation timestamp) is
+// intentionally not carried into relay.Message.Timestamp, which — as for
+// every other protocol in §15.7 — always reflects local receipt time, not
+// a wire-native timestamp.
 //
 //fusa:req REQ-RELAY-041
 func (m Message) ToMessage() relay.Message {
@@ -147,8 +176,10 @@ func (m Message) ToMessage() relay.Message {
 		Payload:   m.Body,
 		Timestamp: time.Now(),
 		Meta: map[string]string{
-			"rcp.op":    op,
-			"rcp.error": strconv.FormatBool(m.Control.Has(FlagError)),
+			"rcp.op":                   op,
+			"rcp.error":                strconv.FormatBool(m.Control.Has(FlagError)),
+			"rcp.transaction_num":      strconv.FormatUint(uint64(m.TransactionNum), 10),
+			"rcp.read_size_or_segment": strconv.FormatUint(uint64(m.ReadSizeOrSegment), 10),
 		},
 	}
 }

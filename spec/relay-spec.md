@@ -1814,6 +1814,8 @@ signature; the `StreamID` is therefore not itself part of `Message.ID`):
 | `ID` | `ByteBusID` | Decimal string, e.g. `"9"`; `strconv.Atoi`, range 0-255 |
 | `Payload` | `Body` | Direct copy |
 | `Meta["rcp.op"]` | `Control` (`FlagRead` / `FlagWrite`) | `"read"` / `"write"`; if absent, defaults to write when `Payload` is non-empty, else read |
+| `Meta["rcp.transaction_num"]` | `TransactionNum` | Decimal `uint16` string; absent or malformed defaults to 0 |
+| `Meta["rcp.read_size_or_segment"]` | `ReadSizeOrSegment` | Decimal `uint16` string; absent or malformed defaults to 0 |
 
 Response `Message` → `relay.Message`:
 
@@ -1822,8 +1824,18 @@ Response `Message` → `relay.Message`:
 | `Protocol` | — | Always `relay.RCP` |
 | `ID` | `ByteBusID` | Same decimal-string encoding as the request |
 | `Payload` | `Body` | Direct copy |
-| `Timestamp` | — | `time.Now()` on receive |
+| `Timestamp` | — | `time.Now()` on receive; `Message.Timestamp` (the native AVTP presentation timestamp) is never carried into it, matching every other protocol in §15.7 |
 | `Meta["rcp.error"]` | `Control` (`FlagError`) | `"true"` / `"false"` |
+| `Meta["rcp.transaction_num"]` | `TransactionNum` | Decimal `uint16` string |
+| `Meta["rcp.read_size_or_segment"]` | `ReadSizeOrSegment` | Decimal `uint16` string |
+
+`ToMessage()` is a single, direction-agnostic converter shared by both
+directions: it always sets `rcp.op`, `rcp.error`, `rcp.transaction_num`, and
+`rcp.read_size_or_segment` together on every `Message`, regardless of
+whether that `Message` represents an outbound request or an inbound
+response. The request/response split above documents which key is
+semantically meaningful in which direction — it does not mean the other
+keys are ever absent from `Meta`.
 
 An implementation whose `Adapt`-wrapped type can itself receive requests
 from more than one `StreamID` concurrently (e.g. adapting an RC Server

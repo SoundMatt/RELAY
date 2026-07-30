@@ -54,7 +54,7 @@ var node relay.Node = can.Adapt(bus)
 // Send — identical regardless of underlying protocol
 err := node.Send(ctx, relay.Message{
     Protocol: relay.CAN,
-    ID:       "256",      // CAN frame 0x100; DDS topic; MQTT topic; RCP zone…
+    ID:       "256",      // CAN frame 0x100; DDS topic; MQTT topic; RCP ByteBusID…
     Payload:  data,
 })
 
@@ -71,7 +71,7 @@ for msg := range ch {
 if caller, ok := node.(relay.Caller); ok {
     resp, err := caller.Call(ctx, relay.Message{
         Protocol: relay.RCP,
-        ID:       "FrontLeft",
+        ID:       "9", // decimal ByteBusID
         Payload:  data,
     })
 }

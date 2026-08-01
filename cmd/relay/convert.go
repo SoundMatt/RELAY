@@ -23,8 +23,11 @@ import (
 
 // maxConvertInputBytes bounds how much of stdin `relay convert` will read
 // before validation, so an unbounded/adversarial input stream can't exhaust
-// memory. 512 MiB comfortably exceeds spec §16's largest single-message
-// payload (MQTT v5, 268,435,455 bytes) plus base64/JSON overhead.
+// memory. 512 MiB is an intentional practical DoS bound: it exceeds MQTT v5's
+// 268,435,455-byte payload (spec §16) with room for base64/JSON overhead, but
+// is deliberately below SOME/IP's theoretical 2³²−16-byte maximum (spec §16),
+// which no real convert input approaches. A SOME/IP canonical value larger
+// than this bound is rejected with exit 2.
 const maxConvertInputBytes = 512 * 1024 * 1024
 
 // referenceConvert is RELAY's reference implementation of the §11.2 convert

@@ -63,8 +63,8 @@ Current status per repo:
 |---|---|
 | cpp-RCP | conformant (reference implementation) |
 | c-RCP | conformant (fixed, c-RCP#151) |
-| go-RCP | **missing** — task tracked, no classifier exists at all |
-| rust-RCP | **missing** — task tracked, no classifier exists at all |
+| go-RCP | conformant (`Message.ResponseKind`, go-RCP#156) |
+| rust-RCP | fix ready (`ByteMessageInfo::response_kind`), rust-RCP#138 pending CI |
 
 ### 2. Table 30 / evt[2:0] write semantics — one centralized module
 
@@ -85,7 +85,32 @@ Current status per repo:
 | go-RCP | conformant (`acf/evt.go`) |
 | rust-RCP | conformant (`evtgroup.rs`) |
 | cpp-RCP | conformant (`endpoint::WriteSemantics` in `include/rcp/endpoint.hpp`, correctly called into by e.g. `gpio.hpp`'s `apply_gpio_write`) |
-| c-RCP | **not centralized** — `ep_can.h`/`ep_lin.h`/`ep_pwm.h`/`ep_spi.h`/`ep_gpio.h` each reference Table 30 independently; task tracked |
+| c-RCP | **not centralized, and CAN/LIN are non-conformant** — see below |
+
+**c-RCP finding, verified directly against TC18.txt:3660-3710 (Table 30):**
+for the endpoint-type row `{ADC, PWM_IN, I2C, LIN, CAN, UART, ISELED,
+MDIO}`, `evt[2:0] = 000b-110b` MUST be rejected with error
+`UNSUPPORTED_CMD`; only `111b` has meaning (`byte_msg_payload` changes
+endpoint config per §12.7.1) — there is no per-value selector meaning
+defined for any other `evt[2:0]` value in this row. `ep_can.h` invents a
+6-value "FrameFormat selection via `evt[2:0]`" and `ep_lin.h` invents an
+8-value "comparison-mode enumeration via `evt[2:0]`" — both modules' own
+doc comments candidly admit these were invented ("this module's own
+original design... rather than on any spec-derived enumeration") using
+SPI's `evt[2:0]`-as-selector precedent as a template. SPI is a genuinely
+different, dedicated Table 30 row (`000b-101b` = real channel select);
+CAN/LIN belong to the shared Row-2 rule instead, where those same
+`evt[2:0]` values must be **rejected**, not interpreted. This is a real
+conformance defect, not just a centralization gap: CAN/LIN currently
+accept and act on wire values TC18 says must be refused. ADC/I2C/UART/
+ISELED/MDIO (the other 5 Row-2 endpoint types) have no `evt[2:0]`
+handling at all, likely meaning they don't enforce the rule either — a
+related, distinct (missing vs. actively-wrong) gap. Not yet fixed —
+needs research into what wire mechanism should actually convey CAN frame
+format and LIN comparison mode (the `111b`/config-write path is the
+likely answer, not yet confirmed against TC18's CAN/LIN chapters) before
+any code change; this is a redesign of two endpoint modules' request
+encoding, not a small refactor.
 
 ### 3. Conditional-request layer — one unified module
 

@@ -34,6 +34,7 @@ One name per protocol concern, used consistently in this document and
 | **response classification** | turning a decoded response header into Acknowledge / Write-response / Read-response / Error-response | §11.3 Table 15, §11.3.1-§11.3.4 |
 | **conditional-request layer** | compound, compound-wait, triggered, chained, timed, and the three cancellation forms | §11.2.2-§11.2.3 |
 | **Table 30 / evt[2:0] write semantics** | request-side endpoint write-arithmetic selector, shared across every endpoint type | §13.5 Table 30 |
+| **compound-wait comparison** | the evt[2:0]-selected byte_msg_payload-vs-current-status comparison a compound-wait request uses, identical across every endpoint type | §13.5.1 |
 | **endpoint-type modules** | GPIO, SPI, PWM (in/out), ADC, I2C, LIN, CAN, UART, ISELED, MDIO, Wakeup | §12 (per-endpoint chapters) |
 | **dispatch/routing** | incoming-request → endpoint-handler routing | (implementation concern, not directly a TC18 chapter) |
 
@@ -68,7 +69,7 @@ Current status per repo:
 
 ### 2. Table 30 / evt[2:0] write semantics — one centralized module
 
-**Reference shape: go-RCP's `acf/evt.go`, rust-RCP's `evtgroup.rs`, cpp-RCP's `endpoint::WriteSemantics`.**
+**Reference shape: c-RCP's `rcp_acf_evt_row2_is_plain()` (`acf.h`/`acf.c`), go-RCP's `acf/evt.go`, rust-RCP's `evtgroup.rs`, cpp-RCP's `endpoint::WriteSemantics`.**
 
 TC18 §13.5 Table 30 states its endpoint-type-grouped write-combining rules
 once; every endpoint-type module should call into one shared
@@ -82,37 +83,112 @@ Current status per repo:
 
 | Repo | Status |
 |---|---|
+| c-RCP | **conformant (reference implementation, fixed this pass)** |
 | go-RCP | conformant (`acf/evt.go`) |
 | rust-RCP | conformant (`evtgroup.rs`) |
 | cpp-RCP | conformant (`endpoint::WriteSemantics` in `include/rcp/endpoint.hpp`, correctly called into by e.g. `gpio.hpp`'s `apply_gpio_write`) |
-| c-RCP | **not centralized, and CAN/LIN are non-conformant** — see below |
 
-**c-RCP finding, verified directly against TC18.txt:3660-3710 (Table 30):**
-for the endpoint-type row `{ADC, PWM_IN, I2C, LIN, CAN, UART, ISELED,
-MDIO}`, `evt[2:0] = 000b-110b` MUST be rejected with error
-`UNSUPPORTED_CMD`; only `111b` has meaning (`byte_msg_payload` changes
-endpoint config per §12.7.1) — there is no per-value selector meaning
-defined for any other `evt[2:0]` value in this row. `ep_can.h` invents a
-6-value "FrameFormat selection via `evt[2:0]`" and `ep_lin.h` invents an
-8-value "comparison-mode enumeration via `evt[2:0]`" — both modules' own
-doc comments candidly admit these were invented ("this module's own
-original design... rather than on any spec-derived enumeration") using
-SPI's `evt[2:0]`-as-selector precedent as a template. SPI is a genuinely
-different, dedicated Table 30 row (`000b-101b` = real channel select);
-CAN/LIN belong to the shared Row-2 rule instead, where those same
-`evt[2:0]` values must be **rejected**, not interpreted. This is a real
-conformance defect, not just a centralization gap: CAN/LIN currently
-accept and act on wire values TC18 says must be refused. ADC/I2C/UART/
-ISELED/MDIO (the other 5 Row-2 endpoint types) have no `evt[2:0]`
-handling at all, likely meaning they don't enforce the rule either — a
-related, distinct (missing vs. actively-wrong) gap. Not yet fixed —
-needs research into what wire mechanism should actually convey CAN frame
-format and LIN comparison mode (the `111b`/config-write path is the
-likely answer, not yet confirmed against TC18's CAN/LIN chapters) before
-any code change; this is a redesign of two endpoint modules' request
-encoding, not a small refactor.
+**c-RCP finding, resolved.** Table 30's endpoint-type row
+`{ADC, PWM_IN, I2C, LIN, CAN, UART, ISELED, MDIO}` allows `evt[2:0] =
+000b` for a plain request; every other value is either reserved
+(`UNSUPPORTED_CMD`) or `111b`'s config-write shape (§12.7.1). c-RCP now
+centralizes this in one shared predicate,
+`rcp_acf_evt_row2_is_plain(evt)`, called from every endpoint type in the
+row (c-RCP#153, c-RCP#154). Two modules had invented their own
+non-conformant `evt[2:0]` schemes instead of using it, both now fixed:
 
-### 3. Conditional-request layer — one unified module
+- **CAN** (c-RCP#155, v0.109.0): `ep_can.h` had packed `FrameFormat` into
+  `evt[2:0]` as a 6-value selector — an invented design modeled
+  incorrectly on SPI's genuinely-different Table 30 row (SPI is its own
+  dedicated row, `000b-101b` = real channel select; CAN belongs to the
+  shared Row-2 rule, where those values must be *rejected*, not
+  interpreted). TC18 Figure 39 places `FrameFormat` in the payload's
+  leading quadlet instead, pixel-verified against the rendered
+  specification page. Every CAN frame this module ever produced before
+  the fix was wire-incompatible with a real TC18 peer.
+- **LIN** (c-RCP#158, v0.112.0): `ep_lin.h` had invented an 8-value
+  `evt[2:0]` "comparison-mode enumeration"
+  (EXACT/PREFIX/ANY/NEVER+4-reserved), self-admittedly ("this module's
+  own original design... rather than on any spec-derived enumeration").
+  LIN sits in the same Row-2 group as every other endpoint here, with no
+  exception in Table 30 — its own §13.7.10.1 prose ("a match under the
+  conditions given by `evt[2:0]`") describes the *same* universal
+  §13.5.1 vocabulary canonical choice #3 (below) covers, constrained to
+  mode `000b` (exact match) by Table 30, not a LIN-private scheme.
+
+### 3. Compound-wait comparison (§13.5.1) — one shared, endpoint-agnostic primitive
+
+**Reference implementation: c-RCP's `rcp_acf_compound_wait_evt_valid()` /
+`rcp_acf_compound_wait_match()` (`acf.h`/`acf.c`), c-RCP#156.**
+
+TC18 §13.5.1 gives a compound-wait request's `evt[2:0]` an entirely
+different meaning than Table 30 gives it for a Standard request: it
+selects one of eight ways to compare that request's own
+`byte_msg_payload` against the addressed endpoint's current status —
+exact match, AND-with-1s-mask, AND-with-0s-mask, reserved, and four
+leading-quadlet high/low-word `>=`/`<=` comparisons — **identically
+across every endpoint type**, including the length-capping rule ("only
+the first four out of 20 received bytes will be checked when
+byte_msg_payload has only four bytes"). This is a completely separate
+mechanism from canonical choice #2 above (which governs `evt[2:0]` for
+*Standard* requests); confusing the two, or reimplementing this
+comparison per endpoint type, is the exact anti-pattern #2 already
+documents for Table 30.
+
+Before c-RCP#156/#157, nothing in any of the four repos implemented this
+rule at all. c-RCP had two *partial*, endpoint-specific, never-wired
+helpers instead — `rcp_ep_spi_compound_wait_status_equal()` (only the
+000b exact-match mode, plus a hardcoded, non-conformant fixed 4-byte
+comparison length that isn't a real SPI-specific rule) and
+`rcp_ep_pwm_in_compound_wait_compare()` (only the four `>=`/`<=` modes,
+as a typed period/duty specialization) — neither reachable from real
+request decode, since `rcp_compound_decode_request()` silently discarded
+the ACF header's own `evt` field entirely.
+
+**What c-RCP now does, as the reference shape:**
+
+1. One generic primitive in the wire/ACF layer (`acf.h`/`acf.c`), not in
+   any endpoint module — the comparison is a property of the mechanism,
+   not of any one endpoint type.
+2. `evt` threaded end-to-end: `rcp_compound_encode_request()` takes it as
+   a real parameter (previously every compound-wait request silently
+   encoded `evt = 0`); `rcp_compound_decode_request()` surfaces it.
+3. Real per-request dispatch: each pending compound-wait request stores
+   its own decoded `evt` and an owned copy of its `byte_msg_payload`
+   (`rcp_server_pending_t.compound_wait_evt`/`compound_wait_target`),
+   evaluated independently against a caller-supplied, endpoint-scoped
+   `current_status` at every tick. A single flat "the wait condition"
+   bool (c-RCP's own pre-fix `wait_condition_met` design) cannot
+   represent two simultaneously-pending compound-wait requests on the
+   same endpoint with different targets — this was a real, second defect
+   found while wiring the primitive up, not just an API smell.
+4. Reserved `evt[2:0] = 011b` rejected at admission time
+   (`UNSUPPORTED_CMD`), per TC18's own rule, rather than stored as a
+   request that could simply never match.
+5. Any endpoint-specific comparison need (e.g. LIN's own exact-match
+   requirement, canonical choice #2's LIN finding above) delegates to
+   this same primitive rather than reimplementing comparison logic —
+   `rcp_ep_lin_response_matches()` is a thin wrapper over
+   `rcp_acf_compound_wait_match(0, ...)`.
+
+Current status per repo:
+
+| Repo | Status |
+|---|---|
+| c-RCP | **conformant (reference implementation, c-RCP#156/#157)** |
+| go-RCP | not yet implemented |
+| cpp-RCP | not yet implemented |
+| rust-RCP | not yet implemented |
+
+Porting this to the other three repos is the next item of work: each
+needs (a) the generic 8-mode primitive in its own wire/ACF layer, (b)
+`evt` threaded through that repo's own compound-wait encode/decode
+surface, and (c) real per-request dispatch wiring in whatever module
+owns that repo's request store/scheduler — adapted to each repo's own
+existing conditional-request-layer shape (canonical choice #4 below),
+not a mechanical file-for-file port.
+
+### 4. Conditional-request layer — one unified module
 
 **Reference shape: cpp-RCP's `request.hpp`, rust-RCP's `request.rs`.**
 
@@ -127,7 +203,7 @@ go-RCP and c-RCP onto the single-module shape is the largest structural
 change in this effort — sequenced last, after the smaller items above are
 stable, since it touches the most code per repo.
 
-### 4. Requirement-tag placement — per-function
+### 5. Requirement-tag placement — per-function
 
 **Reference convention: c-RCP's per-function `//cfusa:req REQ-ID`**,
 placed directly above the function/type it covers.
@@ -148,7 +224,7 @@ document does not mandate a syntax change — that would mean filing an
 issue against the tool repo (`cpp-FuSa`), not editing it directly, per
 standing policy against editing other repos.
 
-### 5. `.fusa-reqs.json` schema — c-RCP's field set, plus a stable master-catalog id
+### 6. `.fusa-reqs.json` schema — c-RCP's field set, plus a stable master-catalog id
 
 Canonical fields, all repos:
 
@@ -177,10 +253,10 @@ already works (or needs adding) for `gofusa`/`cpfusa` specifically is
 also unconfirmed — go-RCP's CI gate today hard-fails on anything short of
 100% traced+tested with no exemption mechanism found so far.
 
-### 6. Conditional-request requirement-id grouping — c-RCP's split
+### 7. Conditional-request requirement-id grouping — c-RCP's split
 
 Canonical id-prefix convention, independent of whether the underlying
-code is one unified module (per §3, above) or several files:
+code is one unified module (per §4, above) or several files:
 
 ```
 REQ-CMP-*      compound / compound-wait
@@ -192,7 +268,7 @@ REQ-CANCEL-*   clear-all / clear-non-safestate / clear-single
 
 go-RCP currently uses one bucket (`REQ-REQ-*`) for all of the above; that
 will need re-splitting when go-RCP's conditional-request module is
-unified (§3).
+unified (§4).
 
 ## Verification standard for any change made against this document
 

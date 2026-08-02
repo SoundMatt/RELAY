@@ -65,7 +65,7 @@ Current status per repo:
 | cpp-RCP | conformant (reference implementation) |
 | c-RCP | conformant (fixed, c-RCP#151) |
 | go-RCP | conformant (`Message.ResponseKind`, go-RCP#156) |
-| rust-RCP | fix ready (`ByteMessageInfo::response_kind`), rust-RCP#138 pending CI |
+| rust-RCP | conformant (`ByteMessageInfo::response_kind`, rust-RCP#138, merged) |
 
 ### 2. Table 30 / evt[2:0] write semantics — one centralized module
 
@@ -195,13 +195,46 @@ not a mechanical file-for-file port.
 Both unify compound/compound-wait/triggered/chained/timed/cancellation
 around one request-kind enum plus shared sequencer-bank, priority-tier,
 and ledger state. c-RCP's five-way file split (`request_compound.c`,
-`request_chained.c`, `request_triggered.c`, `request_timed.c`,
+request_chained.c`, `request_triggered.c`, `request_timed.c`,
 `request_cancel.c`) duplicates that shared state five times; go-RCP's
 `request/` package is a partial, inconsistent split (`chained.go`
 standalone, a generic `kind.go`, separate `dispatcher.go`). Unifying
 go-RCP and c-RCP onto the single-module shape is the largest structural
 change in this effort — sequenced last, after the smaller items above are
 stable, since it touches the most code per repo.
+
+**go-RCP wire-format finding (2026-08-02, not yet fixed):** beyond the
+module-shape gap above, go-RCP's `request/envelope.go` Compound,
+CompoundWait, Triggered, and Timed envelopes independently invent their
+own byte layout rather than TC18's real one — a correctness defect, not
+just an organizational one, separate from (and larger than) canonical
+choice #3's compound-wait-comparison gap above. Compound/CompoundWait use
+a generic value-comparison `Conditional`
+(`SequencerID`+`CompareOp`+`Operand`+`AdvanceOnMatch`) where TC18
+§11.2.2.1/§11.2.2.2 define a sequencer *state machine* instead
+(`cmp_start_state`/`cmp_next_state`/`cmp_sequencer`/`cmp_exec_delay`/
+`cmp_repetitions` — no value comparison at all); Triggered
+(`EncodeTriggered`/`DecodeTriggered`) encodes only a 1-byte source,
+missing 4 of TC18 §11.2.2.3 Table 8's 5 real fields
+(`trigger_signal_nr`/`trigger_threshold`/`trigger_exec_delay`/
+`trigger_repetitions`); Timed (`EncodeTimed`/`DecodeTimed`) uses an
+8-byte caller-defined microsecond clock where TC18 §11.2.2.5 defines a
+48-bit gPTP-domain `presentation_time` (6 bytes, 3.25-day rollover).
+rust-RCP's `src/request.rs` (real `start_state`-equality sequencer
+gating) and c-RCP's `request_compound.c`/`request_timed.c` are the
+correct reference shapes for the redesign. This is a multi-file semantic
+rewrite (sequencer-evaluation logic, not just wire bytes), not a quick
+patch. Tracked as go-RCP's largest open conformance item.
+
+**rust-RCP related finding (2026-08-02, not yet fixed):** while
+extracting SHOULD/MAY references, rust-RCP's Timed-request readiness
+check (`REQ-TIME-002`/`REQ-TIME-003`) was found to use `AvtpTimestamp` — a
+32-bit type rolling over every ~4.3 seconds — for what may need to be
+TC18 §11.2.2.5's 48-bit, 3.25-day-rollover `presentation_time` domain
+instead. Not confirmed as a bug (readiness-checking and admission-control
+are related but distinct concerns), but flagged for dedicated
+investigation given it's the same class of time-domain conflation as the
+confirmed go-RCP defect above.
 
 ### 5. Requirement-tag placement — per-function
 

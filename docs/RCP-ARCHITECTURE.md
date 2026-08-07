@@ -226,15 +226,51 @@ correct reference shapes for the redesign. This is a multi-file semantic
 rewrite (sequencer-evaluation logic, not just wire bytes), not a quick
 patch. Tracked as go-RCP's largest open conformance item.
 
-**rust-RCP related finding (2026-08-02, not yet fixed):** while
-extracting SHOULD/MAY references, rust-RCP's Timed-request readiness
-check (`REQ-TIME-002`/`REQ-TIME-003`) was found to use `AvtpTimestamp` — a
-32-bit type rolling over every ~4.3 seconds — for what may need to be
-TC18 §11.2.2.5's 48-bit, 3.25-day-rollover `presentation_time` domain
-instead. Not confirmed as a bug (readiness-checking and admission-control
-are related but distinct concerns), but flagged for dedicated
-investigation given it's the same class of time-domain conflation as the
-confirmed go-RCP defect above.
+**rust-RCP related finding — CONFIRMED (2026-08-02 flagged, 2026-08-07
+confirmed), not yet fixed:** rust-RCP's Timed-request readiness check
+(`REQ-TIME-002`/`REQ-TIME-003`) uses `AvtpTimestamp` — a 32-bit type
+rolling over every ~4.3 seconds — for a Timed request's presentation-time
+gate. This is no longer just flagged: the code's own doc comment
+("Provenance note: `TimedExecutionTime`'s wire placement, width...") is
+explicit that this was an unconfirmed judgment call, not a verified wire
+fact — "nothing in this crate's roadmap states that a Timed request's
+execution-time field is actually 32 bits wide." TC18's real
+`presentation_time` (§11.2.2.5, TC18.txt L1596-1649) is 48-bit,
+gPTP-domain, ~3.25-day rollover — a materially different value from
+`AvtpTimestamp`'s domain. Unlike the go-RCP finding above, this is a
+defect on an *existing, traced, tested* requirement, not an absence, so
+it is not staged in a `.fusa-reqs-pending.json` entry — it needs a direct
+fix (new type or width correction) in a future session.
+
+**cpp-RCP and rust-RCP field-level gaps beneath their correct module
+shape (found 2026-08-07):** both repos are correctly cited above as the
+*reference shape* for module unification — that assessment stands. But a
+closer, field-by-field read against TC18 §11.2.2 found both have real
+gaps underneath that good architecture, now staged in each repo's
+`.fusa-reqs-pending.json` (see the schema-6 pending-reqs mechanism
+above):
+
+- **cpp-RCP**: the opcode/routing/state-machine layer
+  (`RequestTypeOpcode`'s 8 real TC18 opcodes including 0x06
+  ClearNonSafestate, `mtv=false` repurposing, `expected_start_state`) is
+  correctly designed — not the same class of defect as go-RCP's
+  conditional-envelope layer. But three field-level behaviors are
+  genuinely absent (the real TC18 field names appear only in comments,
+  never as real fields/variables/consumed values anywhere in `include/`
+  or `src/`): Compound's `cmp_exec_delay`/`cmp_repetitions`, Triggered's
+  `trigger_source_ep`/`trigger_signal_nr`/`trigger_threshold`, and
+  Timed's `presentation_time` (no scheduling/dispatch logic exists
+  anywhere — a Timed request today has no distinguishing runtime
+  behavior from a standard one).
+- **rust-RCP**: notably more complete than cpp-RCP — `cmp_exec_delay`/
+  `cmpw_exec_delay`, `trigger_exec_delay`, and `trigger_repetitions`
+  (`TriggerRepeatCount`/`is_trigger_repeat_exhausted`) are all real,
+  well-tested implementations already. Two gaps remain: Compound/
+  CompoundWait's `cmp_repetitions`/`cmpw_repetitions` (repeat count) is
+  absent entirely, and Triggered's `trigger_source_ep`/
+  `trigger_signal_nr`/`trigger_threshold` are absent
+  (`should_count_trigger_occurrence(endpoint_busy)` always returns true
+  regardless of which signal or endpoint actually fired).
 
 ### 5. Requirement-tag placement — per-function
 
@@ -267,8 +303,22 @@ id, title, text, standard, level, asil, scope, status, tc18, tc18_master_id
 
 - `id`/`title`/`text`/`standard`/`level`/`asil` — already common to all four.
 - `scope`, `status` — c-RCP's convention (`status`: `implemented` /
-  `partial` / `not-implemented`, the mechanism that lets a genuine TC18 gap
-  be recorded honestly without breaking a 100%-traced CI gate).
+  `partial` / `not-implemented`). **Correction (2026-08-07): this is NOT a
+  working CI-gate exemption mechanism, contrary to what this document
+  previously claimed.** Directly verified: c-RCP has 148 requirements
+  labeled `partial`/`not-implemented` in `.fusa-reqs.json`, yet a freshly
+  built, CI-pinned `cfusa` (v0.5.50) reports c-RCP genuinely at 1023/1023
+  (100%) traced and tested — `cfusa`'s `--req-coverage 100`/`--sec-tested
+  100` gates do not read the `status` field at all. Those 148 labels are
+  stale/decorative: the requirements were actually finished at some point
+  after the label was written, and nothing ever updated it. The same
+  empirical test (a fake untraced entry added to a scratch copy of
+  go-RCP's `.fusa-reqs.json`) confirms `gofusa`'s CI check hard-fails on
+  any untraced/untested requirement with no exemption path at all. **No
+  tool in this ecosystem has a real status-based exemption mechanism.**
+  The `status` field may still be worth keeping as human-readable
+  documentation, but must not be relied on or assumed to affect tool
+  behavior.
 - `tc18` — c-RCP's existing citation-string convention:
   `"§X.Y Table N, TC18.txt L1234-1256"`.
 - `tc18_master_id` — **new**: the id of the corresponding entry in the
@@ -281,10 +331,23 @@ All four repos' x-FuSa tools (`gofusa`, `cfusa`, `cpfusa`, `rsfusa`)
 already tolerate unrecognized JSON fields without error — confirmed for
 `gofusa`/`cfusa` by direct testing; assumed but not yet spot-checked for
 `cpfusa`/`rsfusa`, to be confirmed before this schema is relied upon in
-those two repos. Whether `status`'s not-implemented exemption path
-already works (or needs adding) for `gofusa`/`cpfusa` specifically is
-also unconfirmed — go-RCP's CI gate today hard-fails on anything short of
-100% traced+tested with no exemption mechanism found so far.
+those two repos.
+
+**The real mechanism for a genuinely-missing (no requirement AND no
+implementation) TC18 clause, established 2026-08-07:** a `.fusa-reqs-
+pending.json` file at each repo's root — same field schema as that
+repo's own `.fusa-reqs.json`, plus a `gap` field explaining what's
+missing and the grep/read evidence behind that conclusion, and a
+`_readme` field explaining the convention inline. Confirmed, per repo,
+via a freshly built pinned tool, to be completely invisible to
+`gofusa`/`cfusa`/`cpfusa`/`rsfusa` (never read, never affects
+`check`/`trace` output), so it carries zero CI risk while still being a
+real, structured, migratable record. An entry moves into the real
+`.fusa-reqs.json` only once it has a genuine implementation and test.
+Already in place: cpp-RCP (conditional-request field gaps), rust-RCP
+(conditional-request field gaps), go-RCP (PWM_OUT Table 42 trigger
+signals) — see each repo's own `.fusa-reqs-pending.json` and canonical
+choice #4 below for the conditional-request findings specifically.
 
 ### 7. Conditional-request requirement-id grouping — c-RCP's split
 

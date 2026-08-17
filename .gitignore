@@ -11,6 +11,7 @@
 *.exe
 *.exe~
 *.out
+*.pdf
 *.so
 *.swo
 *.swp

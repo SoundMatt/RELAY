@@ -322,8 +322,13 @@ id, title, text, standard, level, asil, scope, status, tc18, tc18_master_id
 - `tc18` — c-RCP's existing citation-string convention:
   `"§X.Y Table N, TC18.txt L1234-1256"`.
 - `tc18_master_id` — **new**: the id of the corresponding entry in the
-  640-entry master TC18 requirement catalog built for this propagation
-  effort (`TC18-11.3-006` etc.), so cross-repo reconciliation becomes an
+  447-entry master TC18 requirement catalog built for this propagation
+  effort (`TC18-11.3-006` etc.; published at
+  [`docs/tc18-master-catalog.json`](tc18-master-catalog.json), merged
+  from 16 parallel page-range extraction agents against RC5, verified
+  duplicate-free and spot-checked against the source PDF — the earlier
+  "640-entry" figure quoted here was a stale estimate from before the
+  catalog was actually built), so cross-repo reconciliation becomes an
   exact-match lookup instead of the line-range-overlap heuristic
   `cross_reference.py` currently has to use.
 

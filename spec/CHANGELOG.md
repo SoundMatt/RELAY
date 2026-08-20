@@ -1,5 +1,32 @@
 # RELAY Spec Changelog
 
+## v2.0.5 — 2026-08-20 (doc addition; no normative change to existing conformant implementations)
+
+- **§15.7.5**: added guidance for protocol bindings whose underlying wire
+  protocol has several independently fixed-shape request/response pairs
+  and no shared generic envelope beneath the fields this section's own
+  reference mapping already covers — the case RCP's own TC18 binding hits
+  (13 heterogeneous endpoint/operation types: GPIO, SPI, I²C, UART, ADC,
+  both PWM directions, LIN, CAN, ISELED, MDIO, both WakeUp operations,
+  discovery). Closes #66.
+- Deliberately does not mandate one answer: a cross-repo survey of all
+  four independent TC18 implementations found real, working, divergent
+  strategies. cpp-RCP, rust-RCP, and go-RCP independently (no
+  coordination between them) kept `Adapt` at this section's own generic
+  ACF-envelope layer, pushing endpoint-type-specific payload
+  encoding/decoding out to the caller via each endpoint type's own module.
+  c-RCP alone (`include/rcp/adapt.h`/`src/adapt.c`) built a richer,
+  per-operation-opcode dispatcher inside `Adapt` itself, narrowing
+  `Caller` scope to one endpoint-type family and exposing type-specific
+  fields via a `"rcp.<endpoint-type>.<field>"` `Meta` convention. Both are
+  now documented as conformant strategies, mirroring this section's own
+  pre-existing permissive pattern for multi-stream `ID` encoding (same
+  "document your choice in the `Adapt` doc comment" disclosure
+  requirement, no single mandated format).
+- `SpecVersion` unchanged (`2.0`); no existing conformant implementation
+  (including all four current RCP bindings, using either strategy) is
+  made non-conformant by this addition.
+
 ## v2.0.4 — 2026-07-30 (bug fix; no semantic change)
 
 - **`go.mod`**: module path was still `github.com/SoundMatt/RELAY` after the

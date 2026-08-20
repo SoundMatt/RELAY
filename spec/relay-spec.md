@@ -1856,6 +1856,53 @@ conformant multi-stream encoding MUST be unambiguous, round-trip losslessly
 through `ID`, and be documented in the implementation's own `Adapt` doc
 comment.
 
+**Heterogeneous, fixed-shape endpoint types.** TC18 itself defines 13
+independently fixed-shape endpoint/operation types (GPIO, SPI, I²C, UART,
+ADC, PWM in each direction, LIN, CAN, ISELED, MDIO, the two WakeUp
+operations, and discovery), each with its own request/response struct and
+its own encode/decode pair, and no generic "Command" envelope beneath
+`ByteBusID`/`Control`/`Body` for a binding to hang endpoint-type-specific
+fields on. The table above only carries the fields every endpoint type
+shares (`ByteBusID`, `Control`, `Body`, `TransactionNum`,
+`ReadSizeOrSegment`); it does not by itself resolve how a binding is
+supposed to expose the other 13-endpoint-type-specific fields (e.g. an
+SPI request's channel select, an MDIO request's clause/PRTAD/DEVAD/REGAD,
+a CAN request's frame format) through `relay.Message`.
+
+This section deliberately does not mandate one answer, because real,
+independent TC18 implementations validate more than one as conformant:
+
+- **Push the type-specific shape entirely into `Body`.** Keep `Adapt`
+  operating at this section's own generic ACF-envelope layer — the frame
+  header fields every endpoint type shares — and treat each endpoint
+  type's own payload bytes as opaque, letting the caller encode/decode
+  them via that endpoint type's own module before calling `Send`/`Call`
+  and after reading the response. `Adapt` then wraps one whole
+  already-dialed `Controller`/stream, spanning all 13 endpoint types and
+  every `ByteBusID` on it, exactly as this section's own reference mapping
+  above already does. Three independent TC18 implementations across three
+  languages converged on this strategy without coordinating with each
+  other.
+- **Resolve the shape inside a richer `Adapt`-layer dispatcher.** Add a
+  binding-local, per-*operation* (not merely per-endpoint-type — a read
+  and a write on the same endpoint can pack completely different fields)
+  opcode, dispatch `ToMessage`/`FromMessage` on it explicitly, and expose
+  the type-specific fields as additional, binding-documented `Meta` keys
+  (e.g. a `"<protocol>.<endpoint-type>.<field>"` naming convention). Under
+  this strategy `Adapt` narrows its scope to one endpoint-type family per
+  wrapped `Caller`, and the message's `Meta` names which operation on that
+  family it is. One independent implementation took this approach.
+
+A conformant binding MAY choose either strategy (or, per the multi-stream
+paragraph above, extend `ID`'s own encoding instead, if that alone is
+sufficient); whichever it picks, the choice — including any additional
+`Meta` key convention — MUST be documented in the implementation's own
+`Adapt` doc comment, the same disclosure this section already requires for
+a multi-stream `ID` encoding. This is not RCP-specific: any future binding
+whose underlying protocol has several independently fixed-shape
+request/response pairs with no shared generic envelope faces the identical
+choice, for the identical reason.
+
 **15.7.6 SOME/IP `Message.ToMessage()` / `FromMessage()`**
 
 | relay.Message field | someip.Message field | Notes |

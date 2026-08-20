@@ -354,6 +354,70 @@ mandatory sentinel with `%w` so `errors.Is` reaches the RELAY sentinel.
 | SOMEIP | `ErrUnknownMethod` | `ErrNotConnected` | Method ID not registered |
 | SOMEIP | `ErrMalformedMessage` | `ErrPayloadTooLarge` | Header or payload malformed |
 
+### 5.5 Adding a protocol-specific error post-launch
+
+§3.1 covers adding an entirely new protocol. This subsection covers the
+narrower, more common case: a protocol that has already shipped needs a new
+protocol-specific error condition surfaced to callers.
+
+**When a new sentinel is warranted.** A new §5.4 entry is warranted when the
+condition is:
+
+1. **Distinguishable in practice** — a caller handling it needs to tell it
+   apart from every existing §5.1 and §5.4 sentinel for that protocol (e.g. a
+   `catch`/`match`/`errors.Is` branch that behaves differently for this
+   condition than for any sentinel already defined).
+2. **Not a shape of an existing sentinel** — the condition is not just a
+   protocol-specific instance of one of the four mandatory sentinels (§5.1)
+   or an already-defined §5.4 entry with a slightly different trigger. If it
+   is, wrap the existing sentinel from the new call site (§5.2) instead of
+   defining a new one — most "new error" instincts are actually this case.
+3. **Reachable through the mandatory interface** — the condition can occur
+   through the protocol's own mandatory interface (§8) as specified today,
+   not only through an optional extension (§9) or a hypothetical future one.
+
+If a condition fails any of these three, it does not need a new sentinel: use
+an existing one (possibly wrapping it more specifically per §5.2), or, if the
+condition can't occur through the mandatory interface at all, it isn't a
+RELAY-spec concern yet.
+
+**Process.** Adding a warranted sentinel to an already-shipped protocol:
+
+1. Open a PR against this spec adding the new row to the §5.4 table —
+   protocol, exact error name, the mandatory sentinel it wraps per §5.2, and
+   the precise condition — **before** any implementation ships the sentinel.
+   The table is the ecosystem-consistency contract (§5.4's own opening
+   sentence): a sentinel two implementations both need has to be named and
+   specified identically, which a single implementation's own PR can't
+   establish on its own.
+2. The new error name MUST NOT collide with an existing name already used
+   for a *different* condition on the same protocol, and SHOULD reuse an
+   existing name across protocols only when the condition is genuinely the
+   same shape (e.g. `ErrTopicEmpty` already appears for both DDS and MQTT
+   because both have an empty-topic-string condition with identical
+   semantics — this is the reuse this rule permits, not a coincidence to
+   avoid).
+3. This is an additive change to an enumerated table, not a new normative
+   requirement layered on existing implementations — it does not, on its
+   own, need a spec MINOR bump the way §3.1's new-protocol process does
+   (that adds a whole new protocol identifier and interface surface).
+   §19.1's own scheme has no dedicated tier for this: it is closest to that
+   scheme's "clarification, editorial" row, so the `vMAJOR.MINOR` identifier
+   itself is normally unaffected. It still gets a `CHANGELOG.md` entry
+   recording exactly what was added, following the same `vMAJOR.MINOR.N`
+   changelog-tracking convention already used for prior doc-only additions
+   (e.g. this subsection's own entry). Judge against §19.1's table directly
+   if the addition is entangled with a larger, genuinely MINOR change in
+   the same release.
+4. Only after the spec PR merges does an implementation's own PR define and
+   export the sentinel, following §5.2's wrapping semantics from its first
+   commit rather than retrofitting `%w` later.
+
+Skipping step 1 is exactly how the gap this subsection closes was created: a
+shipped, exported protocol error sentinel with no corresponding §5.4 row,
+because no documented process existed for adding one after a protocol's
+initial adoption.
+
 ---
 
 ## 6. Lifecycle Requirements

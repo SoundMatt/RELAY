@@ -1,5 +1,32 @@
 # RELAY Spec Changelog
 
+## v2.0.7 — 2026-08-20 (doc addition; no normative change to existing conformant implementations)
+
+- **§5.5 — Adding a protocol-specific error post-launch**: §3.1 already
+  covered adding an entirely new protocol; there was no equivalent guidance
+  for the narrower, more common case of adding a new protocol-specific
+  error sentinel to a protocol that has already shipped. New subsection
+  gives a three-part test for when a new §5.4 table entry is actually
+  warranted vs. when the condition should just wrap an existing sentinel
+  (§5.2), plus the process itself: the §5.4 table row lands via a spec PR
+  *before* any implementation ships the sentinel, since the table is the
+  ecosystem-consistency contract a single implementation's own PR can't
+  establish on its own. Closes [REL-SPEC-8].
+- Motivated by a concrete instance the finding names: a shipped, exported
+  go-SOMEIP error sentinel with no corresponding §5.4 row, apparently
+  because no documented process existed for adding one post-launch. Only
+  the spec-level process gap is addressed here — the go-SOMEIP instance
+  itself (filed separately as RELAY-TERM-04) is that repo's own follow-up,
+  not fixed by this change.
+- Inserted as a new §5.5 subsection immediately after §5.4 (not a trailing
+  appendix like [REL-SPEC-1]/v2.0.6): a decimal subsection number under an
+  existing top-level section doesn't renumber anything else, so this can
+  live next to the material it governs without the cross-reference-breakage
+  concern a new top-level section would raise.
+- `SpecVersion` unchanged (`2.0`); no existing conformant implementation is
+  made non-conformant — this documents a process for future additions, it
+  does not itself add, remove, or rename any interface, type, or sentinel.
+
 ## v2.0.6 — 2026-08-20 (doc addition; no normative change to existing conformant implementations)
 
 - **Appendix B — Quickstart for Implementers**: added a non-normative,

@@ -1,5 +1,27 @@
 # RELAY Spec Changelog
 
+## v2.0.6 — 2026-08-20 (doc addition; no normative change to existing conformant implementations)
+
+- **Appendix B — Quickstart for Implementers**: added a non-normative,
+  linear build-order walkthrough (9 steps, worked example over CAN) tying
+  together the ~20 sections a conformant implementation touches
+  (constructor contract §7, protocol interfaces §8, error sentinels §5,
+  lifecycle §6, `Adapt()` §10.3-10.5, canonical types §15, subscriber
+  helpers §14.1, CLI contract §11, capability discovery §12, conformance
+  §17, continuous conformance §20). Every requirement it walks through is
+  cited to its own authoritative section — the appendix restates nothing
+  and adds no new MUST/SHOULD text of its own.
+- Motivated by [REL-SPEC-1]: THEME-A found 13 of 18 ports drifted off the
+  current spec version, and implementers evidently find self-checking
+  re-conformance hard today with the requirements scattered by topic
+  rather than sequenced by build order. Placed as a trailing appendix
+  (after Appendix A) rather than inserted early in the document, so no
+  existing section number changes and no cross-reference anywhere in the
+  ecosystem (docs, code comments, other repos' issues) breaks.
+- `SpecVersion` unchanged (`2.0`); no existing conformant implementation
+  is made non-conformant by this addition, since it adds no new
+  requirement.
+
 ## v2.0.5 — 2026-08-20 (doc addition; no normative change to existing conformant implementations)
 
 - **§15.7.5**: added guidance for protocol bindings whose underlying wire

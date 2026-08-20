@@ -2756,3 +2756,122 @@ summary.
 | relay::Context (C++) | n/a | n/a | n/a | n/a | n/a | n/a | ✅ as rcp:: |
 
 **Legend:** ✅ conforms · ✗ missing · ⚠ breaking change required · ? unknown · n/a not applicable
+
+---
+
+## Appendix B — Quickstart for Implementers
+
+*(Added post-v1.11, [REL-SPEC-1]. Not itself normative — every requirement it
+walks through is normative in its own authoritative section, cited inline.
+This appendix restates nothing; it only sequences.)*
+
+The requirements a conformant implementation MUST satisfy are scattered across
+roughly twenty sections because each one is normative on its own — a
+requirements document is organized by *topic* (constructors, interfaces,
+lifecycle, wire types…), not by *build order*. This appendix is the missing
+build-order narrative: one linear pass through building a minimal conformant
+port from scratch, cross-referencing the authoritative section for each step
+rather than restating it. Skipping straight to §7 first (as a spec normally
+reads) works too — this appendix exists for readers who want the shape of the
+whole job before the detail of any one piece of it.
+
+The worked example below targets CAN (`go-CAN`), the simplest of the six
+protocols in §3 (no request/response, no service discovery, no QoS). The same
+nine steps apply to every protocol — substitute the relevant rows from each
+section's per-protocol table (§8, §10.3, §10.4, §12.2, §15) for a different
+target.
+
+**1. Package layout.** Create `github.com/SoundMatt/go-CAN`, importing
+`github.com/SoundMatt/RELAY/v2` as its only RELAY dependency (§13.6) — the
+`/v2` suffix on RELAY's own path is required because `SpecVersion` is 2.0+
+(§13.4); `go-CAN`'s own module path carries no version suffix until *its own*
+module reaches v2, at which point standard Go semantic-import-versioning
+applies (unrelated to RELAY's `SpecVersion`). Until RELAY is published, add
+the `replace` directive in §7.1 — remove it before conformance CI runs (CI
+MUST NOT use `replace`, §7.1). Binary name `cantool` per §13.2.
+
+**2. Error sentinels.** Define the four mandatory sentinels from §5.1
+(`ErrClosed`, `ErrNotConnected`, `ErrTimeout`, `ErrPayloadTooLarge`) before
+writing any interface method — every one of them is a return value some
+method below will need on its first day. Follow §5.2's wrapping semantics
+(`errors.Is` MUST unwrap to one of the four) from the start; retrofitting
+wrapping after methods already return bare sentinels is the harder order.
+
+**3. The protocol interface.** Implement `Bus` exactly as specified in §8.1:
+`Send`, `Subscribe`, `Close`, plus the package-level `ValidateFrame` and
+`MaxDataLen` functions. `Subscribe`'s `filters []Filter` parameter is a slice,
+not variadic (§8.1's own note on why). Every method here returns one of step
+2's sentinels in the situations §6 specifies — write the interface and the
+lifecycle rules together, not the interface first and lifecycle later:
+idempotent `Close()`, `ErrClosed` after close, zero-value safety without a
+constructor call (§6, requirements 1/2/9). The `LoaningBus` extension
+(`Loan`/`SendLoaned`) is optional (§9) — skip it for a first pass.
+
+**4. Constructor and mock.** Export `New` per one of the three forms in §7 —
+CAN is a hardware transport, so Form 1 (`New(ctx, endpoint string, opts
+...Option) (Bus, error)`) is preferred. §7 rule 4 is easy to miss because it's
+a *mandatory* obligation attached to the interface, not the constructor
+signature: every implementation MUST also ship a `mock` sub-package with a
+Form 2 `New(opts ...Option) Bus` returning a fully working in-process `Bus` —
+this is what every test in steps 5-9 below runs against, and what `relay
+interop` (§20.2) drives when no hardware is present.
+
+**5. Frame validation.** `ValidateFrame` (declared in step 3) enforces the
+bit-level constraints §15.1 lists for CAN: standard/extended ID ranges,
+BRS/FD and RTR/FD mutual constraints, FD/XL mutual exclusion, per-format data
+length ceilings. These are Conformance Requirement 11 (§17) — get them from
+§15.1's constraint list directly rather than re-deriving them from the CAN
+spec, since the RELAY-specific combinations (e.g. FD and XL being mutually
+exclusive formats) are a RELAY modeling choice, not a verbatim restatement of
+ISO 11898.
+
+**6. `Adapt()` and canonical conversion.** Export `Adapt(bus Bus) relay.Node`
+at the package root (§10.3's CAN row). `Adapt()` MUST NOT block — it wraps,
+it does not connect. Internally it uses `Frame.ToMessage()`/`FromMessage()`
+(§15.7.1's field-mapping table) for every conversion, and follows §10.4's CAN
+routing row for how `Message.ID`/`Meta` map onto `Frame.ID` and the `can.*`
+flag keys. The inbound goroutine model in §10.5 governs how `Subscribe()`
+frames reach the channel `Node.Subscribe()`
+returns — this is the part of `Adapt()` most implementations get wrong on a
+first pass (back-pressure and channel lifetime interact with §6's lifecycle
+rules), so read §10.5 fully before writing it, not after debugging a stuck
+goroutine.
+
+**7. Subscriber helpers.** Export `SubscriberConfig`, `SubscriberOption`,
+`ApplySubscriberOpts`, `ChanDepth` with the exact names and default depth (64)
+from §14.1. CAN uses none of the protocol-specific routing fields
+(`EventID`/`TopicName` are SOMEIP/DDS-only) — `WithChannelDepth`/
+`WithBackPressure` are the only options a CAN adapter needs to honor.
+
+**8. CLI and capability discovery.** Implement the three mandatory commands
+from §11.1 (`version`, `capabilities`, `status`) with the JSON schemas in
+§12.1-12.3. `capabilities` is the single most load-bearing document in the
+whole spec for a new reader: `"adapt": true` (set once step 6 exists),
+`"commands"` and `"interfaces"` list what's actually implemented, and
+`"features"` uses CAN's defined vocabulary (`"fd"`, `"isotp"`, `"j1939"`,
+`"uds"`, `"obdii"` — §12.2's CAN rows) rather than inventing new strings.
+`send`/`subscribe`/`convert` (§11.2) are optional but strongly recommended —
+`convert` in particular is what lets `relay interop` (§20.2) check the
+implementation's `ToMessage()` conversion against the reference without a
+second protocol implementation present.
+
+**9. Wire up CI and check conformance.** `relay conform <binary>` (§17's own
+black-box-coverage discussion) is a **black-box** check: it validates the CLI JSON
+schemas and Conformance Requirement 7 fully, and partially checks Requirements
+1, 6, and 12 — it structurally cannot see Requirements 2-5, 8-11 (the
+interface, sentinel, lifecycle, constructor, and frame-constraint rules from
+steps 2-5 above), which the implementation's own test suite must verify
+instead. §20.1 lists the three CI gates a conformant implementation's default
+branch and every PR MUST run and fail on: `relay conform --strict`, the
+language's full x-FuSa lifecycle (100% requirement traceability, not just an
+ERROR-severity gate), and — once `convert` exists — `relay interop` reporting
+EQUIVALENT for every golden vector. A green run of all three, on a release
+commit, is what §17's conformance definition and §20's continuous-conformance
+requirement together mean by "conformant": not "was conformant once," but
+"is conformant on every commit that ships."
+
+That's the whole shape of a minimal CAN port. Steps 1-2 and 7-9 are close to
+identical across protocols; steps 3-6 are where each protocol's own tables in
+§8, §10.3, §10.4, §12.2, and §15 diverge — read the equivalent row for the
+target protocol at each step rather than assuming CAN's own detail transfers
+verbatim.

@@ -64,8 +64,8 @@ Current status per repo:
 |---|---|
 | cpp-RCP | conformant (reference implementation) |
 | c-RCP | conformant (fixed, c-RCP#151) |
-| go-RCP | conformant (`Message.ResponseKind`, go-RCP#156) |
-| rust-RCP | conformant (`ByteMessageInfo::response_kind`, rust-RCP#138, merged) |
+| go-RCP | **classifier implemented and correct (`Message.ResponseKind`, go-RCP#156), but not wired into any production dispatch/response-handling path — `udp/controller.go` and `mock/client.go` both reimplement narrower, raw classification instead. Still open work.** |
+| rust-RCP | **classifier implemented and correct (`ByteMessageInfo::response_kind`, rust-RCP#138), but not called anywhere outside its own test file — `adapt.rs::to_message` builds its `meta` map from `op` alone and never surfaces evt/err/Acknowledge. Still open work.** |
 
 ### 2. Table 30 / evt[2:0] write semantics — one centralized module
 
@@ -81,12 +81,20 @@ fixed in go-RCP's v8.0.0).
 
 Current status per repo:
 
-| Repo | Status |
-|---|---|
-| c-RCP | **conformant (reference implementation, fixed this pass)** |
-| go-RCP | conformant (`acf/evt.go`) |
-| rust-RCP | conformant (`evtgroup.rs`) |
-| cpp-RCP | conformant (`endpoint::WriteSemantics` in `include/rcp/endpoint.hpp`, correctly called into by e.g. `gpio.hpp`'s `apply_gpio_write`) |
+This table covers all three of Table 30's endpoint-type rows: SPI's own
+channel-select row, the GPIO/PWM_OUT write-combining row, and the shared
+"Row 2" plain-request rule (`{ADC, PWM_IN, I2C, LIN, CAN, UART, ISELED,
+MDIO}`, `evt[2:0]` must be `000b`). A repo can be conformant for the first
+two rows while having no implementation at all for Row 2 — that is exactly
+cpp-RCP's and rust-RCP's current state, corrected below (previously this
+table wrongly marked both "conformant").
+
+| Repo | SPI row | GPIO/PWM_OUT row | Row 2 (8 endpoint types) |
+|---|---|---|---|
+| c-RCP | conformant (`rcp_ep_spi_channel_valid()`) | conformant (`rcp_ep_gpio_write_semantics_valid()`) | **conformant (reference implementation, fixed this pass) — `rcp_acf_evt_row2_is_plain()`, called consistently from all 8 endpoint files** |
+| go-RCP | conformant | conformant | conformant (`acf/evt.go`) |
+| cpp-RCP | conformant (`spi::channel_of`) | conformant (`endpoint::WriteSemantics`, called into by e.g. `gpio.hpp`'s `apply_gpio_write`) | **not implemented — none of the 8 Row-2 endpoint types (`can.hpp`, `lin.hpp`, `adc.hpp`, `i2c.hpp`, `uart.hpp`, `iseled.hpp`, `mdio.hpp`, plus PWM_IN) have any ACF-header evt decode or dispatch wiring yet; `mock::Server::dispatch()` only routes EP0/GPIO/SPI. Greenfield work, not a dedup refactor.** |
+| rust-RCP | conformant (`SpiChannelSelect::from_sub_opcode`) | conformant (`GpioWriteSemantics::from_sub_opcode`) | **not implemented — `evtgroup.rs`'s `classify_evt_sub_opcode` is a stub that always returns `None` by design (its own doc comment says so); none of `can.rs`/`lin.rs`/`adc.rs`/`i2c.rs`/`uart.rs`/`iseled.rs`/`mdio.rs`/`pwm.rs` (PWM_IN) read `evt` at all. Greenfield work, not a dedup refactor.** |
 
 **c-RCP finding, resolved.** Table 30's endpoint-type row
 `{ADC, PWM_IN, I2C, LIN, CAN, UART, ISELED, MDIO}` allows `evt[2:0] =

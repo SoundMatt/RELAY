@@ -518,9 +518,7 @@ func MaxDataLen(fd bool) int // 64 if fd, else 8
 ```
 
 Note: the `filters` parameter is a slice (not variadic) to avoid ambiguity with
-the variadic `opts`. Pass `nil` to receive all frames. This is a breaking change
-from go-CAN's current `Subscribe(filters ...Filter)` signature — tracked in
-Appendix A.
+the variadic `opts`. Pass `nil` to receive all frames.
 
 ### 8.2 DDS
 
@@ -583,7 +581,6 @@ func CalcChecksum(pid uint8, data []byte, ct ChecksumType) uint8
 ```
 
 Note: same slice-not-variadic pattern as CAN (§8.1) for the same reason.
-`SetSchedule` is new — tracked as a gap in go-LIN (Appendix A).
 
 ### 8.4 MQTT
 
@@ -1486,7 +1483,7 @@ func (c SubscriberConfig) ChanDepth(defaultDepth int) int {
 }
 ```
 
-The names `SubscriberConfig` and `SubscriberOption` MUST be used consistently across all protocols. (go-SOMEIP currently uses `SubscribeConfig`/`SubscribeOption` — tracked gap in Appendix A.)
+The names `SubscriberConfig` and `SubscriberOption` MUST be used consistently across all protocols.
 
 Until `github.com/SoundMatt/RELAY` is published (see §7.1), implementations that
 need these helpers MUST define them locally with identical signatures. When RELAY
@@ -1586,7 +1583,7 @@ by the spec. The `release` field is unexported to prevent callers from bypassing
 - Standard ID (Ext=false): 0x000–0x7FF
 - Extended ID (Ext=true): 0x00000000–0x1FFFFFFF
 - BRS MUST be false when FD is false
-- RTR MUST be false when FD is true *(gap in existing go-CAN: this check is absent — see Appendix A)*
+- RTR MUST be false when FD is true
 - len(Data) ≤ 8 when FD is false; ≤ 64 when FD is true
 - FD and XL MUST NOT both be set (mutually exclusive formats)
 - ESI MUST be false unless FD or XL is set
@@ -2850,7 +2847,8 @@ This table is a historical snapshot taken during the v0.2 milestone and has not
 been updated since; it does not reflect current x-Net implementation status. For
 current, machine-checked conformance, run `relay conform` against each
 implementation's binary or `relay report --scan` for a cross-implementation
-summary.
+summary. For specific, named implementations' known current deviations from
+this spec, see `docs/KNOWN_GAPS.md`.
 
 | Requirement | go-CAN | go-DDS | go-LIN | go-mqtt | go-RCP | go-SOMEIP | cpp-RCP |
 |---|---|---|---|---|---|---|---|

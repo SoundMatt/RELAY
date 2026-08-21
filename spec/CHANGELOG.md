@@ -1,5 +1,47 @@
 # RELAY Spec Changelog
 
+## v2.7 — 2026-08-21 (MINOR — new protocol/model retirement process, §17 Requirement 17)
+
+- **New §3.2 "Retiring a protocol or model".** §19.2's existing deprecation
+  policy governs only a single MUST requirement's removal; it had nothing
+  to say about retiring a whole canonical model (the way §15.5's RCP types
+  were rewritten for TC18 conformance). Defines a `retired[]`/`deprecated[]`
+  array pair for `spec/version.json`, each entry a `{name, since, removal,
+  reason}` record — `name` matching what an implementation would otherwise
+  advertise in `features`/`commands` (§12.2).
+- **New §17 Requirement 17 — no retired capabilities past removal.** A
+  capabilities document whose declared `spec_version` is at or past a
+  `retired[]` entry's `removal` version MUST NOT still list that entry's
+  `name`. Unlike Requirements 13–16, this is fully within `relay conform`'s
+  own reach: the check only needs two things it already fetches over the
+  CLI (declared `spec_version`, declared `features`/`commands`) compared
+  against `relay conform`'s own embedded `spec/version.json` — the same
+  authoritative source §19.4 already points to. Full black-box coverage,
+  like Requirement 7.
+- **`retired[]`/`deprecated[]` start empty, deliberately not backfilled.**
+  RELAY's own pre-TC18 RCP placeholder-model replacement (§15.5, v2.0)
+  predates this section: it was an instant MAJOR-version breaking
+  replacement with no compatibility window, not a `since`/`removal`-spaced
+  retirement this mechanism is designed to track. Force-fitting it into
+  `retired[]` would misrepresent history as having had a graceful
+  deprecation window it never had. This section governs retirements
+  declared from here onward.
+- **Bug found and fixed while wiring Requirement 17's manifest entry**:
+  `buildManifest`'s Requirement 6 and Requirement 1 statuses were computed
+  from `hasFail(cFindings)`/an incomplete filter that didn't account for
+  the capabilities command failing to run at all (§17.7) as a superset
+  failure — a gap that would have let Requirement 17's new, differently-
+  cited findings silently miscolor Requirement 6's own status once mixed
+  into the same findings list. Introduced a shared `capsUnreachable` check
+  used by Requirements 1, 6, and 17 alike; mutation-tested (reverted,
+  confirmed `TestBuildManifestFailPropagatesToOverall` failed, restored).
+- **Reference implementation**: `checkRetiredCapabilities`/
+  `specVersionAtLeast`/`loadRetiredCapabilities` in `cmd/relay/conform.go`,
+  wired into `validateCapabilitiesDoc`. New `REQ-RELAY-099`. 8 new tests,
+  including a real mutation test on the check's core comparison logic.
+- `SpecVersion` bumped `2.6` → `2.7` (MINOR, new §17 requirement). Closes
+  [NEW-SPEC-5].
+
 ## v2.6 — 2026-08-21 (MINOR — new release conformance attestation format)
 
 - **New §20.6 — Release conformance attestation (`relay-conform-attestation/1`).**

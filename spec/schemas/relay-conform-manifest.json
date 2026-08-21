@@ -56,7 +56,7 @@
                 "required": ["id", "status", "verifier"],
                 "additionalProperties": false
             },
-            "description": "One entry per §17 requirement (1-16, extended as the requirement list grows)."
+            "description": "One entry per §17 requirement (1-17, extended as the requirement list grows)."
         },
         "overall": {
             "type": "string",

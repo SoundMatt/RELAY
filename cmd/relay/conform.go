@@ -15,6 +15,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -282,15 +283,25 @@ func buildManifest(binary string) conformManifest {
 		sFindings = validateStatusDoc(statusJSON)
 	}
 
+	// capsUnreachable is true when the capabilities command couldn't even be
+	// run/parsed at all (§17.7) — a total failure that subsumes every
+	// narrower capabilities-doc check below.
+	capsUnreachable := hasFailWithReq(cFindings, "§17.7")
+
 	req1 := statusPass
 	// Requirement 1 (protocol declaration) spans both documents: spec_version
 	// shape (version doc) and the capabilities doc's own protocol-null check
 	// (§12.2, gated on multi_protocol — see validateCapabilitiesDoc).
-	if hasFail(vFindings) || hasFailWithReq(cFindings, "§12.2") {
+	if hasFail(vFindings) || capsUnreachable || hasFailWithReq(cFindings, "§12.2") {
 		req1 = statusFail
 	}
+
 	req6 := statusPass
-	if hasFail(cFindings) {
+	// Requirement 6 (application interface) is specifically the adapt=false
+	// check (§17.6) — filtered so an unrelated capabilities-doc FAIL (e.g.
+	// Requirement 17's retirement check) doesn't misreport this requirement,
+	// but still FAILs if the capabilities doc couldn't be fetched at all.
+	if capsUnreachable || hasFailWithReq(cFindings, "§17.6") {
 		req6 = statusFail
 	}
 	req7 := statusPass
@@ -300,6 +311,10 @@ func buildManifest(binary string) conformManifest {
 	req12 := statusShapeOnly
 	if hasFail(vFindings) {
 		req12 = statusFail
+	}
+	req17 := statusPass
+	if capsUnreachable || hasFailWithReq(cFindings, "§3.2") {
+		req17 = statusFail
 	}
 
 	m.Requirements = []manifestRequirement{
@@ -319,6 +334,7 @@ func buildManifest(binary string) conformManifest {
 		{14, statusNotObservable, verifierCI},
 		{15, statusNotObservable, verifierManifestSplit},
 		{16, statusNotObservable, verifierCI},
+		{17, req17, verifierRelayConform},
 	}
 
 	m.Overall = statusPass
@@ -538,6 +554,105 @@ func validateCapabilitiesDoc(data []byte) []conformFinding {
 		}
 	}
 
+	// §3.2 / §17 Requirement 17: a capabilities doc MUST NOT still advertise a
+	// retired capability at or past its removal version.
+	if specVersion, ok := doc["spec_version"].(string); ok {
+		fs = append(fs, checkRetiredCapabilities(specVersion, doc, loadRetiredCapabilities())...)
+	}
+
+	return fs
+}
+
+// retiredEntry is one entry in spec/version.json's retired[]/deprecated[]
+// arrays (§3.2).
+type retiredEntry struct {
+	Name    string `json:"name"`
+	Since   string `json:"since"`
+	Removal string `json:"removal"`
+	Reason  string `json:"reason"`
+}
+
+// loadRetiredCapabilities parses RELAY's own embedded spec/version.json and
+// returns its retired[] entries (§3.2). Returns nil, not an error, if the
+// embedded document is unparseable — this check degrades to a no-op rather
+// than failing every conform invocation on an unrelated defect.
+func loadRetiredCapabilities() []retiredEntry {
+	raw, err := relay.Evidence("version")
+	if err != nil {
+		return nil
+	}
+	var meta struct {
+		Retired []retiredEntry `json:"retired"`
+	}
+	if err := json.Unmarshal(raw, &meta); err != nil {
+		return nil
+	}
+	return meta.Retired
+}
+
+// parseSpecVersion parses a "MAJOR.MINOR" spec version string.
+func parseSpecVersion(s string) (major, minor int, ok bool) {
+	parts := strings.SplitN(s, ".", 2)
+	if len(parts) != 2 {
+		return 0, 0, false
+	}
+	maj, err1 := strconv.Atoi(parts[0])
+	min, err2 := strconv.Atoi(parts[1])
+	if err1 != nil || err2 != nil {
+		return 0, 0, false
+	}
+	return maj, min, true
+}
+
+// specVersionAtLeast reports whether a >= b, both "MAJOR.MINOR" strings.
+// Returns false (fail-safe: does not trigger retirement enforcement) if
+// either string cannot be parsed.
+func specVersionAtLeast(a, b string) bool {
+	aMaj, aMin, aOK := parseSpecVersion(a)
+	bMaj, bMin, bOK := parseSpecVersion(b)
+	if !aOK || !bOK {
+		return false
+	}
+	if aMaj != bMaj {
+		return aMaj > bMaj
+	}
+	return aMin >= bMin
+}
+
+// checkRetiredCapabilities cross-references a binary's declared spec_version
+// and capabilities (features/commands) against a retired[] list (§3.2, §17
+// Requirement 17), FAILing any capability still advertised at or past its
+// recorded removal version.
+//
+//fusa:req REQ-RELAY-099
+func checkRetiredCapabilities(specVersion string, capsDoc map[string]interface{}, retired []retiredEntry) []conformFinding {
+	if specVersion == "" || len(retired) == 0 {
+		return nil
+	}
+	named := map[string]bool{}
+	if cmds, ok := capsDoc["commands"].([]interface{}); ok {
+		for _, c := range cmds {
+			if s, ok := c.(string); ok {
+				named[s] = true
+			}
+		}
+	}
+	if feats, ok := capsDoc["features"].([]interface{}); ok {
+		for _, f := range feats {
+			if s, ok := f.(string); ok {
+				named[s] = true
+			}
+		}
+	}
+	var fs []conformFinding
+	for _, r := range retired {
+		if !specVersionAtLeast(specVersion, r.Removal) {
+			continue
+		}
+		if named[r.Name] {
+			fs = append(fs, fail("§3.2", "capabilities doc: declares retired capability %q, which MUST be removed at spec_version %s (removal version %s)", r.Name, specVersion, r.Removal))
+		}
+	}
 	return fs
 }
 

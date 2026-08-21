@@ -932,6 +932,16 @@
       "verification": "test",
       "safety_goal": "SG-006",
       "asil": "QM"
+    },
+    {
+      "id": "REQ-RELAY-099",
+      "title": "Retired-capability enforcement (relay conform, spec sec-3.2)",
+      "text": "spec/version.json MAY carry a retired[] array (spec sec-3.2), each entry a {name, since, removal, reason} record. relay conform MUST FAIL a capabilities document (sec-12.2) whose declared spec_version is at or past a retired[] entry's removal version and whose features or commands still lists that entry's name (spec sec-17 Requirement 17). The check is sourced from relay conform's own embedded spec/version.json, not the attested binary's -- a black-box invocation cannot introspect the target's retired list, only compare its declared spec_version and capabilities against the reference list relay conform itself ships.",
+      "category": "functional",
+      "criticality": "medium",
+      "verification": "test",
+      "safety_goal": "SG-006",
+      "asil": "ASIL-B"
     }
   ]
 }

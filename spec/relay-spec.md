@@ -1,4 +1,4 @@
-# RELAY Specification — v2.6
+# RELAY Specification — v2.7
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -133,6 +133,63 @@ New protocols are added by opening a PR proposing the new constant and canonical
 name, adding the canonical frame type (§14), interface contract (§8), CLI
 contract (§10), and `Adapt()` implementation (§9). Values are assigned
 sequentially and never reused. The spec MINOR version is bumped.
+
+### 3.2 Retiring a protocol or model
+
+§19.2's deprecation policy governs the removal or inversion of a single MUST
+requirement; it says nothing about retiring an entire canonical *model* — a
+protocol's whole set of canonical types superseded by a different design, the
+way §15.5's RCP types were rewritten for TC18 conformance. Without a defined
+process, retired-model residue (dead code paths, stale test fixtures, docs
+that still describe the old shape) tends to persist in implementations well
+past the point the model was declared gone, with no machine-checkable way to
+catch it.
+
+When a protocol or canonical model is retired, `spec/version.json` MUST record
+it in a `retired` array:
+
+```json
+"retired": [
+    {"name": "example-retired-model", "since": "2.7", "removal": "2.9", "reason": "Superseded by ..."}
+]
+```
+
+`name` is a stable identifier for the retired capability — the same string an
+implementation would otherwise advertise in its capabilities document's
+`features` or `commands` (§12.2). `since` is the spec MINOR version the model
+was first marked retired; `removal` is the spec MINOR version by which it MUST
+be gone. Per §19.2, `removal` MUST be at least one MINOR release after `since`.
+
+Between `since` and `removal`:
+- An implementation MAY still ship retired-model code, but only fenced behind
+  a capability-declared compat flag it documents in its own CHANGELOG — it
+  MUST NOT be indistinguishable from current, supported behavior.
+- Documentation MUST NOT describe a retired model as current outside a
+  CHANGELOG entry recording its retirement.
+
+At and after `removal`:
+- Retired-model code MUST be removed from the implementation entirely.
+- An implementation's capabilities document (§12.2) MUST NOT list the retired
+  `name` in `features` or `commands`.
+- `relay conform` MUST FAIL a binary whose declared `spec_version` is at or
+  past a `retired` entry's `removal` version and whose capabilities document
+  still lists that entry's `name` in `features` or `commands`.
+
+`deprecated` is the single-requirement analogue of `retired`, recording each
+§19.2 deprecation the same way, for the same machine-readability reason:
+
+```json
+"deprecated": [
+    {"name": "example-deprecated-field", "since": "2.7", "removal": "2.9", "reason": "..."}
+]
+```
+
+Both arrays are OPTIONAL and empty by default. RELAY's own pre-TC18 RCP
+placeholder-model replacement (§15.5, spec v2.0) predates this section and is
+not retrofitted into `retired[]`: it was an instant MAJOR-version breaking
+replacement with no compatibility window, not a `since`/`removal`-spaced
+retirement this mechanism is designed to track. `retired[]`/`deprecated[]`
+govern retirements declared from this section onward.
 
 ---
 
@@ -1182,7 +1239,7 @@ failure rather than a skip. Exit: `0` all equivalent, `1` any mismatch/error,
     "protocol":     "CAN",
     "protocol_int": 1,
     "version":      "1.2.3",
-    "spec_version": "2.6",
+    "spec_version": "2.7",
     "language":     "go",
     "runtime":      "go1.25.0",
     "commit":       "a1b2c3d4"
@@ -1207,7 +1264,7 @@ conformance failure, but §17.2's conformance manifest cannot populate its own
     "protocol":            "CAN",
     "protocol_int":        1,
     "version":             "1.2.3",
-    "spec_version":        "2.6",
+    "spec_version":        "2.7",
     "commands":            ["version", "capabilities", "status", "connect", "send", "subscribe"],
     "transports":          ["socketcan", "virtual"],
     "features":            ["fd", "isotp", "j1939"],
@@ -1237,7 +1294,7 @@ CLI:
     "protocol_int":        null,
     "multi_protocol":      true,
     "version":             "2.5.0",
-    "spec_version":        "2.6",
+    "spec_version":        "2.7",
     "commands":            ["version", "capabilities", "status", "conform", "convert", "..."],
     "transports":          [],
     "features":            [],
@@ -1306,7 +1363,7 @@ $ go-can version --format json
     "protocol":     "CAN",
     "protocol_int": 1,
     "version":      "1.2.3",
-    "spec_version": "2.6",
+    "spec_version": "2.7",
     "language":     "go",
     "runtime":      "go1.25.0"
 }
@@ -1318,7 +1375,7 @@ $ go-can capabilities
     "protocol":            "CAN",
     "protocol_int":        1,
     "version":             "1.2.3",
-    "spec_version":        "2.6",
+    "spec_version":        "2.7",
     "commands":            ["version", "capabilities", "status", "connect", "send", "subscribe"],
     "transports":          ["socketcan", "virtual"],
     "features":            ["fd", "isotp", "j1939"],
@@ -1394,11 +1451,11 @@ LABEL org.opencontainers.image.licenses="MPL-2.0"
 LABEL io.relay.tool="<tool>"
 LABEL io.relay.language="go|cpp|rust|c"
 LABEL io.relay.binary="<binary>"
-LABEL io.relay.spec-version="2.6"
+LABEL io.relay.spec-version="2.7"
 ```
 
 The `io.relay.spec-version` label MUST always match the value of `SpecVersion`
-exported by the package (§17.12 / §19.4). The `"2.6"` shown above is an example;
+exported by the package (§17.12 / §19.4). The `"2.7"` shown above is an example;
 update it on each spec minor release.
 
 The project directory is mounted at `/project` by convention:
@@ -2239,6 +2296,7 @@ An implementation is **RELAY-conformant** if and only if:
 14. **Spec-version binding.** The `spec_version` value the CLI prints (§12.1, §12.2) MUST NOT be a hand-copied literal kept in sync by memory alone. A Go implementation that depends on `github.com/SoundMatt/RELAY` MUST bind its declared value directly to `relay.SpecVersion` (e.g. `const SpecVersion = relay.SpecVersion`), so a dependency bump alone keeps it current. An implementation in any other language, or a Go implementation that does not depend on the RELAY module, MUST have a CI step that fails the build when its declared `spec_version` diverges from the authoritative `spec/version.json` (§19.4) at the RELAY revision it targets.
 15. **Conformance manifest.** The implementation MUST commit a `relay-conform/1` manifest (§17.2), generated by `relay conform --manifest` against its own built binary; CI MUST regenerate the manifest on every change and fail the build on any diff from the committed copy, or on any requirement entry whose `status` is `FAIL`.
 16. **Vector manifest.** The canonical `spec/vectors/` distribution (§15.8) is pinned by `spec/vectors/vectors_manifest.json`. A conformant implementation that embeds a local copy of these vectors MUST embed the exact pinned set, and MUST have a CI step that fails when its embedded copy's SHA-256 diverges from the published manifest for the `vectors_version` it targets.
+17. **No retired capabilities past removal.** Per §3.2, a capabilities document (§12.2) whose declared `spec_version` is at or past a `spec/version.json` `retired[]` entry's `removal` version MUST NOT list that entry's `name` in `features` or `commands`.
 
 `relay conform <binary>` is a **black-box CLI tool**: it can only observe what
 the built binary's `version`/`capabilities`/`status` commands print, not the
@@ -2289,7 +2347,13 @@ that exposes an implementation's embedded vector bytes at all, so it
 cannot even partially generate this check — whether an implementation's
 embedded vector copy matches the published manifest is entirely a
 CI-process fact about the implementation's own build, verified by the
-implementation's own CI instead.
+implementation's own CI instead. Requirement 17 (no retired capabilities
+past removal) is, unlike 13–16, fully within `relay conform`'s own reach:
+the check compares two things it already fetches over the CLI — the
+version document's `spec_version` and the capabilities document's
+`features`/`commands` — against `relay conform`'s own embedded
+`spec/version.json`, the same authoritative source §19.4 already points
+to. No source-level or CI-process knowledge is needed.
 
 **Requirement-to-verifier lookup table**, collecting the narrative above
 into one place:
@@ -2312,6 +2376,7 @@ into one place:
 | 14 | Spec-version binding | Implementation's own CI | Not observable through the CLI |
 | 15 | Conformance manifest | `relay conform --manifest` (content); implementation's own CI (regenerate + diff) | Split — manifest content generated by `relay conform`; CI enforcement not observable through the CLI |
 | 16 | Vector manifest | Implementation's own CI | Not observable through the CLI |
+| 17 | No retired capabilities past removal | `relay conform` (version + capabilities cross-check against embedded `spec/version.json`) | Full |
 
 ### 17.1 Wire-format regression coverage (recommended)
 
@@ -2365,7 +2430,7 @@ diffable artifact.
     "manifest_version":  "relay-conform/1",
     "tool":               "go-can",
     "binary_version":     "1.2.3",
-    "spec_version":       "2.6",
+    "spec_version":       "2.7",
     "git_sha":            "a1b2c3d4",
     "capabilities_sha256": "e3b0c44298fc1c14...",
     "requirements": [
@@ -2384,7 +2449,7 @@ SHA-256 of the raw `capabilities` document bytes as returned by the binary,
 letting a diff catch any change to the capabilities document — mechanically
 regenerated or not — without re-parsing it.
 
-`requirements` MUST contain exactly one entry per §17 requirement (1–16,
+`requirements` MUST contain exactly one entry per §17 requirement (1–17,
 extended as this document's own requirement list grows). Each entry's
 `status` is one of:
 
@@ -3114,11 +3179,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v2.6**
+Current version: **v2.7**
 
-**Go:** `const SpecVersion = "2.6"` (update in implementations targeting v2.6)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "2.6";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.6";`
+**Go:** `const SpecVersion = "2.7"` (update in implementations targeting v2.7)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "2.7";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.7";`
 
 ---
 
@@ -3212,7 +3277,7 @@ manifest, the §15.8 vector manifest's `vectors_version`, and the targeted
         {"name": "go-can", "digest": {"sha256": "9f86d081884c7d65..."}}
     ],
     "predicate": {
-        "spec_version":            "2.6",
+        "spec_version":            "2.7",
         "vectors_version":         "2.4",
         "conformance_manifest":    { "...": "the full §17.2 relay-conform/1 document" },
         "safety_evidence_summary": null,

@@ -177,15 +177,15 @@ func conformBinary(binary string, strict bool) conformResult {
 type manifestStatus string
 
 const (
-	statusPass           manifestStatus = "PASS"
-	statusFail           manifestStatus = "FAIL"
-	statusShapeOnly      manifestStatus = "SHAPE_ONLY"
-	statusNotObservable  manifestStatus = "NOT_OBSERVABLE"
-	verifierRelayConform                = "relay conform"
-	verifierTestSuite                   = "implementation test suite"
-	verifierBuildAndTest                = "implementation's own build process and test suite"
-	verifierCI                          = "implementation's own CI"
-	verifierManifestSplit               = "relay conform (manifest content); implementation's own CI (regenerate + diff)"
+	statusPass            manifestStatus = "PASS"
+	statusFail            manifestStatus = "FAIL"
+	statusShapeOnly       manifestStatus = "SHAPE_ONLY"
+	statusNotObservable   manifestStatus = "NOT_OBSERVABLE"
+	verifierRelayConform                 = "relay conform"
+	verifierTestSuite                    = "implementation test suite"
+	verifierBuildAndTest                 = "implementation's own build process and test suite"
+	verifierCI                           = "implementation's own CI"
+	verifierManifestSplit                = "relay conform (manifest content); implementation's own CI (regenerate + diff)"
 )
 
 // manifestRequirement is one entry in a relay-conform/1 manifest's
@@ -199,15 +199,15 @@ type manifestRequirement struct {
 // conformManifest is the relay-conform/1 manifest document (spec §17.2,
 // §17 Requirement 15).
 type conformManifest struct {
-	Kind                string                 `json:"kind"`
-	ManifestVersion     string                 `json:"manifest_version"`
-	Tool                string                 `json:"tool"`
-	BinaryVersion       string                 `json:"binary_version"`
-	SpecVersion         string                 `json:"spec_version"`
-	GitSHA              string                 `json:"git_sha"`
-	CapabilitiesSHA256  string                 `json:"capabilities_sha256"`
-	Requirements        []manifestRequirement  `json:"requirements"`
-	Overall             manifestStatus         `json:"overall"`
+	Kind               string                `json:"kind"`
+	ManifestVersion    string                `json:"manifest_version"`
+	Tool               string                `json:"tool"`
+	BinaryVersion      string                `json:"binary_version"`
+	SpecVersion        string                `json:"spec_version"`
+	GitSHA             string                `json:"git_sha"`
+	CapabilitiesSHA256 string                `json:"capabilities_sha256"`
+	Requirements       []manifestRequirement `json:"requirements"`
+	Overall            manifestStatus        `json:"overall"`
 }
 
 // buildManifest generates a relay-conform/1 manifest (spec §17.2) for one

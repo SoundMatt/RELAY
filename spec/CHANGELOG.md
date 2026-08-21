@@ -1,5 +1,41 @@
 # RELAY Spec Changelog
 
+## v2.7.1 — 2026-08-21 (doc addition; no normative change to existing conformant implementations)
+
+- **New §19.5 "This document's own version literals".** Requirement 14
+  (§17) already obligates an *implementation's* declared `spec_version` to
+  trace back to `spec/version.json` rather than a hand-copied literal — but
+  this document was never held to the same standard for its own text. The
+  stale `"0.1"` example literals fixed by hand in v2.2.3 were exactly that
+  class of drift: §12.1/§12.2's JSON examples and §13.5's Docker `LABEL`
+  example were three major versions behind current, in a document telling
+  implementers not to let exactly this happen. §19.5 makes it a normative
+  MUST that every version literal in this document's own text — the
+  `"spec_version"` examples (§12.1, §12.2, §12.4, §17.2, §20.6), the
+  `LABEL io.relay.spec-version` example (§13.5), and §19.4's "Current
+  version" line and Go/C++/Rust snippets — matches `spec/version.json`,
+  and that this repository's own CI enforces it.
+- **Reference implementation**: `TestSpecVersionMatchesVersionJSON` and
+  `TestSpecDocumentVersionLiteralsMatchVersionJSON`
+  (`version_consistency_test.go`) read `spec/version.json` and
+  `spec/relay-spec.md` from the package's own embedded evidence
+  (`evidence.go`) and fail if any of the anchors above, or any
+  `"spec_version": "X.Y"` example literal anywhere in the document, has
+  drifted. New `REQ-RELAY-100`. Mutation-tested: bumped
+  `spec/version.json` to a throwaway value and confirmed both tests failed
+  with a precise diff for every one of the 12 literals checked (5 named
+  anchors + 7 example occurrences), then separately reworded one anchor's
+  surrounding prose and confirmed the test reports "pattern not found"
+  rather than silently passing; both restored and re-verified green.
+- **Not a `relay conform` check.** `relay conform` verifies binaries, not
+  the specification document that defines it — this sits alongside
+  Requirements 13/14 (§17) as a repository-CI-verified discipline, not a
+  new black-box conformance requirement on implementations. No new §17
+  Requirement, no change to implementation-facing obligations.
+- `SpecVersion` unchanged (`2.7`); the only thing enforced is that it
+  and its document-text copies stay in lockstep going forward. Closes
+  [NEW-SPEC-6].
+
 ## v2.7 — 2026-08-21 (MINOR — new protocol/model retirement process, §17 Requirement 17)
 
 - **New §3.2 "Retiring a protocol or model".** §19.2's existing deprecation

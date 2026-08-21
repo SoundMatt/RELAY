@@ -942,6 +942,15 @@
       "verification": "test",
       "safety_goal": "SG-006",
       "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-RELAY-100",
+      "title": "Generated version literals (spec document + CI enforcement)",
+      "text": "The specification document's own version literals -- the \"spec_version\" value in each JSON example (sec-12.1, sec-12.2, sec-12.4, sec-17.2, sec-20.6), the LABEL io.relay.spec-version value in sec-13.5's Docker example, and sec-19.4's \"Current version\" line and Go/C++/Rust snippets -- MUST match spec/version.json at every commit (sec-19.5). This repository's own CI MUST fail the build when any of them diverges, mirroring Requirement 14's obligation on a conformant implementation's own CI. Not a relay conform check: relay conform verifies binaries, not the spec document that defines it.",
+      "category": "functional",
+      "criticality": "low",
+      "verification": "test",
+      "asil": "QM"
     }
   ]
 }

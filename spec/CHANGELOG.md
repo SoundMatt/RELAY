@@ -1,5 +1,59 @@
 # RELAY Spec Changelog
 
+## v2.8 — 2026-08-21 (MINOR — persisted, regression-gated interop matrix, §17 Requirement 18)
+
+- **New §17 Requirement 18 — persisted, regression-gated interop matrix.**
+  §20.1 item 3's existing behavioural-conformance gate only checked
+  EQUIVALENT-vs-reference as a one-shot pass/fail whose result vanished
+  after the CI run — no persisted artifact, no way to tell from git
+  history when a cross-language equivalence regression was introduced.
+  CI MUST now commit `relay interop --format json`'s output (a versioned
+  `relay-interop-matrix/1` document) covering every published sibling
+  implementation it can invoke, and MUST regenerate it with `relay
+  interop --baseline <committed-copy>` on every change, failing the
+  build if any cell that was `EQUIVALENT` in the committed copy is not
+  `EQUIVALENT` now.
+- **Deliberately not pairwise (N²).** The proposal's literal reading
+  ("compare against every other sibling, not just the reference") would
+  mean every binary's `convert` output diffed against every other
+  binary's directly. Not built: byte-equality is transitive, so "A
+  equivalent to the shared reference" and "B equivalent to the shared
+  reference" already jointly establish "A equivalent to B" — the
+  existing O(N) hub-spoke comparison (every participant vs. one
+  in-process reference) carries the same information an O(N²) pairwise
+  matrix would, without the redundant `convert` invocations. Documented
+  explicitly in §17 and §20.1 rather than silently narrowed.
+- **`relay interop`'s JSON output is now a versioned artifact**: `kind:
+  "relay-interop-matrix"`, `matrix_version: "relay-interop-matrix/1"`,
+  and an explicit `participants[]` list (so the *set* of compared
+  implementations is itself part of the diffable artifact — catching a
+  sibling silently dropped from CI's invocation, not just a per-cell
+  regression).
+- **New `--baseline FILE` flag**: reports a `regressions[]` list — one
+  entry per (vector, participant) cell that was `EQUIVALENT` in the
+  baseline but is not now. A cell that was never `EQUIVALENT` to begin
+  with (e.g. an implementation still catching up to a newly-added golden
+  vector) is deliberately **not** reported as a regression — only actual
+  backsliding is; matches the issue's precise wording, distinct from the
+  existing any-mismatch-fails semantics §20.1 item 3 already enforces
+  independently.
+- **New `spec/schemas/relay-interop-matrix.json`.** New `REQ-RELAY-101`.
+  9 new/changed tests, including a real mutation test on the regression
+  detector's core comparison logic (caught first by a pure unit test
+  reverting `interopRegressions`'s condition; a follow-up integration
+  test needed restricting to a single accept-path vector after the
+  initial version was fooled by the reject-path's by-design leniency and
+  by a substring collision between the built test binary's name and the
+  ever-equivalent "relay (reference)" row — both fixed, then confirmed
+  the mutation was genuinely caught).
+- **Also fixed a citation bug found while investigating this issue** (the
+  same class the issue itself flags for the audit's stale "§20.1.3"):
+  §20.4 cited "§20.1.2" for a specific CI-gate item, but §20.1 is a flat
+  numbered list, not subdivided into `.1`/`.2`/`.3` subsections. Corrected
+  to "§20.1 item 2".
+- `SpecVersion` bumped `2.7` → `2.8` (MINOR, new §17 requirement). Closes
+  [NEW-SPEC-7].
+
 ## v2.7.1 — 2026-08-21 (doc addition; no normative change to existing conformant implementations)
 
 - **New §19.5 "This document's own version literals".** Requirement 14

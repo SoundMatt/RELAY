@@ -382,8 +382,8 @@ func TestBuildManifestSelf(t *testing.T) {
 	if m.SpecVersion == "" {
 		t.Error("SpecVersion is empty")
 	}
-	if len(m.Requirements) != 17 {
-		t.Fatalf("len(Requirements) = %d, want 17", len(m.Requirements))
+	if len(m.Requirements) != 18 {
+		t.Fatalf("len(Requirements) = %d, want 18", len(m.Requirements))
 	}
 	for i, r := range m.Requirements {
 		if r.ID != i+1 {
@@ -414,9 +414,12 @@ func TestBuildManifestNotObservableDefaults(t *testing.T) {
 	bin := buildTestBinary(t)
 	m := buildManifest(bin)
 
-	wantNotObservable := []int{2, 3, 4, 5, 8, 9, 10, 11, 13, 14, 15, 16}
+	wantNotObservable := []int{2, 3, 4, 5, 8, 9, 10, 11, 13, 14, 15, 16, 18}
 	// Requirement 17 is fully observable (see TestBuildManifestSelf's
 	// observable set), so it is deliberately excluded from this list.
+	// Requirement 18 (persisted interop matrix) is verified by a
+	// different command (relay interop, --baseline) that relay conform
+	// never invokes, so it is NOT_OBSERVABLE like 13/14/16.
 	byID := map[int]manifestRequirement{}
 	for _, r := range m.Requirements {
 		byID[r.ID] = r
@@ -510,8 +513,8 @@ func TestRunConformManifestFlag(t *testing.T) {
 	if m.Overall != statusPass {
 		t.Errorf("Overall = %s, want %s", m.Overall, statusPass)
 	}
-	if len(m.Requirements) != 17 {
-		t.Errorf("len(Requirements) = %d, want 17", len(m.Requirements))
+	if len(m.Requirements) != 18 {
+		t.Errorf("len(Requirements) = %d, want 18", len(m.Requirements))
 	}
 }
 
@@ -572,8 +575,8 @@ func TestBuildAttestationSelf(t *testing.T) {
 	if a.Predicate.ConformanceManifest.Kind != "relay-conform-manifest" {
 		t.Errorf("Predicate.ConformanceManifest.Kind = %q, want relay-conform-manifest", a.Predicate.ConformanceManifest.Kind)
 	}
-	if len(a.Predicate.ConformanceManifest.Requirements) != 17 {
-		t.Errorf("len(Predicate.ConformanceManifest.Requirements) = %d, want 17", len(a.Predicate.ConformanceManifest.Requirements))
+	if len(a.Predicate.ConformanceManifest.Requirements) != 18 {
+		t.Errorf("len(Predicate.ConformanceManifest.Requirements) = %d, want 18", len(a.Predicate.ConformanceManifest.Requirements))
 	}
 	// §20.6: MUST be false — this type has no signing mechanism at all.
 	if a.Predicate.Signed {

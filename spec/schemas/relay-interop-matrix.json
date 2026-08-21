@@ -1,0 +1,64 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/relay-interop-matrix.json",
+    "title": "RELAY interop matrix",
+    "description": "JSON output of `relay interop --format json` (spec §20.1 item 3, §17 Requirement 18).",
+    "type": "object",
+    "properties": {
+        "kind": {
+            "type": "string",
+            "const": "relay-interop-matrix"
+        },
+        "matrix_version": {
+            "type": "string",
+            "const": "relay-interop-matrix/1"
+        },
+        "reference": {
+            "type": "string",
+            "description": "Label for the in-process reference conversion every participant is compared against."
+        },
+        "participants": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Sorted base names of every binary compared in this run."
+        },
+        "result": {
+            "type": "string",
+            "enum": ["PASS", "FAIL"]
+        },
+        "vectors": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "vector": { "type": "string" },
+                    "protocol": { "type": "string" },
+                    "cells": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "participant": { "type": "string" },
+                                "ok": { "type": "boolean" },
+                                "equivalent": { "type": "boolean" },
+                                "skipped": { "type": "boolean" },
+                                "detail": { "type": "string" }
+                            },
+                            "required": ["participant", "ok", "equivalent", "skipped"],
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "required": ["vector", "protocol", "cells"],
+                "additionalProperties": false
+            }
+        },
+        "regressions": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Present only when generated with --baseline: one entry per (vector, participant) cell that was EQUIVALENT in the baseline but is not in this run."
+        }
+    },
+    "required": ["kind", "matrix_version", "reference", "participants", "result", "vectors"],
+    "additionalProperties": false
+}

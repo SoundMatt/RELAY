@@ -56,33 +56,51 @@ type interopVectorResult struct {
 	Cells    []interopCell `json:"cells"`
 }
 
-// interopDoc is the full interop report.
+// interopDoc is the full interop report — the relay-interop-matrix/1
+// artifact (spec §20.1 item 3, Requirement 18) when persisted by CI.
 type interopDoc struct {
-	Reference string                `json:"reference"`
-	Result    string                `json:"result"` // PASS / FAIL
-	Vectors   []interopVectorResult `json:"vectors"`
+	Kind          string                `json:"kind"`
+	MatrixVersion string                `json:"matrix_version"`
+	Reference     string                `json:"reference"`
+	Participants  []string              `json:"participants"`
+	Result        string                `json:"result"` // PASS / FAIL
+	Vectors       []interopVectorResult `json:"vectors"`
+	Regressions   []string              `json:"regressions,omitempty"`
 }
 
 // runInterop implements
-// `relay interop [--protocol P] [--vectors DIR] [--strict] [--format text|json|markdown] <binary>...`.
+// `relay interop [--protocol P] [--vectors DIR] [--strict] [--baseline FILE] [--format text|json|markdown] <binary>...`.
 // It verifies that implementations are behaviourally interchangeable by diffing
 // each binary's `convert` output against RELAY's reference conversion for every
-// golden vector (spec §11.2.1).
+// golden vector (spec §11.2.1). Every participant is compared against the same
+// in-process reference rather than against each other pairwise: since the
+// comparison is byte-equality (a transitive relation), "A equivalent to
+// reference" and "B equivalent to reference" together already establish "A
+// equivalent to B" — an O(N) hub comparison carries the same information as an
+// O(N²) pairwise one here, without the redundant work (spec §20.1 item 3).
+//
+// --baseline compares this run's matrix against a previously-committed
+// relay-interop-matrix/1 document (spec §17 Requirement 18) and reports a
+// regression for any (vector, participant) cell that was EQUIVALENT in the
+// baseline but is not in this run — distinct from a cell that was never
+// equivalent to begin with, which --baseline does not newly fail on.
 //
 //fusa:req REQ-RELAY-083
+//fusa:req REQ-RELAY-101
 func runInterop(stdout, stderr io.Writer, args []string) error {
 	fs := flag.NewFlagSet("interop", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	protocol := fs.String("protocol", "", "Restrict to a single protocol (CAN, DDS, LIN, MQTT, RCP, SOMEIP)")
 	vectorsDir := fs.String("vectors", "", "Directory of vector files (default: embedded golden vectors)")
 	strict := fs.Bool("strict", false, "Treat a binary that lacks convert as a failure rather than a skip")
+	baseline := fs.String("baseline", "", "Path to a previously-generated relay-interop-matrix/1 document; fail if any of its EQUIVALENT cells regressed")
 	format := fs.String("format", "text", "Output format: text, json, or markdown")
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("relay interop: %w", err)
 	}
 	binaries := fs.Args()
 	if len(binaries) == 0 {
-		fmt.Fprintln(stderr, "Usage: relay interop [--protocol P] [--vectors DIR] [--strict] [--format text|json|markdown] <binary>...")
+		fmt.Fprintln(stderr, "Usage: relay interop [--protocol P] [--vectors DIR] [--strict] [--baseline FILE] [--format text|json|markdown] <binary>...")
 		return exitCode(2)
 	}
 
@@ -110,7 +128,19 @@ func runInterop(stdout, stderr io.Writer, args []string) error {
 		}
 	}
 
-	doc := interopDoc{Reference: "relay (reference)", Result: "PASS"}
+	participants := make([]string, len(binaries))
+	for i, bin := range binaries {
+		participants[i] = filepath.Base(bin)
+	}
+	sort.Strings(participants)
+
+	doc := interopDoc{
+		Kind:          "relay-interop-matrix",
+		MatrixVersion: "relay-interop-matrix/1",
+		Reference:     "relay (reference)",
+		Participants:  participants,
+		Result:        "PASS",
+	}
 	for _, v := range vecs {
 		row := interopVectorResult{Vector: v.Name, Protocol: v.Protocol}
 
@@ -193,6 +223,23 @@ func runInterop(stdout, stderr io.Writer, args []string) error {
 		doc.Vectors = append(doc.Vectors, row)
 	}
 
+	if *baseline != "" {
+		base, err := os.ReadFile(*baseline)
+		if err != nil {
+			fmt.Fprintf(stderr, "relay interop: --baseline: %v\n", err)
+			return exitCode(2)
+		}
+		var baseDoc interopDoc
+		if err := json.Unmarshal(base, &baseDoc); err != nil {
+			fmt.Fprintf(stderr, "relay interop: --baseline: not a relay-interop-matrix/1 document: %v\n", err)
+			return exitCode(2)
+		}
+		doc.Regressions = interopRegressions(baseDoc, doc)
+		if len(doc.Regressions) > 0 {
+			doc.Result = "FAIL"
+		}
+	}
+
 	if err := renderInterop(stdout, doc, *format); err != nil {
 		return err
 	}
@@ -200,6 +247,38 @@ func runInterop(stdout, stderr io.Writer, args []string) error {
 		return exitCode(1)
 	}
 	return nil
+}
+
+// interopRegressions compares a fresh matrix against a previously-committed
+// baseline and reports every (vector, participant) cell that was EQUIVALENT
+// in the baseline but is not EQUIVALENT now. A cell that was never
+// EQUIVALENT to begin with is not a regression — --baseline only guards
+// against losing ground, not against pre-existing non-conformance (spec §17
+// Requirement 18).
+func interopRegressions(base, cur interopDoc) []string {
+	baseEquivalent := map[string]bool{}
+	for _, row := range base.Vectors {
+		for _, c := range row.Cells {
+			if c.Equivalent {
+				baseEquivalent[row.Vector+"|"+c.Participant] = true
+			}
+		}
+	}
+	var regressions []string
+	for _, row := range cur.Vectors {
+		for _, c := range row.Cells {
+			key := row.Vector + "|" + c.Participant
+			if baseEquivalent[key] && !c.Equivalent {
+				detail := c.Detail
+				if detail == "" {
+					detail = "no longer equivalent"
+				}
+				regressions = append(regressions, fmt.Sprintf("%s: %s regressed from EQUIVALENT (%s)", row.Vector, c.Participant, detail))
+			}
+		}
+	}
+	sort.Strings(regressions)
+	return regressions
 }
 
 // loadInteropVectors loads the embedded golden vectors (or those in dir) and
@@ -323,6 +402,12 @@ func renderInterop(w io.Writer, doc interopDoc, format string) error {
 				fmt.Fprintf(w, "| %s | %s | %s | %s |\n", r.Vector, r.Protocol, c.Participant, interopVerdict(c))
 			}
 		}
+		if len(doc.Regressions) > 0 {
+			fmt.Fprintln(w, "\n## Regressions")
+			for _, r := range doc.Regressions {
+				fmt.Fprintf(w, "- %s\n", r)
+			}
+		}
 		return nil
 	case "text":
 		for _, r := range doc.Vectors {
@@ -333,6 +418,13 @@ func renderInterop(w io.Writer, doc interopDoc, format string) error {
 					line += "  — " + c.Detail
 				}
 				fmt.Fprintln(w, line)
+			}
+		}
+		if len(doc.Regressions) > 0 {
+			fmt.Fprintln(w, strings.Repeat("─", 60))
+			fmt.Fprintln(w, "REGRESSIONS:")
+			for _, r := range doc.Regressions {
+				fmt.Fprintf(w, "  %s\n", r)
 			}
 		}
 		fmt.Fprintln(w, strings.Repeat("─", 60))

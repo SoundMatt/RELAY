@@ -1,0 +1,69 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/relay-conform-manifest.json",
+    "title": "RELAY conformance manifest",
+    "description": "JSON output of `relay conform --manifest <binary>` (spec §17.2, Requirement 15).",
+    "type": "object",
+    "properties": {
+        "kind": {
+            "type": "string",
+            "const": "relay-conform-manifest"
+        },
+        "manifest_version": {
+            "type": "string",
+            "const": "relay-conform/1"
+        },
+        "tool": {
+            "type": "string",
+            "description": "Binary name, from the version document (§12.1)."
+        },
+        "binary_version": {
+            "type": "string",
+            "description": "Semantic version of the binary, from the version document (§12.1)."
+        },
+        "spec_version": {
+            "type": "string",
+            "description": "Declared spec_version, from the version document (§12.1)."
+        },
+        "git_sha": {
+            "type": "string",
+            "description": "The version document's optional commit field, verbatim, or \"\" if absent."
+        },
+        "capabilities_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "SHA-256 (lowercase hex) of the raw capabilities document bytes."
+        },
+        "requirements": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "The §17 requirement number."
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["PASS", "FAIL", "SHAPE_ONLY", "NOT_OBSERVABLE"]
+                    },
+                    "verifier": {
+                        "type": "string",
+                        "description": "What verified this requirement, e.g. \"relay conform\" or \"implementation test suite\"."
+                    }
+                },
+                "required": ["id", "status", "verifier"],
+                "additionalProperties": false
+            },
+            "description": "One entry per §17 requirement (1-15, extended as the requirement list grows)."
+        },
+        "overall": {
+            "type": "string",
+            "enum": ["PASS", "FAIL"],
+            "description": "FAIL if any requirements entry is FAIL, else PASS."
+        }
+    },
+    "required": ["kind", "manifest_version", "tool", "binary_version", "spec_version", "git_sha", "capabilities_sha256", "requirements", "overall"],
+    "additionalProperties": false
+}

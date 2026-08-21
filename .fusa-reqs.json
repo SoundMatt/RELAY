@@ -892,6 +892,16 @@
       "criticality": "medium",
       "verification": "spec-review",
       "asil": "QM"
+    },
+    {
+      "id": "REQ-RELAY-095",
+      "title": "relay conform --manifest (relay-conform/1)",
+      "text": "relay conform --manifest <binary> MUST emit a relay-conform/1 manifest (spec \u00a717.2) instead of findings: a JSON document with kind, manifest_version, tool, binary_version, spec_version, git_sha, capabilities_sha256, a requirements[] entry for every \u00a717 requirement (id/status/verifier), and an overall PASS/FAIL. status MUST use the vocabulary PASS/FAIL/SHAPE_ONLY/NOT_OBSERVABLE and MUST NOT report PASS for a requirement relay conform cannot actually observe. The process MUST exit 1 when overall is FAIL.",
+      "category": "functional",
+      "criticality": "high",
+      "verification": "test",
+      "safety_goal": "SG-006",
+      "asil": "ASIL-B"
     }
   ]
 }

@@ -6,6 +6,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"os"
@@ -13,6 +15,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 // --- unit tests for schema validators ---
@@ -309,6 +313,181 @@ func TestRunConformNoArgs(t *testing.T) {
 	var code exitCode
 	if !errors.As(err, &code) || int(code) != 2 {
 		t.Errorf("conform with no args should return exitCode(2), got %v", err)
+	}
+}
+
+// --- tests for --manifest / buildManifest (spec §17.2, Requirement 15) ---
+
+//fusa:test REQ-RELAY-095
+func TestBuildManifestSelf(t *testing.T) {
+	bin := buildTestBinary(t)
+	m := buildManifest(bin)
+
+	if m.Kind != "relay-conform-manifest" {
+		t.Errorf("Kind = %q, want %q", m.Kind, "relay-conform-manifest")
+	}
+	if m.ManifestVersion != "relay-conform/1" {
+		t.Errorf("ManifestVersion = %q, want %q", m.ManifestVersion, "relay-conform/1")
+	}
+	if m.Tool == "" {
+		t.Error("Tool is empty")
+	}
+	if m.BinaryVersion == "" {
+		t.Error("BinaryVersion is empty")
+	}
+	if m.SpecVersion == "" {
+		t.Error("SpecVersion is empty")
+	}
+	if len(m.Requirements) != 15 {
+		t.Fatalf("len(Requirements) = %d, want 15", len(m.Requirements))
+	}
+	for i, r := range m.Requirements {
+		if r.ID != i+1 {
+			t.Errorf("Requirements[%d].ID = %d, want %d", i, r.ID, i+1)
+		}
+		if r.Status == "" {
+			t.Errorf("Requirements[%d] (id=%d) has empty status", i, r.ID)
+		}
+		if r.Verifier == "" {
+			t.Errorf("Requirements[%d] (id=%d) has empty verifier", i, r.ID)
+		}
+		// §17.2: a manifest MUST NOT report PASS for a requirement relay
+		// conform cannot actually observe. Only 1, 6, 7, 12 may be PASS/FAIL;
+		// everything else must never be reported PASS.
+		observable := map[int]bool{1: true, 6: true, 7: true, 12: true}
+		if !observable[r.ID] && r.Status == statusPass {
+			t.Errorf("Requirements[%d] (id=%d) reports PASS but is not in the observable set", i, r.ID)
+		}
+	}
+	// relay must conform to itself, so the overall manifest result must be PASS.
+	if m.Overall != statusPass {
+		t.Errorf("Overall = %s, want %s (relay must conform to itself)", m.Overall, statusPass)
+	}
+}
+
+//fusa:test REQ-RELAY-095
+func TestBuildManifestNotObservableDefaults(t *testing.T) {
+	bin := buildTestBinary(t)
+	m := buildManifest(bin)
+
+	wantNotObservable := []int{2, 3, 4, 5, 8, 9, 10, 11, 13, 14, 15}
+	byID := map[int]manifestRequirement{}
+	for _, r := range m.Requirements {
+		byID[r.ID] = r
+	}
+	for _, id := range wantNotObservable {
+		r, ok := byID[id]
+		if !ok {
+			t.Errorf("requirement %d missing from manifest", id)
+			continue
+		}
+		if r.Status != statusNotObservable {
+			t.Errorf("requirement %d status = %s, want %s", id, r.Status, statusNotObservable)
+		}
+	}
+}
+
+//fusa:test REQ-RELAY-095
+func TestBuildManifestCapabilitiesSHA256(t *testing.T) {
+	bin := buildTestBinary(t)
+	capsJSON, err := runBinaryCommand(bin, []string{"capabilities"})
+	if err != nil {
+		t.Fatalf("capabilities: %v", err)
+	}
+	sum := sha256.Sum256(capsJSON)
+	want := hex.EncodeToString(sum[:])
+
+	m := buildManifest(bin)
+	if m.CapabilitiesSHA256 != want {
+		t.Errorf("CapabilitiesSHA256 = %q, want %q (independently computed sha256 of raw capabilities bytes)", m.CapabilitiesSHA256, want)
+	}
+}
+
+//fusa:test REQ-RELAY-095
+func TestBuildManifestSchemaValid(t *testing.T) {
+	bin := buildTestBinary(t)
+	m := buildManifest(bin)
+
+	data, err := json.Marshal(m)
+	if err != nil {
+		t.Fatalf("json.Marshal(manifest): %v", err)
+	}
+	var asAny interface{}
+	if err := json.Unmarshal(data, &asAny); err != nil {
+		t.Fatalf("re-unmarshal manifest JSON: %v", err)
+	}
+	schemaJSON, err := relay.Schema("relay-conform-manifest")
+	if err != nil {
+		t.Fatalf("no embedded relay-conform-manifest schema: %v", err)
+	}
+	violations := validateSchema(schemaJSON, asAny)
+	if len(violations) != 0 {
+		t.Errorf("manifest does not conform to relay-conform-manifest schema: %v\nmanifest: %s", violations, data)
+	}
+}
+
+//fusa:test REQ-RELAY-095
+func TestBuildManifestFailPropagatesToOverall(t *testing.T) {
+	bin := buildFailingBinary(t)
+	m := buildManifest(bin)
+
+	// version/capabilities/status all fail against a binary that always
+	// exits non-zero, so requirements 1, 6, 7 must be FAIL and Overall must
+	// be FAIL.
+	byID := map[int]manifestRequirement{}
+	for _, r := range m.Requirements {
+		byID[r.ID] = r
+	}
+	for _, id := range []int{1, 6, 7} {
+		if got := byID[id].Status; got != statusFail {
+			t.Errorf("requirement %d status = %s, want %s", id, got, statusFail)
+		}
+	}
+	if m.Overall != statusFail {
+		t.Errorf("Overall = %s, want %s", m.Overall, statusFail)
+	}
+}
+
+//fusa:test REQ-RELAY-095
+func TestRunConformManifestFlag(t *testing.T) {
+	bin := buildTestBinary(t)
+	var out bytes.Buffer
+	var errbuf bytes.Buffer
+	err := runConform(&out, &errbuf, []string{"--manifest", bin})
+	if err != nil {
+		t.Fatalf("relay conform --manifest relay: unexpected error: %v\noutput: %s", err, out.String())
+	}
+	var m conformManifest
+	if jsonErr := json.Unmarshal(out.Bytes(), &m); jsonErr != nil {
+		t.Fatalf("conform --manifest output is not valid JSON: %v\noutput: %s", jsonErr, out.String())
+	}
+	if m.Overall != statusPass {
+		t.Errorf("Overall = %s, want %s", m.Overall, statusPass)
+	}
+	if len(m.Requirements) != 15 {
+		t.Errorf("len(Requirements) = %d, want 15", len(m.Requirements))
+	}
+}
+
+//fusa:test REQ-RELAY-095
+func TestRunConformManifestFlagFail(t *testing.T) {
+	bin := buildFailingBinary(t)
+	var out bytes.Buffer
+	var errbuf bytes.Buffer
+	err := runConform(&out, &errbuf, []string{"--manifest", bin})
+	if err == nil {
+		t.Fatalf("expected non-nil error for FAIL manifest, got nil\noutput: %s", out.String())
+	}
+	var code exitCode
+	if !errors.As(err, &code) || int(code) != 1 {
+		t.Errorf("expected exitCode(1) for FAIL manifest, got %v", err)
+	}
+	var m conformManifest
+	if jsonErr := json.Unmarshal(out.Bytes(), &m); jsonErr != nil {
+		t.Fatalf("conform --manifest output is not valid JSON: %v\noutput: %s", jsonErr, out.String())
+	}
+	if m.Overall != statusFail {
+		t.Errorf("Overall = %s, want %s", m.Overall, statusFail)
 	}
 }
 

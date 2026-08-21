@@ -1,4 +1,4 @@
-# RELAY Specification — v2.0
+# RELAY Specification — v2.1
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -1228,6 +1228,19 @@ be ignored by `relay conform`. Defined values per protocol:
 | DDS | `"tsn"` | TSN QoS fields supported |
 | RCP | `"loaning"` | `LoaningController` exported |
 
+The `commands`, `transports`, `features`, `interfaces`, and `optional_interfaces`
+fields MUST be generated from (or otherwise kept in lock-step with) the same
+source-of-truth that gates compilation — build tags, a CMake target list, Cargo
+feature flags, C preprocessor macros, or the implementation's equivalent —
+rather than hand-maintained as a list independent of what was actually
+compiled in. This is the mechanism that keeps the self-report truthful;
+ecosystem audits have found implementations where the two had drifted apart.
+`relay conform` validates this document's *shape* (§12.2) but, being a
+black-box CLI tool (§17), cannot itself observe whether a given
+implementation's list was produced mechanically or by hand — this MUST is
+verified by the implementation's own build process and test suite, the same
+category as the source-level requirements in §17.
+
 ### 12.3 Status document
 
 `<binary> status --format json`:
@@ -2033,6 +2046,7 @@ An implementation is **RELAY-conformant** if and only if:
     - LIN: `ValidateFrame` enforces diagnostic checksum rule.
     - SOMEIP: `ProtocolVersion` MUST be validated as 0x01 on send and receive.
 12. **SpecVersion constant.** Package exports `SpecVersion` equal to the spec version being targeted. The authoritative current value is defined in §19.4 (`spec/version.json`).
+13. **Capabilities generation.** The capabilities document's `commands`, `transports`, `features`, `interfaces`, and `optional_interfaces` fields are generated from the same source-of-truth that gates compilation, per §12.2, not hand-maintained independently of it.
 
 `relay conform <binary>` is a **black-box CLI tool**: it can only observe what
 the built binary's `version`/`capabilities`/`status` commands print, not the
@@ -2059,7 +2073,12 @@ invariants), 5 (constructor contract / mock presence), 8 (frame constraints),
 9 (envelope conversion), 10 (subscriber helpers), and 11 (protocol-specific
 constraints) are **source-level Go API contracts that `relay conform` cannot
 observe through a CLI** and MUST be verified by the implementation's own test
-suite instead.
+suite instead. Requirement 13 (capabilities generation) is the same kind of
+gap for a different reason: it's a build-process discipline, not an API
+contract, and `relay conform` has no way to distinguish a mechanically
+generated `capabilities` document from a hand-maintained one that merely
+happens to be shape-valid — it too MUST be verified by the implementation's
+own test suite instead.
 
 ### 17.1 Wire-format regression coverage (recommended)
 
@@ -2801,11 +2820,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v2.0**
+Current version: **v2.1**
 
-**Go:** `const SpecVersion = "2.0"` (update in implementations targeting v2.0)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "2.0";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.0";`
+**Go:** `const SpecVersion = "2.1"` (update in implementations targeting v2.1)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "2.1";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.1";`
 
 ---
 

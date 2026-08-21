@@ -1,5 +1,42 @@
 # RELAY Spec Changelog
 
+## v2.2.4 — 2026-08-21 (doc addition; no normative change to existing conformant implementations)
+
+- **Fixed a real spec-internal inconsistency**: §8.3's Go `CalcChecksum`
+  signature used a bare `ChecksumType` parameter type, contradicting
+  §15.3's own canonical Go name `LINChecksumType` for the identical
+  concept — found while investigating this issue's underlying research.
+  Fixed to `LINChecksumType`, matching §15.3.
+- **New §13.7.4 — Standard type-name registry**, extending §13.7.2's
+  module-name-registry pattern to exported *types*. Independently
+  re-verified across the actual ~17 x-Net repos (not just the audit's own
+  claim) which of the finding's eight named concepts are genuinely
+  divergent: four are (LIN checksum selector, ISO-TP connection, J1939
+  bus/frame/PGN/priority, the in-process virtual-bus type); the DDS QoS
+  preset constants turned out to differ only in per-language idiomatic
+  casing (already tolerated by §13.7.2's own "idiomatic packaging aside"
+  carve-out — not a real divergence); the MQTT health-status
+  enum/struct-inversion claim was independently re-verified against all
+  18 repos and found to be **stale** — every repo already pairs
+  `HealthStatus` (enum) with `Health` (struct) consistently, no exception
+  found; `SubscriberConfig`/`SubscriberOption` is already governed by
+  §14.1, not duplicated; and the RC Server general-register-block naming
+  is deliberately **excluded** — its current divergence includes a real
+  wire-shape difference (single `u32` vs. split major/minor `u8` pair),
+  not just a naming one, making it `docs/RCP-ARCHITECTURE.md`'s scope to
+  reconcile, not a plain naming registry's.
+- **New §13.7.2 keyword-escape clause**: `virtual` is a reserved word in
+  both C++ and Rust — the existing module-name mandate was, as literally
+  written, unsatisfiable in two of the three languages it applies to.
+  New sentence: where the mandated name collides with a language keyword,
+  the implementation MUST use the closest available escape (`virt` for
+  `virtual`) rather than inventing an unrelated name.
+- **Not part of the §17 conformance gate**, matching every other §13.7.x
+  naming convention (including the pre-existing module-name registry):
+  `relay conform`'s black-box CLI cannot introspect exported type names
+  over a CLI interface. `SpecVersion` unchanged (`2.2`). Closes
+  [REL-SPEC-4].
+
 ## v2.2.3 — 2026-08-21 (doc addition; no normative change to existing conformant implementations)
 
 - **Fixed stale example literals.** §12.1/§12.2's `spec_version` JSON

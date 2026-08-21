@@ -1,5 +1,31 @@
 # RELAY Spec Changelog
 
+## v2.0.9 — 2026-08-20 (doc addition; no normative change to existing conformant implementations)
+
+- **New `docs/KNOWN_GAPS.md`; stop embedding sibling-repo bug notes in
+  normative spec prose**: four inline asides — go-CAN's `Subscribe()`
+  slice-vs-variadic note (§8.1), the go-CAN `ValidateFrame` RTR/FD-check
+  gap (§15.1), go-LIN's `SetSchedule` note (§8.3), and go-SOMEIP's
+  `SubscriberConfig`/`SubscriberOption` naming note (§14.1) — all cited a
+  specific implementation's then-current deviation and pointed at
+  Appendix A, which the spec's own text already marks as a historical
+  snapshot "not maintained thereafter" the v0.2 milestone. Mixing
+  per-implementation status into normative requirement text meant that
+  text either had to be re-reviewed every time the named implementation
+  shipped a fix, or — as had already happened — silently went stale
+  while still reading as current spec guidance. All four asides are
+  removed, leaving each site purely normative; their content moves
+  verbatim into new `docs/KNOWN_GAPS.md`, an explicitly non-normative
+  document with its own staleness caveat (nothing in it gates `relay
+  conform` or any other CI check). Appendix A's own preamble now points
+  to `docs/KNOWN_GAPS.md` for current per-implementation deviations, so
+  the pointer exists exactly once rather than being repeated at every
+  future implementation-status callout. Closes [REL-SPEC-7].
+- `SpecVersion` unchanged (`2.0`); no MUST/SHOULD/MAY requirement text
+  changed — only the removal of non-normative asides and their
+  relocation to a new non-normative document. No existing conformant
+  implementation is affected either way.
+
 ## v2.0.8 — 2026-08-20 (doc addition; no normative change to existing conformant implementations)
 
 - **§13.7.1 / §18.2 — C++ protocol-interface `I`-prefix**: every existing

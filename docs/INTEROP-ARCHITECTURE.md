@@ -107,13 +107,23 @@ from a probe that is simply *unreached* due to a bug. **Fix the bug before
 hardening the gate**, or hardening will just turn a silent no-op into a
 permanently red required check:
 
-- **go-DDS, rust-DDS**: the `docker pull eclipse-cyclonedds/cyclonedds:latest`
-  step targets a tag that was never published — this is a real defect, not
-  environmental unavailability. Fix first by adopting cpp-DDS's already-
-  working pattern: build the peer image locally from upstream CycloneDDS
-  source (`docker compose ... build cyclone-peer`) instead of pulling a
-  nonexistent tag. Only once the probe can genuinely succeed does hardening
-  it make sense.
+- **go-DDS, rust-DDS, cpp-DDS**: the `docker pull
+  eclipse-cyclonedds/cyclonedds:latest` step targets a tag that was never
+  published — this is a real defect, not environmental unavailability. Fix
+  by building the peer image locally from upstream CycloneDDS source
+  (`docker compose ... build cyclone-peer`) instead of pulling a nonexistent
+  tag. Only once the probe can genuinely succeed does hardening it make
+  sense.
+  <br>*(Correction, 2026-08-21: an earlier draft of this document framed
+  cpp-DDS as having "already fixed" this bug, implying a pre-existing,
+  proven template the other two repos could copy. A follow-up
+  CI-history investigation found that's not accurate — cpp-DDS carried the
+  identical nonexistent-tag bug through at least 7 of its own preceding CI
+  runs and was fixed in its own most recent commit at the time, essentially
+  concurrently with go-DDS and rust-DDS, not earlier. All three DDS repos
+  reached "bug fixed" maturity at the same time, not two-fixed-one-pending.
+  The underlying `Dockerfile.cyclonedds` pattern itself is still the right
+  fix and was ported correctly; only the historical framing was wrong.)*
 - **Once a probe's target is real** (CAN's `vcan`+`can-utils`, DDS's
   locally-built peer, MQTT's service container), add a hard-failing check on
   the canonical Linux runner specifically: if that probe still reports
@@ -127,6 +137,15 @@ permanently red required check:
   "routinely skips") is the right transparency floor even before hardening
   — repos still using a quiet `::notice::` (go-mqtt, rust-MQTT, go-DDS,
   rust-DDS) should upgrade to CAN's messaging as an interim step.
+
+**Hardening readiness, per family (investigated 2026-08-21 against real CI
+history, not assumed from this document):**
+
+| Family | Probe target now real? | Evidence | Verdict |
+|---|---|---|---|
+| CAN (go/cpp/rust) | No — genuinely unavailable | 24/24 checked runs across all three repos fail identically: `modprobe: FATAL: Module vcan not found in directory /lib/modules/<kernel>`. GitHub-hosted `ubuntu-latest`/`ubuntu-22.04` runners do not ship this kernel module. | **Do not harden.** Hardening today would make CI permanently red on every PR, not occasionally red on a genuine regression. This is the one family where the audit's original caution is fully justified. |
+| DDS (go/cpp/rust) | Yes, as of the fixes above | Each repo: 0/7 pre-fix runs succeeded (confirms the bug was real and universal); exactly 1/1 post-fix run succeeded so far, each landing 2026-07-31 to 2026-08-21. | **Not yet — wait for more green runs.** A source build (git clone + CMake) is more failure-prone than a pulled tag ever was; one success isn't enough to certify it reliable on the canonical runner. Revisit after several more runs accumulate. |
+| MQTT (go/rust) | Yes — always was (real `eclipse-mosquitto:2` service container) | 6/6 available runs succeed for both repos; real interop tests genuinely execute and pass every time (`mosquitto_pub`/`mosquitto_sub` and a third-party-CLI-backed round trip). | **Safe to harden now.** Strongest evidence of any family — proceed with the canonical-runner hard-fail. |
 
 ### 4. Service-container-first, where a real image exists (INTEROP-06)
 

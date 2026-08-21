@@ -1,4 +1,4 @@
-# RELAY Specification — v2.3
+# RELAY Specification — v2.4
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -1182,7 +1182,7 @@ failure rather than a skip. Exit: `0` all equivalent, `1` any mismatch/error,
     "protocol":     "CAN",
     "protocol_int": 1,
     "version":      "1.2.3",
-    "spec_version": "2.3",
+    "spec_version": "2.4",
     "language":     "go",
     "runtime":      "go1.25.0",
     "commit":       "a1b2c3d4"
@@ -1207,7 +1207,7 @@ conformance failure, but §17.2's conformance manifest cannot populate its own
     "protocol":            "CAN",
     "protocol_int":        1,
     "version":             "1.2.3",
-    "spec_version":        "2.3",
+    "spec_version":        "2.4",
     "commands":            ["version", "capabilities", "status", "connect", "send", "subscribe"],
     "transports":          ["socketcan", "virtual"],
     "features":            ["fd", "isotp", "j1939"],
@@ -1278,7 +1278,7 @@ $ go-can version --format json
     "protocol":     "CAN",
     "protocol_int": 1,
     "version":      "1.2.3",
-    "spec_version": "2.3",
+    "spec_version": "2.4",
     "language":     "go",
     "runtime":      "go1.25.0"
 }
@@ -1290,7 +1290,7 @@ $ go-can capabilities
     "protocol":            "CAN",
     "protocol_int":        1,
     "version":             "1.2.3",
-    "spec_version":        "2.3",
+    "spec_version":        "2.4",
     "commands":            ["version", "capabilities", "status", "connect", "send", "subscribe"],
     "transports":          ["socketcan", "virtual"],
     "features":            ["fd", "isotp", "j1939"],
@@ -1366,11 +1366,11 @@ LABEL org.opencontainers.image.licenses="MPL-2.0"
 LABEL io.relay.tool="<tool>"
 LABEL io.relay.language="go|cpp|rust|c"
 LABEL io.relay.binary="<binary>"
-LABEL io.relay.spec-version="2.3"
+LABEL io.relay.spec-version="2.4"
 ```
 
 The `io.relay.spec-version` label MUST always match the value of `SpecVersion`
-exported by the package (§17.12 / §19.4). The `"2.3"` shown above is an example;
+exported by the package (§17.12 / §19.4). The `"2.4"` shown above is an example;
 update it on each spec minor release.
 
 The project directory is mounted at `/project` by convention:
@@ -2123,6 +2123,54 @@ The conversion MUST be lossless (§15.7): every SOME/IP header field is preserve
 
 `FromMessage`: parse `msg.ID` as `"serviceID/methodID"` decimal pair; if malformed return `ErrMalformedMessage`.
 
+### 15.8 Vector distribution
+
+The canonical golden vectors (§15.7, `spec/vectors/*.json`) are a single
+source of truth: every implementation that participates in `relay interop`
+or Requirement 9's envelope-conversion verification embeds an identical
+copy, not a private variant. `spec/vectors/vectors_manifest.json` pins that
+distribution:
+
+```json
+{
+    "kind":             "relay-vectors-manifest",
+    "manifest_version": "relay-vectors/1",
+    "vectors_version":  "2.4",
+    "vectors": [
+        {"name": "can-standard-frame",                  "sha256": "816b402d..."},
+        {"name": "errors/lin-diagnostic-wrong-checksum", "sha256": "36666ad1..."}
+    ]
+}
+```
+
+`vectors_version` is bound to the RELAY spec version (§19.4) that last
+changed the vector set — not necessarily every spec release, since most
+releases don't touch `spec/vectors/`. `vectors` MUST list every file under
+`spec/vectors/` (including `spec/vectors/errors/`), by name relative to
+that directory with the `.json` suffix stripped, each paired with the
+SHA-256 (lowercase hex) of its raw file bytes.
+
+Per Requirement 16 (§17), a conformant implementation that embeds a local
+copy of these vectors (as RELAY's own reference tooling does, via
+`//go:embed` in `vectors.go`) MUST embed the *exact* pinned set —
+byte-for-byte — and MUST have a CI step that recomputes each embedded
+vector's SHA-256 and fails the build on any divergence from
+`vectors_manifest.json` for the `vectors_version` it targets. This closes
+the same class of drift Requirement 15's conformance manifest closes for
+§17 itself: a golden vector silently diverging from the canonical set (an
+accidental local edit, a stale copy after an upstream fix) would otherwise
+pass every existing check, since neither `relay conform` nor `relay
+interop` currently distinguishes "this implementation's copy of a vector"
+from "the canonical vector."
+
+`spec/vectors/*.json` content itself is unaffected: this section pins
+*distribution*, not envelope semantics (already governed by §15.7). Wire
+format remains explicitly out of scope per §1.1/§17.1: this manifest MUST
+NOT be extended with byte-for-byte wire-format vectors, only the existing
+envelope-level `relay.Message` fixtures. §17.1's SHOULD for
+implementation-owned wire-format regression vectors is unaffected by this
+section and remains a separate, unpinned concern.
+
 ---
 
 ## 16. Per-Protocol Defaults
@@ -2162,6 +2210,7 @@ An implementation is **RELAY-conformant** if and only if:
 13. **Capabilities generation.** The capabilities document's `commands`, `transports`, `features`, `interfaces`, and `optional_interfaces` fields are generated from the same source-of-truth that gates compilation, per §12.2, not hand-maintained independently of it.
 14. **Spec-version binding.** The `spec_version` value the CLI prints (§12.1, §12.2) MUST NOT be a hand-copied literal kept in sync by memory alone. A Go implementation that depends on `github.com/SoundMatt/RELAY` MUST bind its declared value directly to `relay.SpecVersion` (e.g. `const SpecVersion = relay.SpecVersion`), so a dependency bump alone keeps it current. An implementation in any other language, or a Go implementation that does not depend on the RELAY module, MUST have a CI step that fails the build when its declared `spec_version` diverges from the authoritative `spec/version.json` (§19.4) at the RELAY revision it targets.
 15. **Conformance manifest.** The implementation MUST commit a `relay-conform/1` manifest (§17.2), generated by `relay conform --manifest` against its own built binary; CI MUST regenerate the manifest on every change and fail the build on any diff from the committed copy, or on any requirement entry whose `status` is `FAIL`.
+16. **Vector manifest.** The canonical `spec/vectors/` distribution (§15.8) is pinned by `spec/vectors/vectors_manifest.json`. A conformant implementation that embeds a local copy of these vectors MUST embed the exact pinned set, and MUST have a CI step that fails when its embedded copy's SHA-256 diverges from the published manifest for the `vectors_version` it targets.
 
 `relay conform <binary>` is a **black-box CLI tool**: it can only observe what
 the built binary's `version`/`capabilities`/`status` commands print, not the
@@ -2205,7 +2254,14 @@ manifest) is split down the middle: `relay conform --manifest` itself
 conform`'s own reach, unlike Requirements 2–5/8–11/13/14 above — but
 whether CI actually regenerates it on every change and diffs it against
 the committed copy is, like Requirement 14, a CI-process fact `relay
-conform` cannot observe from outside the binary it's given.
+conform` cannot observe from outside the binary it's given. Requirement 16
+(vector manifest) is the same category as Requirement 14, not Requirement
+15: unlike the conformance manifest, `relay conform` has no CLI surface
+that exposes an implementation's embedded vector bytes at all, so it
+cannot even partially generate this check — whether an implementation's
+embedded vector copy matches the published manifest is entirely a
+CI-process fact about the implementation's own build, verified by the
+implementation's own CI instead.
 
 **Requirement-to-verifier lookup table**, collecting the narrative above
 into one place:
@@ -2227,6 +2283,7 @@ into one place:
 | 13 | Capabilities generation | Implementation's own build process and test suite | Not observable through the CLI |
 | 14 | Spec-version binding | Implementation's own CI | Not observable through the CLI |
 | 15 | Conformance manifest | `relay conform --manifest` (content); implementation's own CI (regenerate + diff) | Split — manifest content generated by `relay conform`; CI enforcement not observable through the CLI |
+| 16 | Vector manifest | Implementation's own CI | Not observable through the CLI |
 
 ### 17.1 Wire-format regression coverage (recommended)
 
@@ -2280,7 +2337,7 @@ diffable artifact.
     "manifest_version":  "relay-conform/1",
     "tool":               "go-can",
     "binary_version":     "1.2.3",
-    "spec_version":       "2.3",
+    "spec_version":       "2.4",
     "git_sha":            "a1b2c3d4",
     "capabilities_sha256": "e3b0c44298fc1c14...",
     "requirements": [
@@ -2299,7 +2356,7 @@ SHA-256 of the raw `capabilities` document bytes as returned by the binary,
 letting a diff catch any change to the capabilities document — mechanically
 regenerated or not — without re-parsing it.
 
-`requirements` MUST contain exactly one entry per §17 requirement (1–15,
+`requirements` MUST contain exactly one entry per §17 requirement (1–16,
 extended as this document's own requirement list grows). Each entry's
 `status` is one of:
 
@@ -3029,11 +3086,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v2.3**
+Current version: **v2.4**
 
-**Go:** `const SpecVersion = "2.3"` (update in implementations targeting v2.3)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "2.3";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.3";`
+**Go:** `const SpecVersion = "2.4"` (update in implementations targeting v2.4)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "2.4";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.4";`
 
 ---
 
@@ -3064,6 +3121,10 @@ every pull request, run and gate on:
    `relay-conform/1` manifest with `relay conform --manifest` against the
    built CLI and fail the job on any diff from the committed copy, or on
    any requirement entry whose `status` is `FAIL`.
+5. **Vector manifest** (§15.8, Requirement 16) — recompute the SHA-256 of
+   every embedded golden vector and fail the job on any divergence from
+   `spec/vectors/vectors_manifest.json` for the `vectors_version` it
+   targets.
 
 Releases MUST be tagged only from a commit whose CI is fully green.
 

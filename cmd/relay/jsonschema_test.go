@@ -136,6 +136,11 @@ func TestGoldenVectorsConformToSchemas(t *testing.T) {
 	}
 
 	for _, p := range paths {
+		// spec/vectors/vectors_manifest.json (§15.8) pins the vector
+		// distribution; it is metadata about the set, not a vector itself.
+		if filepath.Base(p) == "vectors_manifest.json" {
+			continue
+		}
 		p := p
 		t.Run(filepath.Base(p), func(t *testing.T) {
 			data, err := os.ReadFile(p)

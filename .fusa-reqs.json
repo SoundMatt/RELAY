@@ -902,6 +902,16 @@
       "verification": "test",
       "safety_goal": "SG-006",
       "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-RELAY-096",
+      "title": "Vector distribution manifest (relay-vectors/1)",
+      "text": "spec/vectors/vectors_manifest.json (spec \u00a715.8) MUST pin the canonical golden vector distribution: a vectors_version bound to spec/version.json, and a SHA-256 (lowercase hex) per file under spec/vectors/ (including spec/vectors/errors/). VectorNames() MUST exclude the manifest itself from the vector set it enumerates \u2014 it is metadata about the distribution, not a vector. VerifyVectorManifest() MUST recompute every embedded vector's SHA-256 and report a finding for any vector present but unlisted, listed but absent, or present-and-listed with a mismatched hash (spec \u00a717 Requirement 16).",
+      "category": "functional",
+      "criticality": "medium",
+      "verification": "test",
+      "safety_goal": "SG-006",
+      "asil": "ASIL-B"
     }
   ]
 }

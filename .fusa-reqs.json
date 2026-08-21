@@ -961,6 +961,16 @@
       "verification": "test",
       "safety_goal": "SG-006",
       "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-RELAY-102",
+      "title": "Continuous example verification (doctest, spec sec-20.7)",
+      "text": "A fenced json code block in the specification document immediately preceded by an HTML comment <!-- doctest:KIND --> on its own line MUST be extracted by this repository's own CI and validated against KIND's rules (version/capabilities/status document rules, or the relay-conform-manifest/relay-conform-attestation/vectors-manifest schema) using the same validator relay conform applies to a real binary's output. A build MUST fail if a marked example violates its validator, or if a KIND has zero examples found. Per spec sec-13.8, an implementation's README RELAY conformance section MUST similarly have every literal, executable command example machine-extracted and executed in its own CI, excluding network-fetching commands (go get/go install) and commands requiring a published container image, which are explicitly out of this requirement's scope.",
+      "category": "functional",
+      "criticality": "medium",
+      "verification": "test",
+      "safety_goal": "SG-006",
+      "asil": "ASIL-B"
     }
   ]
 }

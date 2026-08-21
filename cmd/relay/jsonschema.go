@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -19,7 +20,7 @@ import (
 //
 //	type (string or []string), properties, required, additionalProperties:false,
 //	enum, const, minimum, maximum, items (single schema), minItems, maxItems,
-//	contains (single schema).
+//	contains (single schema), pattern (string values, RE2 syntax).
 //
 // Unsupported keywords are ignored (they do not cause false failures).
 
@@ -74,6 +75,15 @@ func validateValue(schema map[string]interface{}, v interface{}, path string, ou
 		}
 		if max, ok := numberOf(schema["maximum"]); ok && val > max {
 			*out = append(*out, fmt.Sprintf("%s: %v > maximum %v", loc, val, max))
+		}
+	case string:
+		if pat, ok := schema["pattern"].(string); ok {
+			re, err := regexp.Compile(pat)
+			if err != nil {
+				*out = append(*out, fmt.Sprintf("%s: schema pattern %q does not compile: %v", loc, pat, err))
+			} else if !re.MatchString(val) {
+				*out = append(*out, fmt.Sprintf("%s: value %q does not match pattern %q", loc, val, pat))
+			}
 		}
 	case map[string]interface{}:
 		validateObject(schema, val, path, out)

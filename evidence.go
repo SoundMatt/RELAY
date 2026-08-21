@@ -27,13 +27,14 @@ import (
 //fusa:req REQ-RELAY-093
 //fusa:req REQ-RELAY-094
 //fusa:req REQ-RELAY-100
+//fusa:req REQ-RELAY-102
 //fusa:req REQ-RELAY-074
 //fusa:req REQ-RELAY-075
 //fusa:req REQ-RELAY-076
 //go:embed .fusa-reqs.json .fusa-hara.json .fusa-tara.json
 //go:embed spec/version.json docs/tool-safety-manual.md
 //go:embed docs/formal/RelayLifecycle.tla docs/formal/README.md
-//go:embed docs/asil-d-uplift.md spec/relay-spec.md
+//go:embed docs/asil-d-uplift.md spec/relay-spec.md README.md
 var evidenceFS embed.FS
 
 // evidencePaths maps the logical evidence name to its embedded path.
@@ -47,6 +48,7 @@ var evidencePaths = map[string]string{
 	"formal-model-doc":   "docs/formal/README.md",
 	"asil-d-uplift":      "docs/asil-d-uplift.md",
 	"specification":      "spec/relay-spec.md",
+	"readme":             "README.md",
 }
 
 // Evidence returns the raw bytes of a named safety-evidence artifact, e.g.

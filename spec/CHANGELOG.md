@@ -1,5 +1,42 @@
 # RELAY Spec Changelog
 
+## v2.2 — 2026-08-21 (stable)
+
+Spec-version binding — a new normative conformance requirement. Additive
+(MINOR).
+
+- **New §17 Requirement 14 — spec-version binding.** THEME-A found 13 of 18
+  ecosystem ports currently declare a stale `spec_version`. §17 Requirement
+  12 already required a `SpecVersion` constant "equal to the spec version
+  being targeted," but its own verification narrative already conceded
+  `relay conform`'s black-box CLI can only shape-check the printed string,
+  never observe whether it's genuinely bound to anything — so a hand-typed
+  literal that's never revisited was always indistinguishable, from the
+  outside, from a correctly-maintained one. New requirement: a Go
+  implementation that depends on `github.com/SoundMatt/RELAY` MUST bind its
+  declared `spec_version` directly to `relay.SpecVersion` rather than
+  duplicating the string — a dependency bump alone then keeps it current.
+  Any implementation that can't do that (a different language, or a Go
+  implementation without the RELAY dependency) MUST have a CI step that
+  fails the build when its declared value diverges from the authoritative
+  `spec/version.json` at the RELAY revision it targets. Closes
+  [REL-SPEC-6].
+- **Scoped deliberately to the normative half only.** The finding's
+  recommendation also proposed generating the spec document's own version
+  literals (§19.4's embedded snippets, etc.) from `spec/version.json`
+  itself — that's [NEW-SPEC-6]'s own scope (RELAY's own doc-build tooling),
+  not duplicated here.
+- Like Requirement 13, `relay conform` cannot observe *how* a declared
+  `spec_version` was produced — a value bound to `relay.SpecVersion`, one
+  checked by a CI script against `spec/version.json`, and one simply typed
+  once and forgotten all look identical from outside the binary — so this
+  MUST is verified by the implementation's own CI, not `relay conform`.
+- `SpecVersion = "2.2"` (`version.go`, `spec/version.json`,
+  `version_test.go`); `cmd/relay`'s `toolVersion` bumped `2.1.0` → `2.2.0`
+  per its own drift-guard test. Per §19.3, `relay conform` continues
+  accepting implementations declaring earlier `spec_version`s under their
+  own rules — nothing currently conformant is retroactively broken.
+
 ## v2.1 — 2026-08-20 (stable)
 
 Capabilities generation — a new normative conformance requirement, not just

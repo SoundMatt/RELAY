@@ -382,8 +382,8 @@ func TestBuildManifestSelf(t *testing.T) {
 	if m.SpecVersion == "" {
 		t.Error("SpecVersion is empty")
 	}
-	if len(m.Requirements) != 15 {
-		t.Fatalf("len(Requirements) = %d, want 15", len(m.Requirements))
+	if len(m.Requirements) != 16 {
+		t.Fatalf("len(Requirements) = %d, want 16", len(m.Requirements))
 	}
 	for i, r := range m.Requirements {
 		if r.ID != i+1 {
@@ -414,7 +414,7 @@ func TestBuildManifestNotObservableDefaults(t *testing.T) {
 	bin := buildTestBinary(t)
 	m := buildManifest(bin)
 
-	wantNotObservable := []int{2, 3, 4, 5, 8, 9, 10, 11, 13, 14, 15}
+	wantNotObservable := []int{2, 3, 4, 5, 8, 9, 10, 11, 13, 14, 15, 16}
 	byID := map[int]manifestRequirement{}
 	for _, r := range m.Requirements {
 		byID[r.ID] = r
@@ -508,8 +508,8 @@ func TestRunConformManifestFlag(t *testing.T) {
 	if m.Overall != statusPass {
 		t.Errorf("Overall = %s, want %s", m.Overall, statusPass)
 	}
-	if len(m.Requirements) != 15 {
-		t.Errorf("len(Requirements) = %d, want 15", len(m.Requirements))
+	if len(m.Requirements) != 16 {
+		t.Errorf("len(Requirements) = %d, want 16", len(m.Requirements))
 	}
 }
 
@@ -532,6 +532,142 @@ func TestRunConformManifestFlagFail(t *testing.T) {
 	}
 	if m.Overall != statusFail {
 		t.Errorf("Overall = %s, want %s", m.Overall, statusFail)
+	}
+}
+
+// --- tests for --attestation / buildAttestation (spec §20.6) ---
+
+//fusa:test REQ-RELAY-098
+func TestBuildAttestationSelf(t *testing.T) {
+	bin := buildTestBinary(t)
+	raw, err := os.ReadFile(bin)
+	if err != nil {
+		t.Fatalf("read binary: %v", err)
+	}
+	sum := sha256.Sum256(raw)
+	wantDigest := hex.EncodeToString(sum[:])
+
+	a, err := buildAttestation(bin)
+	if err != nil {
+		t.Fatalf("buildAttestation: %v", err)
+	}
+
+	if a.Type != "https://in-toto.io/Statement/v1" {
+		t.Errorf("Type = %q, want in-toto Statement v1", a.Type)
+	}
+	if a.PredicateType != "https://relay.dev/attestation/relay-conform/1" {
+		t.Errorf("PredicateType = %q, want relay-conform/1", a.PredicateType)
+	}
+	if len(a.Subject) != 1 {
+		t.Fatalf("len(Subject) = %d, want 1", len(a.Subject))
+	}
+	if a.Subject[0].Digest.SHA256 != wantDigest {
+		t.Errorf("Subject[0].Digest.SHA256 = %q, want %q (independently computed sha256 of the binary file)", a.Subject[0].Digest.SHA256, wantDigest)
+	}
+	if a.Predicate.SpecVersion == "" {
+		t.Error("Predicate.SpecVersion is empty")
+	}
+	if a.Predicate.ConformanceManifest.Kind != "relay-conform-manifest" {
+		t.Errorf("Predicate.ConformanceManifest.Kind = %q, want relay-conform-manifest", a.Predicate.ConformanceManifest.Kind)
+	}
+	if len(a.Predicate.ConformanceManifest.Requirements) != 16 {
+		t.Errorf("len(Predicate.ConformanceManifest.Requirements) = %d, want 16", len(a.Predicate.ConformanceManifest.Requirements))
+	}
+	// §20.6: MUST be false — this type has no signing mechanism at all.
+	if a.Predicate.Signed {
+		t.Error("Predicate.Signed = true, want false (relay conform --attestation never signs)")
+	}
+	if a.Predicate.SafetyEvidenceSummary != nil {
+		t.Errorf("Predicate.SafetyEvidenceSummary = %v, want nil (RELAY's reference tooling cannot generate one)", a.Predicate.SafetyEvidenceSummary)
+	}
+}
+
+//fusa:test REQ-RELAY-098
+func TestBuildAttestationVectorsVersionMatchesEmbedded(t *testing.T) {
+	bin := buildTestBinary(t)
+	a, err := buildAttestation(bin)
+	if err != nil {
+		t.Fatalf("buildAttestation: %v", err)
+	}
+	vm, err := relay.ParsedVectorsManifest()
+	if err != nil {
+		t.Fatalf("ParsedVectorsManifest: %v", err)
+	}
+	if a.Predicate.VectorsVersion != vm.VectorsVersion {
+		t.Errorf("Predicate.VectorsVersion = %q, want %q (this tool's own embedded vectors_manifest.json)", a.Predicate.VectorsVersion, vm.VectorsVersion)
+	}
+}
+
+//fusa:test REQ-RELAY-098
+func TestBuildAttestationSchemaValid(t *testing.T) {
+	bin := buildTestBinary(t)
+	a, err := buildAttestation(bin)
+	if err != nil {
+		t.Fatalf("buildAttestation: %v", err)
+	}
+	data, err := json.Marshal(a)
+	if err != nil {
+		t.Fatalf("json.Marshal(attestation): %v", err)
+	}
+	var asAny interface{}
+	if err := json.Unmarshal(data, &asAny); err != nil {
+		t.Fatalf("re-unmarshal attestation JSON: %v", err)
+	}
+	schemaJSON, err := relay.Schema("relay-conform-attestation")
+	if err != nil {
+		t.Fatalf("no embedded relay-conform-attestation schema: %v", err)
+	}
+	violations := validateSchema(schemaJSON, asAny)
+	if len(violations) != 0 {
+		t.Errorf("attestation does not conform to relay-conform-attestation schema: %v\nattestation: %s", violations, data)
+	}
+}
+
+//fusa:test REQ-RELAY-098
+func TestBuildAttestationUnreadableBinary(t *testing.T) {
+	_, err := buildAttestation(filepath.Join(t.TempDir(), "does-not-exist"))
+	if err == nil {
+		t.Fatal("expected an error for a nonexistent binary, got nil")
+	}
+}
+
+//fusa:test REQ-RELAY-098
+func TestRunConformAttestationFlag(t *testing.T) {
+	bin := buildTestBinary(t)
+	var out bytes.Buffer
+	var errbuf bytes.Buffer
+	err := runConform(&out, &errbuf, []string{"--attestation", bin})
+	if err != nil {
+		t.Fatalf("relay conform --attestation relay: unexpected error: %v\noutput: %s", err, out.String())
+	}
+	var a conformAttestation
+	if jsonErr := json.Unmarshal(out.Bytes(), &a); jsonErr != nil {
+		t.Fatalf("conform --attestation output is not valid JSON: %v\noutput: %s", jsonErr, out.String())
+	}
+	if a.Predicate.ConformanceManifest.Overall != statusPass {
+		t.Errorf("Predicate.ConformanceManifest.Overall = %s, want %s", a.Predicate.ConformanceManifest.Overall, statusPass)
+	}
+}
+
+//fusa:test REQ-RELAY-098
+func TestRunConformAttestationFlagFail(t *testing.T) {
+	bin := buildFailingBinary(t)
+	var out bytes.Buffer
+	var errbuf bytes.Buffer
+	err := runConform(&out, &errbuf, []string{"--attestation", bin})
+	if err == nil {
+		t.Fatalf("expected non-nil error for a FAIL-manifest attestation, got nil\noutput: %s", out.String())
+	}
+	var code exitCode
+	if !errors.As(err, &code) || int(code) != 1 {
+		t.Errorf("expected exitCode(1) for a FAIL-manifest attestation, got %v", err)
+	}
+	var a conformAttestation
+	if jsonErr := json.Unmarshal(out.Bytes(), &a); jsonErr != nil {
+		t.Fatalf("conform --attestation output is not valid JSON: %v\noutput: %s", jsonErr, out.String())
+	}
+	if a.Predicate.ConformanceManifest.Overall != statusFail {
+		t.Errorf("Predicate.ConformanceManifest.Overall = %s, want %s", a.Predicate.ConformanceManifest.Overall, statusFail)
 	}
 }
 

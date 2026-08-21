@@ -1,0 +1,74 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/relay-conform-attestation.json",
+    "title": "RELAY release conformance attestation",
+    "description": "JSON output of `relay conform --attestation <binary>` (spec §20.6). An in-toto Statement whose predicate bundles the §17.2 conformance manifest and §15.8 vectors_version. Defines shape only — signing and publication are out of scope.",
+    "type": "object",
+    "properties": {
+        "_type": {
+            "type": "string",
+            "const": "https://in-toto.io/Statement/v1"
+        },
+        "predicateType": {
+            "type": "string",
+            "const": "https://relay.dev/attestation/relay-conform/1"
+        },
+        "subject": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Binary name, from the conformance manifest's tool field."
+                    },
+                    "digest": {
+                        "type": "object",
+                        "properties": {
+                            "sha256": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$",
+                                "description": "SHA-256 (lowercase hex) of the attested binary's raw file bytes."
+                            }
+                        },
+                        "required": ["sha256"],
+                        "additionalProperties": false
+                    }
+                },
+                "required": ["name", "digest"],
+                "additionalProperties": false
+            }
+        },
+        "predicate": {
+            "type": "object",
+            "properties": {
+                "spec_version": {
+                    "type": "string",
+                    "description": "Declared spec_version, from the conformance manifest."
+                },
+                "vectors_version": {
+                    "type": "string",
+                    "description": "vectors_version from the attestation-generating tool's own embedded vectors_manifest.json (§15.8) -- NOT observed from the attested binary, which a black-box invocation cannot introspect. \"\" if the generator embeds none."
+                },
+                "conformance_manifest": {
+                    "type": "object",
+                    "description": "The full relay-conform/1 document (§17.2), exactly as relay conform --manifest emits it."
+                },
+                "safety_evidence_summary": {
+                    "type": ["object", "null"],
+                    "description": "OPTIONAL, implementation-defined x-FuSa safety-evidence digest. Null when not populated (e.g. by RELAY's own reference tooling, which cannot generate one generically)."
+                },
+                "signed": {
+                    "type": "boolean",
+                    "const": false,
+                    "description": "MUST be false on an unsigned attestation. This schema does not define a signed variant; signing mechanisms are out of scope (spec §20.6)."
+                }
+            },
+            "required": ["spec_version", "vectors_version", "conformance_manifest", "signed"],
+            "additionalProperties": false
+        }
+    },
+    "required": ["_type", "predicateType", "subject", "predicate"],
+    "additionalProperties": false
+}

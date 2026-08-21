@@ -13,6 +13,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -56,21 +57,23 @@ type conformResult struct {
 }
 
 // runConform implements
-// `relay conform [--format text|json] [--strict] [--manifest] <binary>`.
+// `relay conform [--format text|json] [--strict] [--manifest] [--attestation] <binary>`.
 //
 //fusa:req REQ-RELAY-052
 //fusa:req REQ-RELAY-095
+//fusa:req REQ-RELAY-098
 func runConform(stdout, stderr io.Writer, args []string) error {
 	fs := flag.NewFlagSet("conform", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	format := fs.String("format", "text", "Output format: text or json")
 	strict := fs.Bool("strict", false, "Treat WARN as FAIL")
 	manifest := fs.Bool("manifest", false, "Emit a relay-conform/1 manifest (spec §17.2) instead of findings")
+	attestation := fs.Bool("attestation", false, "Emit an unsigned relay-conform-attestation/1 predicate (spec §20.6) instead of findings")
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("relay conform: %w", err)
 	}
 	if fs.NArg() == 0 {
-		fmt.Fprintln(stderr, "Usage: relay conform [--format text|json] [--strict] [--manifest] <binary>")
+		fmt.Fprintln(stderr, "Usage: relay conform [--format text|json] [--strict] [--manifest] [--attestation] <binary>")
 		return exitCode(2)
 	}
 	if fs.NArg() > 1 {
@@ -91,6 +94,22 @@ func runConform(stdout, stderr io.Writer, args []string) error {
 			return err
 		}
 		if m.Overall == statusFail {
+			return exitCode(1)
+		}
+		return nil
+	}
+
+	if *attestation {
+		a, err := buildAttestation(fs.Arg(0))
+		if err != nil {
+			return fmt.Errorf("relay conform --attestation: %w", err)
+		}
+		enc := json.NewEncoder(stdout)
+		enc.SetIndent("", "    ")
+		if err := enc.Encode(a); err != nil {
+			return err
+		}
+		if a.Predicate.ConformanceManifest.Overall == statusFail {
 			return exitCode(1)
 		}
 		return nil
@@ -299,6 +318,7 @@ func buildManifest(binary string) conformManifest {
 		{13, statusNotObservable, verifierBuildAndTest},
 		{14, statusNotObservable, verifierCI},
 		{15, statusNotObservable, verifierManifestSplit},
+		{16, statusNotObservable, verifierCI},
 	}
 
 	m.Overall = statusPass
@@ -309,6 +329,77 @@ func buildManifest(binary string) conformManifest {
 		}
 	}
 	return m
+}
+
+// attestationDigest is one subject's content-addressed digest in an in-toto
+// Statement (spec §20.6).
+type attestationDigest struct {
+	SHA256 string `json:"sha256"`
+}
+
+// attestationSubject identifies the artifact an attestation is about.
+type attestationSubject struct {
+	Name   string            `json:"name"`
+	Digest attestationDigest `json:"digest"`
+}
+
+// attestationPredicate is the relay-conform-attestation/1 predicate body
+// (spec §20.6).
+type attestationPredicate struct {
+	SpecVersion           string          `json:"spec_version"`
+	VectorsVersion        string          `json:"vectors_version"`
+	ConformanceManifest   conformManifest `json:"conformance_manifest"`
+	SafetyEvidenceSummary interface{}     `json:"safety_evidence_summary"`
+	Signed                bool            `json:"signed"`
+}
+
+// conformAttestation is an in-toto Statement carrying a relay-conform-attestation/1
+// predicate (spec §20.6). It is unsigned: this type has no signature field,
+// and Signed is always false — signing and publication are explicitly out of
+// scope for RELAY's own reference tooling (spec §20.6).
+type conformAttestation struct {
+	Type          string               `json:"_type"`
+	PredicateType string               `json:"predicateType"`
+	Subject       []attestationSubject `json:"subject"`
+	Predicate     attestationPredicate `json:"predicate"`
+}
+
+// buildAttestation generates an unsigned relay-conform-attestation/1
+// predicate (spec §20.6) for one binary: an in-toto Statement bundling the
+// §17.2 conformance manifest for that binary, this tool's own embedded
+// vectors_version (§15.8 — NOT observed from the attested binary, which a
+// black-box invocation cannot introspect), and the attested binary's own
+// SHA-256 as the subject digest.
+//
+//fusa:req REQ-RELAY-098
+func buildAttestation(binary string) (conformAttestation, error) {
+	raw, err := os.ReadFile(binary)
+	if err != nil {
+		return conformAttestation{}, fmt.Errorf("read binary: %w", err)
+	}
+	sum := sha256.Sum256(raw)
+
+	m := buildManifest(binary)
+
+	vectorsVersion := ""
+	if vm, err := relay.ParsedVectorsManifest(); err == nil {
+		vectorsVersion = vm.VectorsVersion
+	}
+
+	return conformAttestation{
+		Type:          "https://in-toto.io/Statement/v1",
+		PredicateType: "https://relay.dev/attestation/relay-conform/1",
+		Subject: []attestationSubject{
+			{Name: m.Tool, Digest: attestationDigest{SHA256: hex.EncodeToString(sum[:])}},
+		},
+		Predicate: attestationPredicate{
+			SpecVersion:           m.SpecVersion,
+			VectorsVersion:        vectorsVersion,
+			ConformanceManifest:   m,
+			SafetyEvidenceSummary: nil,
+			Signed:                false,
+		},
+	}, nil
 }
 
 // hasFail reports whether any finding in fs is FAIL-severity.

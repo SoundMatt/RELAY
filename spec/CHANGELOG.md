@@ -1,5 +1,44 @@
 # RELAY Spec Changelog
 
+## v2.6 — 2026-08-21 (MINOR — new release conformance attestation format)
+
+- **New §20.6 — Release conformance attestation (`relay-conform-attestation/1`).**
+  Defines the *shape* an implementation MAY publish to make §20.1's CI
+  gates externally verifiable rather than self-asserted: an
+  [in-toto](https://in-toto.io/) Statement whose `subject` digest is the
+  SHA-256 of the attested binary file, and whose predicate bundles the
+  full §17.2 conformance manifest, the attestation-generating tool's own
+  embedded `vectors_version` (§15.8 — explicitly **not** observed from the
+  attested binary, which a black-box invocation cannot introspect), and an
+  optional implementation-defined `safety_evidence_summary`.
+- **Scope decision (documented, not silently narrowed)**: this is a
+  spec-only release. The originating issue proposed cryptographic
+  signing, publishing the attestation alongside a release's container
+  image, surfacing its digest in `version --format json`, and having
+  `relay probe`/`relay report` treat an unverifiable release as
+  non-conformant. None of that ships here: RELAY's own CI does not
+  currently push container images to any registry, and fabricating a
+  "signature" without real key management would be worse than not
+  signing at all. `predicate.signed` MUST be `false` on an unsigned
+  attestation; this section defines shape only and does not mandate a
+  signing mechanism or publication channel. Closing this properly is
+  future work.
+- **New embedded schema** `spec/schemas/relay-conform-attestation.json`.
+- **Reference implementation**: `relay conform --attestation <binary>` in
+  `cmd/relay/conform.go`, generating the unsigned predicate for a given
+  binary. New `REQ-RELAY-098`.
+- **Bug found and fixed while implementing this**: `buildManifest`'s
+  `Requirements` slice was missing entry 16 (Vector manifest) — PR #181
+  added the §17 Requirement 16 spec text and the verifier-table row but
+  never added the corresponding code entry, so every `relay-conform/1`
+  manifest generated since v2.4 silently omitted it despite the spec's
+  own text mandating "exactly one entry per §17 requirement (1–16, ...)".
+  Fixed; both manifest-shape tests that should have caught this
+  (`TestBuildManifestSelf`, `TestRunConformManifestFlag`) were also
+  stale at a hardcoded `15` and are corrected alongside it.
+- `SpecVersion` bumped `2.5` → `2.6` (MINOR). Closes [NEW-SPEC-4] (partial
+  — signing, publishing, and probe/report enforcement remain open).
+
 ## v2.5 — 2026-08-21 (MINOR — new optional capabilities field, tightened §17 Requirements 1 and 6)
 
 - **New optional `multi_protocol` capabilities field (§12.2).** Defaults to

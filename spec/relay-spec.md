@@ -1,4 +1,4 @@
-# RELAY Specification — v2.5
+# RELAY Specification — v2.6
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -1182,7 +1182,7 @@ failure rather than a skip. Exit: `0` all equivalent, `1` any mismatch/error,
     "protocol":     "CAN",
     "protocol_int": 1,
     "version":      "1.2.3",
-    "spec_version": "2.5",
+    "spec_version": "2.6",
     "language":     "go",
     "runtime":      "go1.25.0",
     "commit":       "a1b2c3d4"
@@ -1207,7 +1207,7 @@ conformance failure, but §17.2's conformance manifest cannot populate its own
     "protocol":            "CAN",
     "protocol_int":        1,
     "version":             "1.2.3",
-    "spec_version":        "2.5",
+    "spec_version":        "2.6",
     "commands":            ["version", "capabilities", "status", "connect", "send", "subscribe"],
     "transports":          ["socketcan", "virtual"],
     "features":            ["fd", "isotp", "j1939"],
@@ -1237,7 +1237,7 @@ CLI:
     "protocol_int":        null,
     "multi_protocol":      true,
     "version":             "2.5.0",
-    "spec_version":        "2.5",
+    "spec_version":        "2.6",
     "commands":            ["version", "capabilities", "status", "conform", "convert", "..."],
     "transports":          [],
     "features":            [],
@@ -1306,7 +1306,7 @@ $ go-can version --format json
     "protocol":     "CAN",
     "protocol_int": 1,
     "version":      "1.2.3",
-    "spec_version": "2.5",
+    "spec_version": "2.6",
     "language":     "go",
     "runtime":      "go1.25.0"
 }
@@ -1318,7 +1318,7 @@ $ go-can capabilities
     "protocol":            "CAN",
     "protocol_int":        1,
     "version":             "1.2.3",
-    "spec_version":        "2.5",
+    "spec_version":        "2.6",
     "commands":            ["version", "capabilities", "status", "connect", "send", "subscribe"],
     "transports":          ["socketcan", "virtual"],
     "features":            ["fd", "isotp", "j1939"],
@@ -1394,11 +1394,11 @@ LABEL org.opencontainers.image.licenses="MPL-2.0"
 LABEL io.relay.tool="<tool>"
 LABEL io.relay.language="go|cpp|rust|c"
 LABEL io.relay.binary="<binary>"
-LABEL io.relay.spec-version="2.5"
+LABEL io.relay.spec-version="2.6"
 ```
 
 The `io.relay.spec-version` label MUST always match the value of `SpecVersion`
-exported by the package (§17.12 / §19.4). The `"2.5"` shown above is an example;
+exported by the package (§17.12 / §19.4). The `"2.6"` shown above is an example;
 update it on each spec minor release.
 
 The project directory is mounted at `/project` by convention:
@@ -2365,7 +2365,7 @@ diffable artifact.
     "manifest_version":  "relay-conform/1",
     "tool":               "go-can",
     "binary_version":     "1.2.3",
-    "spec_version":       "2.5",
+    "spec_version":       "2.6",
     "git_sha":            "a1b2c3d4",
     "capabilities_sha256": "e3b0c44298fc1c14...",
     "requirements": [
@@ -3114,11 +3114,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v2.5**
+Current version: **v2.6**
 
-**Go:** `const SpecVersion = "2.5"` (update in implementations targeting v2.5)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "2.5";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.5";`
+**Go:** `const SpecVersion = "2.6"` (update in implementations targeting v2.6)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "2.6";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.6";`
 
 ---
 
@@ -3193,6 +3193,71 @@ A conformant implementation MUST produce, in CI, a software bill of materials an
 build provenance for each release (SLSA build track), and MUST tag releases from
 signed, reviewed commits. RELAY's own `relay sbom` and `gofusa release` satisfy
 this for the reference tooling.
+
+### 20.6 Release conformance attestation (`relay-conform-attestation/1`)
+
+§20.1's CI gates are self-asserted by the port's own pipeline: a green run
+today gives no consumer of a released binary an externally verifiable claim
+about what was checked. This subsection defines the *format* an
+implementation MAY publish to close that gap — a
+`relay-conform-attestation/1` predicate bundling the §17.2 conformance
+manifest, the §15.8 vector manifest's `vectors_version`, and the targeted
+`spec_version`, shaped as an [in-toto](https://in-toto.io/) Statement:
+
+```json
+{
+    "_type":        "https://in-toto.io/Statement/v1",
+    "predicateType": "https://relay.dev/attestation/relay-conform/1",
+    "subject": [
+        {"name": "go-can", "digest": {"sha256": "9f86d081884c7d65..."}}
+    ],
+    "predicate": {
+        "spec_version":            "2.6",
+        "vectors_version":         "2.4",
+        "conformance_manifest":    { "...": "the full §17.2 relay-conform/1 document" },
+        "safety_evidence_summary": null,
+        "signed":                  false
+    }
+}
+```
+
+`subject[0].digest.sha256` is the SHA-256 of the artifact being attested —
+the binary file itself, or a container image digest if the implementation
+publishes one. `predicate.conformance_manifest` is the exact document
+`relay conform --manifest` emits (§17.2) for that same binary. Unlike the
+conformance manifest's own fields, `predicate.vectors_version` is **not**
+observed from the attested binary — a black-box CLI invocation has no way
+to read an arbitrary external binary's own embedded `vectors_manifest.json`
+(§15.8). It MUST instead be the `vectors_version` of the vector set the
+*attestation-generating tool itself* embeds, documenting which canonical
+vector set was current when the attestation was produced, or `""` if it
+embeds none. An implementation generating its own attestation about
+itself (the common case: a release pipeline attesting its own binary)
+naturally reports its own true embedded value here. `predicate.safety_evidence_summary`
+is OPTIONAL and implementation-defined — a place for an x-FuSa
+safety-evidence digest (`gofusa`/`rsfusa`/`cfusa`/`cpfusa`); RELAY's own
+reference tooling does not populate it, since generating one requires the
+implementation's own pinned x-FuSa tool, not something a black-box `relay
+conform` invocation can produce.
+
+`predicate.signed` MUST be `false` on an attestation that is not
+cryptographically signed. This section defines the predicate's *shape*
+only: it does NOT mandate a signing mechanism, a publication channel, or
+that `relay probe`/`relay report` treat an unsigned or absent attestation
+as non-conformant. Those are genuinely separate, larger commitments —
+choosing a signing scheme (e.g. Sigstore/cosign keyless signing) and
+standing up release-artifact publishing infrastructure — deliberately left
+open rather than mandated here without a concrete, verified reference
+implementation to point to. An implementation that signs its own
+attestations MAY set `predicate.signed: true` and MUST then publish the
+signature and the identity/transparency-log record a verifier needs,
+using whatever mechanism its own release process already trusts; this
+document does not standardize that mechanism.
+
+This is a SHOULD, not a MUST, for the same reason as §17.1: there is no
+CI gate for it yet, and RELAY's own reference tooling emits the predicate
+unsigned (`relay conform --attestation <binary>`) without publishing or
+signing it.
 
 ---
 

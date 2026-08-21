@@ -1,5 +1,30 @@
 # RELAY Spec Changelog
 
+## v2.2.2 — 2026-08-21 (doc addition; no normative change to existing conformant implementations)
+
+- **New §17 requirement-to-verifier lookup table.** §17 already narrated,
+  in prose, which of its 14 requirements `relay conform` can verify and
+  which it can't — but the narrative was scattered across four paragraphs,
+  with no single place to look up "does `relay conform` check Requirement
+  N, and how?" New table collects it: one row per requirement, its
+  verifier, and its coverage (full / partial / shape-only / not observable
+  through the CLI). Purely descriptive — collects existing prose into a
+  table, adds no new requirement and changes no existing one.
+- **New §12.4 combined walkthrough.** §12.1–12.3 each show one document's
+  JSON schema in isolation, as three unrelated fragments for hypothetical
+  different tools. New subsection runs `version` → `capabilities` →
+  `status` against the same example binary (`go-can`) in one sequence, so
+  the fields shared across all three documents (`tool`, `version`,
+  `spec_version`) and the superset relationship between `version` and
+  `capabilities` are visible together, the way a reader actually
+  encounters them at a real CLI. Supplements §12.1–12.3, doesn't replace
+  them — each subsection's own schema reference is still the place to look
+  up one document's shape in isolation. Closes [REL-SPEC-9].
+- `SpecVersion` unchanged (`2.2`); no requirement text changed or was
+  added — this documents existing, already-shipped behavior more
+  legibly, it doesn't create new behavior for any implementation to
+  satisfy.
+
 ## v2.2.1 — 2026-08-21 (doc addition; no normative change to existing conformant implementations)
 
 - **New §13.8 — README conventions.** §3.5 of the audit's terminology matrix

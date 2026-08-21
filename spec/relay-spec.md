@@ -1257,6 +1257,54 @@ category as the source-level requirements in §17.
 }
 ```
 
+### 12.4 Combined walkthrough
+
+§12.1-12.3 each show one document's own schema in isolation. This section
+runs all three commands against the same example binary in sequence, so the
+fields' relationships to each other — the same `tool`/`version`/
+`spec_version` recur across all three documents; `capabilities` is a
+superset of `version`'s fields — are visible in one place:
+
+```console
+$ go-can version --format json
+{
+    "tool":         "go-can",
+    "protocol":     "CAN",
+    "protocol_int": 1,
+    "version":      "1.2.3",
+    "spec_version": "2.2",
+    "language":     "go",
+    "runtime":      "go1.25.0"
+}
+
+$ go-can capabilities
+{
+    "kind":                "capabilities",
+    "tool":                "go-can",
+    "protocol":            "CAN",
+    "protocol_int":        1,
+    "version":             "1.2.3",
+    "spec_version":        "2.2",
+    "commands":            ["version", "capabilities", "status", "connect", "send", "subscribe"],
+    "transports":          ["socketcan", "virtual"],
+    "features":            ["fd", "isotp", "j1939"],
+    "interfaces":          ["Bus"],
+    "optional_interfaces": ["LoaningBus", "HealthProvider", "MetricsProvider"],
+    "adapt":               true
+}
+
+$ go-can status --format json
+{
+    "protocol":  "CAN",
+    "tool":      "go-can",
+    "version":   "1.2.3",
+    "healthy":   true,
+    "connected": false,
+    "endpoint":  "",
+    "details":   {}
+}
+```
+
 ---
 
 ## 13. Implementation Naming
@@ -2106,6 +2154,26 @@ whether `spec_version` is bound to `relay.SpecVersion`, checked against
 `relay conform` can only shape-check the printed string (per Requirement 12
 above), never how it was produced, so this too is verified by the
 implementation's own CI, not `relay conform`.
+
+**Requirement-to-verifier lookup table**, collecting the narrative above
+into one place:
+
+| # | Requirement | Verified by | Coverage |
+|---|---|---|---|
+| 1 | Protocol declaration | `relay conform` (capabilities schema check) | Partial — `spec_version` always checked; `protocol` absence is WARN only |
+| 2 | Protocol interfaces | Implementation's own test suite | Not observable through the CLI |
+| 3 | Error sentinels | Implementation's own test suite | Not observable through the CLI |
+| 4 | Lifecycle invariants | Implementation's own test suite | Not observable through the CLI |
+| 5 | Constructor contract | Implementation's own test suite | Not observable through the CLI |
+| 6 | Application interface | `relay conform` (capabilities `adapt` field) | Partial — `adapt: false` is WARN, not FAIL |
+| 7 | CLI mandatory commands | `relay conform` (`version`/`capabilities`/`status` schema validation) | Full |
+| 8 | Frame constraints | Implementation's own test suite | Not observable through the CLI |
+| 9 | Envelope conversion | Implementation's own test suite | Not observable through the CLI |
+| 10 | Subscriber helpers | Implementation's own test suite | Not observable through the CLI |
+| 11 | Protocol-specific constraints | Implementation's own test suite | Not observable through the CLI |
+| 12 | SpecVersion constant | `relay conform` (`spec_version` shape check) | Shape only — value's correctness cannot be observed |
+| 13 | Capabilities generation | Implementation's own build process and test suite | Not observable through the CLI |
+| 14 | Spec-version binding | Implementation's own CI | Not observable through the CLI |
 
 ### 17.1 Wire-format regression coverage (recommended)
 

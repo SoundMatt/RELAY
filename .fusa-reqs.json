@@ -922,6 +922,16 @@
       "verification": "test",
       "safety_goal": "SG-006",
       "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-RELAY-098",
+      "title": "relay conform --attestation (relay-conform-attestation/1)",
+      "text": "relay conform --attestation <binary> MUST emit an unsigned relay-conform-attestation/1 predicate (spec \u00a720.6): an in-toto Statement whose subject digest is the SHA-256 of the attested binary's raw file bytes, and whose predicate bundles the full \u00a717.2 conformance manifest for that binary, the attestation-generating tool's own embedded vectors_version (\u00a715.8) -- not the attested binary's, which a black-box invocation cannot introspect -- and predicate.signed:false. This defines predicate shape only; signing and publication are explicitly out of scope.",
+      "category": "functional",
+      "criticality": "low",
+      "verification": "test",
+      "safety_goal": "SG-006",
+      "asil": "QM"
     }
   ]
 }

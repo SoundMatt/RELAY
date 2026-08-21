@@ -1433,6 +1433,26 @@ packaging aside). Modules with no entry here are unconstrained.
 RELAY core types in a single module named `relay`; once the binding is
 published it MUST depend on the binding rather than the local copy.
 
+### 13.8 README conventions
+
+An implementation's README MUST document its RELAY adapter (§10) under a
+section headed exactly `## RELAY conformance` — not `RELAY adapter`, `RELAY
+Integration`, `RELAY compliance (vX.Y)`, or any other variant, and not left
+absent. A version number, if included, belongs in the section body, not the
+heading, so the heading text itself never goes stale.
+
+Any CLI quickstart demo in this section that documents a round-trip (e.g.
+"run `send` in one shell, `subscribe` in another, and see the message
+arrive") MUST actually work when followed literally, in two separate shell
+invocations, exactly as written. A `mock`/`virtual` transport (§7 Form 2)
+that spins up a fresh, unshared bus per invocation cannot satisfy a
+documented two-shell round-trip — the second invocation would connect to a
+different bus and never see the first's message. Either the demo's transport
+MUST share persistent state across separate invocations (e.g. a
+long-running virtual-bus process, or a real transport like `socketcan`), or
+the README MUST NOT claim a two-shell round-trip is possible with the
+mock/virtual transport alone.
+
 ---
 
 ## 14. Subscriber Defaults and Helpers

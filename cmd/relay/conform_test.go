@@ -382,8 +382,8 @@ func TestBuildManifestSelf(t *testing.T) {
 	if m.SpecVersion == "" {
 		t.Error("SpecVersion is empty")
 	}
-	if len(m.Requirements) != 16 {
-		t.Fatalf("len(Requirements) = %d, want 16", len(m.Requirements))
+	if len(m.Requirements) != 17 {
+		t.Fatalf("len(Requirements) = %d, want 17", len(m.Requirements))
 	}
 	for i, r := range m.Requirements {
 		if r.ID != i+1 {
@@ -398,7 +398,7 @@ func TestBuildManifestSelf(t *testing.T) {
 		// §17.2: a manifest MUST NOT report PASS for a requirement relay
 		// conform cannot actually observe. Only 1, 6, 7, 12 may be PASS/FAIL;
 		// everything else must never be reported PASS.
-		observable := map[int]bool{1: true, 6: true, 7: true, 12: true}
+		observable := map[int]bool{1: true, 6: true, 7: true, 12: true, 17: true}
 		if !observable[r.ID] && r.Status == statusPass {
 			t.Errorf("Requirements[%d] (id=%d) reports PASS but is not in the observable set", i, r.ID)
 		}
@@ -415,6 +415,8 @@ func TestBuildManifestNotObservableDefaults(t *testing.T) {
 	m := buildManifest(bin)
 
 	wantNotObservable := []int{2, 3, 4, 5, 8, 9, 10, 11, 13, 14, 15, 16}
+	// Requirement 17 is fully observable (see TestBuildManifestSelf's
+	// observable set), so it is deliberately excluded from this list.
 	byID := map[int]manifestRequirement{}
 	for _, r := range m.Requirements {
 		byID[r.ID] = r
@@ -508,8 +510,8 @@ func TestRunConformManifestFlag(t *testing.T) {
 	if m.Overall != statusPass {
 		t.Errorf("Overall = %s, want %s", m.Overall, statusPass)
 	}
-	if len(m.Requirements) != 16 {
-		t.Errorf("len(Requirements) = %d, want 16", len(m.Requirements))
+	if len(m.Requirements) != 17 {
+		t.Errorf("len(Requirements) = %d, want 17", len(m.Requirements))
 	}
 }
 
@@ -570,8 +572,8 @@ func TestBuildAttestationSelf(t *testing.T) {
 	if a.Predicate.ConformanceManifest.Kind != "relay-conform-manifest" {
 		t.Errorf("Predicate.ConformanceManifest.Kind = %q, want relay-conform-manifest", a.Predicate.ConformanceManifest.Kind)
 	}
-	if len(a.Predicate.ConformanceManifest.Requirements) != 16 {
-		t.Errorf("len(Predicate.ConformanceManifest.Requirements) = %d, want 16", len(a.Predicate.ConformanceManifest.Requirements))
+	if len(a.Predicate.ConformanceManifest.Requirements) != 17 {
+		t.Errorf("len(Predicate.ConformanceManifest.Requirements) = %d, want 17", len(a.Predicate.ConformanceManifest.Requirements))
 	}
 	// §20.6: MUST be false — this type has no signing mechanism at all.
 	if a.Predicate.Signed {
@@ -668,6 +670,147 @@ func TestRunConformAttestationFlagFail(t *testing.T) {
 	}
 	if a.Predicate.ConformanceManifest.Overall != statusFail {
 		t.Errorf("Predicate.ConformanceManifest.Overall = %s, want %s", a.Predicate.ConformanceManifest.Overall, statusFail)
+	}
+}
+
+// --- tests for checkRetiredCapabilities / specVersionAtLeast (spec §3.2, Requirement 17) ---
+
+//fusa:test REQ-RELAY-099
+func TestSpecVersionAtLeast(t *testing.T) {
+	cases := []struct {
+		a, b string
+		want bool
+	}{
+		{"2.9", "2.9", true},
+		{"2.10", "2.9", true},  // numeric, not lexicographic, comparison
+		{"2.9", "2.10", false}, // lexicographically "2.9" > "2.10" but numerically it is not
+		{"3.0", "2.99", true},
+		{"2.8", "2.9", false},
+		{"garbage", "2.9", false}, // unparseable: fail-safe, does not trigger enforcement
+		{"2.9", "garbage", false},
+	}
+	for _, c := range cases {
+		if got := specVersionAtLeast(c.a, c.b); got != c.want {
+			t.Errorf("specVersionAtLeast(%q, %q) = %v, want %v", c.a, c.b, got, c.want)
+		}
+	}
+}
+
+//fusa:test REQ-RELAY-099
+func TestCheckRetiredCapabilitiesFails(t *testing.T) {
+	retired := []retiredEntry{
+		{Name: "old-thing", Since: "2.7", Removal: "2.9", Reason: "superseded"},
+	}
+	capsDoc := map[string]interface{}{
+		"features": []interface{}{"old-thing", "fd"},
+	}
+	fs := checkRetiredCapabilities("2.9", capsDoc, retired)
+	if len(fs) != 1 {
+		t.Fatalf("expected exactly one finding, got %d: %+v", len(fs), fs)
+	}
+	if fs[0].Severity != sevFail {
+		t.Errorf("Severity = %s, want %s", fs[0].Severity, sevFail)
+	}
+	if fs[0].Req != "§3.2" {
+		t.Errorf("Req = %q, want %q", fs[0].Req, "§3.2")
+	}
+}
+
+//fusa:test REQ-RELAY-099
+func TestCheckRetiredCapabilitiesBeforeRemoval(t *testing.T) {
+	// spec_version is still before the removal version — retirement window
+	// hasn't closed yet, so this MUST NOT FAIL (§3.2 permits it, compat-flagged,
+	// between since and removal).
+	retired := []retiredEntry{
+		{Name: "old-thing", Since: "2.7", Removal: "2.9", Reason: "superseded"},
+	}
+	capsDoc := map[string]interface{}{
+		"features": []interface{}{"old-thing"},
+	}
+	fs := checkRetiredCapabilities("2.8", capsDoc, retired)
+	if len(fs) != 0 {
+		t.Errorf("expected no findings before removal version, got %+v", fs)
+	}
+}
+
+//fusa:test REQ-RELAY-099
+func TestCheckRetiredCapabilitiesNotDeclared(t *testing.T) {
+	// Past removal, but the capabilities doc doesn't actually declare the
+	// retired name — nothing to FAIL.
+	retired := []retiredEntry{
+		{Name: "old-thing", Since: "2.7", Removal: "2.9", Reason: "superseded"},
+	}
+	capsDoc := map[string]interface{}{
+		"features": []interface{}{"fd"},
+		"commands": []interface{}{"version", "capabilities", "status"},
+	}
+	fs := checkRetiredCapabilities("2.9", capsDoc, retired)
+	if len(fs) != 0 {
+		t.Errorf("expected no findings when the retired name isn't declared, got %+v", fs)
+	}
+}
+
+//fusa:test REQ-RELAY-099
+func TestCheckRetiredCapabilitiesCommands(t *testing.T) {
+	// A retired command name (not just a feature) MUST also be caught.
+	retired := []retiredEntry{
+		{Name: "old-command", Since: "2.7", Removal: "2.9", Reason: "superseded"},
+	}
+	capsDoc := map[string]interface{}{
+		"commands": []interface{}{"version", "capabilities", "status", "old-command"},
+	}
+	fs := checkRetiredCapabilities("2.9", capsDoc, retired)
+	if len(fs) != 1 {
+		t.Fatalf("expected exactly one finding, got %d: %+v", len(fs), fs)
+	}
+}
+
+//fusa:test REQ-RELAY-099
+func TestCheckRetiredCapabilitiesEmptyInputs(t *testing.T) {
+	if fs := checkRetiredCapabilities("", map[string]interface{}{"features": []interface{}{"x"}}, []retiredEntry{{Name: "x", Removal: "1.0"}}); len(fs) != 0 {
+		t.Errorf("empty spec_version should produce no findings, got %+v", fs)
+	}
+	if fs := checkRetiredCapabilities("2.9", map[string]interface{}{"features": []interface{}{"x"}}, nil); len(fs) != 0 {
+		t.Errorf("nil retired list should produce no findings, got %+v", fs)
+	}
+}
+
+//fusa:test REQ-RELAY-099
+func TestLoadRetiredCapabilitiesRealManifestEmpty(t *testing.T) {
+	// RELAY's own shipped spec/version.json retired[] is empty (§3.2 governs
+	// retirements declared from its introduction onward; the historical RCP
+	// placeholder-model retirement predates it and is not retrofitted). This
+	// is a sanity check that the loader itself works against the real
+	// embedded document, not a synthetic fixture.
+	got := loadRetiredCapabilities()
+	if len(got) != 0 {
+		t.Errorf("loadRetiredCapabilities() = %+v, want empty (nothing retired yet)", got)
+	}
+}
+
+//fusa:test REQ-RELAY-099
+func TestValidateCapabilitiesDocRetiredCapability(t *testing.T) {
+	// End-to-end through validateCapabilitiesDoc requires a real retired[]
+	// entry in the embedded spec/version.json, which is currently empty by
+	// design (see TestLoadRetiredCapabilitiesRealManifestEmpty) — so this
+	// test exercises checkRetiredCapabilities directly with the exact shape
+	// validateCapabilitiesDoc would pass it, confirming the wiring contract
+	// (field names, types) matches what a real capabilities doc provides.
+	data := []byte(`{
+		"kind":"capabilities","tool":"go-can","protocol":"CAN","protocol_int":1,
+		"version":"9.0.0","spec_version":"99.0",
+		"commands":["version","capabilities","status"],
+		"transports":[],"features":["retired-example"],"interfaces":[],
+		"optional_interfaces":[],"adapt":true
+	}`)
+	var doc map[string]interface{}
+	if err := json.Unmarshal(data, &doc); err != nil {
+		t.Fatalf("unmarshal fixture: %v", err)
+	}
+	retired := []retiredEntry{{Name: "retired-example", Since: "2.0", Removal: "50.0", Reason: "test fixture"}}
+	fs := checkRetiredCapabilities(doc["spec_version"].(string), doc, retired)
+	if len(fs) != 1 {
+		t.Fatalf("expected one finding for a capabilities doc past a retired name's removal version, got %d: %+v", len(fs), fs)
 	}
 }
 

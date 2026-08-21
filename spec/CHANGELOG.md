@@ -1,5 +1,42 @@
 # RELAY Spec Changelog
 
+## v2.4 — 2026-08-21 (MINOR — new §17 conformance requirement)
+
+- **New §17 Requirement 16 — Vector manifest.** The canonical
+  `spec/vectors/` distribution (new §15.8) is pinned by
+  `spec/vectors/vectors_manifest.json`. A conformant implementation that
+  embeds a local copy of these vectors MUST embed the exact pinned set,
+  and MUST have a CI step that fails when its embedded copy's SHA-256
+  diverges from the published manifest for the `vectors_version` it
+  targets. Same MINOR-worthy precedent as Requirements 13, 14, and 15.
+- **New §15.8 — Vector distribution.** Defines the `relay-vectors/1`
+  manifest shape (`kind`, `manifest_version`, `vectors_version`,
+  `vectors[]` — each a `{name, sha256}` pair). New embedded schema
+  `spec/schemas/vectors-manifest.json`. Explicitly scoped to
+  *distribution* of the existing envelope-level `relay.Message` fixtures
+  only: per §1.1/§17.1, wire format remains out of scope, and this
+  manifest MUST NOT be extended with byte-for-byte wire-format vectors.
+  (NEW-SPEC-1's originating issue proposed extending the vector set
+  itself to wire-format bug classes; that part is explicitly declined as
+  contradicting RELAY's own pre-existing scope boundary, established in
+  REL-SPEC-2/§17.1 — only the manifest/pinning/hashing mechanism ships
+  here.)
+- **New §20.1 CI gate**: recompute the SHA-256 of every embedded golden
+  vector and fail the job on any divergence from
+  `spec/vectors/vectors_manifest.json` for the `vectors_version` it
+  targets.
+- **Reference implementation**: `spec/vectors/vectors_manifest.json`
+  (16 vectors, hashes independently verified via `sha256sum`),
+  `VectorsManifest()`/`ParsedVectorsManifest()`/`VerifyVectorManifest()` in
+  this repo's own `vectors.go`. `VectorNames()` now excludes the manifest
+  file itself from the vector set it enumerates (it is metadata about the
+  distribution, not a vector) — this also required a matching fix in two
+  pre-existing test files (`spec_vectors_test.go`,
+  `cmd/relay/jsonschema_test.go`) that globbed `spec/vectors/*.json`
+  directly and would otherwise have tried to parse the manifest as a
+  golden vector. New `REQ-RELAY-096`. `SpecVersion` bumped to `2.4`.
+  Closes [NEW-SPEC-2].
+
 ## v2.3 — 2026-08-21 (MINOR — new §17 conformance requirement)
 
 - **New §17 Requirement 15 — Conformance manifest.** The implementation

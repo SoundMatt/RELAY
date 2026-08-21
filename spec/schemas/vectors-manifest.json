@@ -1,0 +1,43 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/SoundMatt/RELAY/spec/schemas/vectors-manifest.json",
+    "title": "RELAY golden vector distribution manifest",
+    "description": "spec/vectors/vectors_manifest.json — pins the canonical golden vector distribution (spec §15.8, Requirement 16).",
+    "type": "object",
+    "properties": {
+        "kind": {
+            "type": "string",
+            "const": "relay-vectors-manifest"
+        },
+        "manifest_version": {
+            "type": "string",
+            "const": "relay-vectors/1"
+        },
+        "vectors_version": {
+            "type": "string",
+            "description": "The RELAY spec version (spec/version.json) that last changed the vector set."
+        },
+        "vectors": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Vector name relative to spec/vectors/, .json suffix stripped, e.g. \"can-standard-frame\" or \"errors/lin-diagnostic-wrong-checksum\"."
+                    },
+                    "sha256": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$",
+                        "description": "SHA-256 (lowercase hex) of the vector file's raw bytes."
+                    }
+                },
+                "required": ["name", "sha256"],
+                "additionalProperties": false
+            },
+            "description": "One entry per file under spec/vectors/ (including spec/vectors/errors/)."
+        }
+    },
+    "required": ["kind", "manifest_version", "vectors_version", "vectors"],
+    "additionalProperties": false
+}

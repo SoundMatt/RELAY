@@ -1,0 +1,23 @@
+{
+    "kind": "relay-vectors-manifest",
+    "manifest_version": "relay-vectors/1",
+    "vectors_version": "2.4",
+    "vectors": [
+        {"name": "can-fd-extended-frame", "sha256": "b4c84bb35ec2c07463a6d4d900cd8789a94e564a8f4897eb3be500ba3f3c0247"},
+        {"name": "can-standard-frame", "sha256": "816b402dca5070ec011863b8d8eb3b97abbf2ea8cf264706113e06fcceb4fe27"},
+        {"name": "can-xl-frame", "sha256": "0b3e3e80aa239c16ce6d745fbb01ab3fb30307c5328af29647c44d602d425ad1"},
+        {"name": "dds-sample", "sha256": "d2ec5e026defa1eca904ee7cb3db8e71d49edd5d0b9123b2a7d05ecc2478bf1f"},
+        {"name": "errors/can-fd-xl-mutually-exclusive", "sha256": "f0322acd9ba36c5d368326537946677632ddbb7c3bfdb4f9620c6bd53145268d"},
+        {"name": "errors/can-rtr-with-fd", "sha256": "9eac49e7dc6742bf8a33be86e14c011f30889776f41b510904bfa003d319f850"},
+        {"name": "errors/can-standard-id-overflow", "sha256": "c4b1d8c3ce9c88e19cbbef09f21d50c5ae3cd699a5ebbc6122eb0ab9bac17f28"},
+        {"name": "errors/can-xl-priority-id-overflow", "sha256": "e6dcbefebc53ed90dae6195c2870d8bce40099f15910388bcf37141cea059328"},
+        {"name": "errors/dds-domain-out-of-range", "sha256": "3fcebeccd26d4f013d2d11cc224d5a95cf423007287cf92d8b09413ef253978f"},
+        {"name": "errors/lin-diagnostic-wrong-checksum", "sha256": "36666ad1c49a89ce2b8fbc34475bfe3d5482d232b7b4b315ccb6248b7a05f776"},
+        {"name": "errors/lin-id-overflow", "sha256": "26ef330bab6af500167b26d24cafabe6444b64162518503577fd3702cc85780f"},
+        {"name": "errors/someip-wrong-protocol-version", "sha256": "ceac6a36bba85455afdf8c95481c1dec59c022f43cfd9347e229ac88de80117e"},
+        {"name": "lin-frame", "sha256": "4b17ddbf4f12b909acd1e964bcc9c4e99ab3bd396c29344bdc4e6c9d287db62b"},
+        {"name": "mqtt-message", "sha256": "8cda632307125bcb60b2b9a7ead020ddab4ef521cfa11703511453e204728263"},
+        {"name": "rcp-message", "sha256": "9cc8030a4035cdf9807fa726a2f56c05ad6e6b8807b335c166c9fc780f36d7a5"},
+        {"name": "someip-message", "sha256": "89b7ca3edb8e233183d04f8870607edd40e5653b9e68e438da63d2aa866c8432"}
+    ]
+}

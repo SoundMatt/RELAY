@@ -1370,6 +1370,20 @@ protocol-prefixed name such as `can_relay`. The application `Node` interface is
 the language-idiomatic name (`relay.Node`, `relay::Node`; a C++ implementation
 implementing it MUST name it `relay::INode`).
 
+The §8 protocol interfaces (`Bus`, `Participant`, `Client`, `Controller`,
+`Service`) are unprefixed in this spec's own Go-canonical examples, for the
+same language-neutral reason every other §8/§15 name is unprefixed — but §8's
+own text notes "C++ ... equivalents are in §18" without §18.2 previously
+showing what that equivalent actually looks like. Every existing cpp-* port
+independently converged on prefixing these specific interfaces with `I`
+(`IBus`, `IParticipant`, `IClient`, …) — the same convention `relay::INode`
+above already establishes for the application interface — without this
+spec ever having said so. A C++ implementation's protocol interfaces MAY take
+the `I`-prefix; §18.2's own "Protocol interfaces (C++)" subsection shows the
+established shape. This is permitted, idiomatic C++ practice, not a MUST —
+the spec's own canonical names remain unprefixed for cross-language
+comparison, exactly as §15's canonical frame-type names do.
+
 **13.7.2 Standard module-name registry.** If an implementation provides a module
 covering one of the following concerns, it MUST use the listed name (idiomatic
 packaging aside). Modules with no entry here are unconstrained.
@@ -2150,6 +2164,56 @@ public:
 
 } // namespace relay
 ```
+
+#### Protocol interfaces (C++)
+
+§8's protocol interfaces (`Bus`, `Participant`, `Client`, `Controller`,
+`Service`) are unprefixed in this spec's own Go-canonical examples, for
+cross-language comparison. Every existing cpp-* port independently
+prefixes them with `I` — the same convention §13.7.1 already establishes
+for `relay::INode` — and this spec now documents that as permitted,
+idiomatic C++ practice (not a MUST). CAN's `Bus` (§8.1) is the worked
+example; every other protocol interface follows the identical shape,
+substituting that protocol's own §8 method signatures:
+
+```cpp
+namespace relay::can {
+
+// §15.1's own Go Filter, mirrored here for a self-contained example --
+// not itself part of this spec's C++-specific type catalogue (§18.2's
+// own "Canonical frame types (C++)" subsection below covers Frame; a
+// Filter equivalent is left to each implementation, matching the same
+// per-language-idiom latitude relay::Channel<T>'s own capacity parameter
+// already takes above).
+struct Filter {
+    std::uint32_t id   = 0;
+    std::uint32_t mask = 0;
+};
+
+class IBus {
+public:
+    virtual std::error_code send(Context ctx, const Frame& f) = 0;
+    virtual std::pair<std::shared_ptr<Channel<Frame>>, std::error_code>
+        subscribe(const std::vector<Filter>& filters, SubscriberOptions opts = {}) = 0;
+    virtual std::error_code close() noexcept = 0;
+    virtual ~IBus() = default;
+};
+
+} // namespace relay::can
+```
+
+An implementation MAY instead name this interface `Bus` (unprefixed,
+matching the spec's own canonical name exactly) — `relay conform` (§17)
+observes CLI/capabilities-document behavior only and has no way to check
+a C++ interface's own name either way, so this is a pure documentation
+convention with no conformance consequence. If an implementation declares
+protocol-interface conformance, both `IBus`/`Bus`-shaped forms satisfy
+§8.1's own method-signature requirements identically. The optional §9
+zero-copy extension (`LoaningBus`/`Loan()`/`SendLoaned()`) follows the
+identical `I`-prefix-or-not latitude; this subsection shows only the
+mandatory interface, not every optional one, to stay a worked example
+rather than a full parallel C++ canonical-type catalogue for CAN
+specifically (out of this subsection's own scope).
 
 #### Optional interfaces (C++)
 

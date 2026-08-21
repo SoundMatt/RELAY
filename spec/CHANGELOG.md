@@ -1,5 +1,32 @@
 # RELAY Spec Changelog
 
+## v2.0.8 — 2026-08-20 (doc addition; no normative change to existing conformant implementations)
+
+- **§13.7.1 / §18.2 — C++ protocol-interface `I`-prefix**: every existing
+  cpp-* port independently prefixes its §8 protocol interfaces (`Bus`,
+  `Participant`, `Client`, …) with `I` — the same convention `relay::INode`
+  already establishes for the application interface — but §8's own text
+  ("C++ ... equivalents are in §18") never actually showed what that C++
+  equivalent looked like: §18.2 covered `relay::Node`/`Caller` and the
+  canonical types, but no protocol interface at all, in either prefixed
+  or unprefixed form. New §13.7.1 paragraph documents the `I`-prefix as
+  permitted, idiomatic C++ practice (not a MUST — the spec's own
+  canonical names stay unprefixed, matching §15's own cross-language
+  convention); new §18.2 "Protocol interfaces (C++)" subsection adds the
+  actual worked example (CAN's `IBus`, the simplest protocol), including
+  a minimal `Filter` struct so the example is genuinely self-contained
+  rather than referencing a type this spec's own C++ section didn't
+  define. Closes [REL-SPEC-5]/[THEME-G].
+- Deliberately scoped to the mandatory interface only, not every optional
+  extension (`LoaningBus` and siblings) — a full parallel C++
+  canonical-type catalogue for CAN specifically is out of this
+  subsection's own scope; the same `I`-prefix-or-not latitude applies to
+  those too, noted but not separately worked through.
+- `SpecVersion` unchanged (`2.0`); no existing conformant implementation
+  is made non-conformant — `relay conform` (§17) cannot observe a C++
+  interface's own name either way, so both prefixed and unprefixed forms
+  were already, and remain, equally conformant.
+
 ## v2.0.7 — 2026-08-20 (doc addition; no normative change to existing conformant implementations)
 
 - **§5.5 — Adding a protocol-specific error post-launch**: §3.1 already

@@ -34,6 +34,10 @@
         "runtime": {
             "type": "string",
             "description": "Runtime version (e.g. \"go1.25.0\", \"clang-18\")."
+        },
+        "commit": {
+            "type": "string",
+            "description": "Git SHA (short or full) the binary was built from. Optional; absent or empty when unavailable."
         }
     },
     "required": ["tool", "version", "spec_version", "language", "runtime"],

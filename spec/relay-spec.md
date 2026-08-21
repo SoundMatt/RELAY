@@ -1,4 +1,4 @@
-# RELAY Specification — v2.4
+# RELAY Specification — v2.5
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -1182,7 +1182,7 @@ failure rather than a skip. Exit: `0` all equivalent, `1` any mismatch/error,
     "protocol":     "CAN",
     "protocol_int": 1,
     "version":      "1.2.3",
-    "spec_version": "2.4",
+    "spec_version": "2.5",
     "language":     "go",
     "runtime":      "go1.25.0",
     "commit":       "a1b2c3d4"
@@ -1207,7 +1207,7 @@ conformance failure, but §17.2's conformance manifest cannot populate its own
     "protocol":            "CAN",
     "protocol_int":        1,
     "version":             "1.2.3",
-    "spec_version":        "2.4",
+    "spec_version":        "2.5",
     "commands":            ["version", "capabilities", "status", "connect", "send", "subscribe"],
     "transports":          ["socketcan", "virtual"],
     "features":            ["fd", "isotp", "j1939"],
@@ -1218,6 +1218,34 @@ conformance failure, but §17.2's conformance manifest cannot populate its own
 ```
 
 `adapt` MUST be `true` if the package exports `Adapt()` per §10.3.
+
+`multi_protocol` (OPTIONAL, boolean, defaults to `false` when absent) self-declares
+that this binary is inherently multi-protocol tooling — a spec/tooling layer like
+RELAY's own reference CLI, not a single-protocol implementation. A tool that sets
+`multi_protocol: true` legitimately reports a null `protocol`/`protocol_int` and
+`adapt: false`: §10.3 scopes the `Adapt()` contract to *protocol packages*, and a
+multi-protocol aggregator has no single protocol to declare or adapt. For a
+single-protocol implementation (the default, `multi_protocol` absent or `false`),
+both remain governed by §17 Requirements 1 and 6 as MUSTs. Example, RELAY's own
+CLI:
+
+```json
+{
+    "kind":                "capabilities",
+    "tool":                "relay",
+    "protocol":            null,
+    "protocol_int":        null,
+    "multi_protocol":      true,
+    "version":             "2.5.0",
+    "spec_version":        "2.5",
+    "commands":            ["version", "capabilities", "status", "conform", "convert", "..."],
+    "transports":          [],
+    "features":            [],
+    "interfaces":          [],
+    "optional_interfaces": [],
+    "adapt":               false
+}
+```
 
 `features` lists protocol-specific capability strings compiled into the binary.
 Values are set at build time — they are not runtime-probed. Unknown strings MUST
@@ -1278,7 +1306,7 @@ $ go-can version --format json
     "protocol":     "CAN",
     "protocol_int": 1,
     "version":      "1.2.3",
-    "spec_version": "2.4",
+    "spec_version": "2.5",
     "language":     "go",
     "runtime":      "go1.25.0"
 }
@@ -1290,7 +1318,7 @@ $ go-can capabilities
     "protocol":            "CAN",
     "protocol_int":        1,
     "version":             "1.2.3",
-    "spec_version":        "2.4",
+    "spec_version":        "2.5",
     "commands":            ["version", "capabilities", "status", "connect", "send", "subscribe"],
     "transports":          ["socketcan", "virtual"],
     "features":            ["fd", "isotp", "j1939"],
@@ -1366,11 +1394,11 @@ LABEL org.opencontainers.image.licenses="MPL-2.0"
 LABEL io.relay.tool="<tool>"
 LABEL io.relay.language="go|cpp|rust|c"
 LABEL io.relay.binary="<binary>"
-LABEL io.relay.spec-version="2.4"
+LABEL io.relay.spec-version="2.5"
 ```
 
 The `io.relay.spec-version` label MUST always match the value of `SpecVersion`
-exported by the package (§17.12 / §19.4). The `"2.4"` shown above is an example;
+exported by the package (§17.12 / §19.4). The `"2.5"` shown above is an example;
 update it on each spec minor release.
 
 The project directory is mounted at `/project` by convention:
@@ -2191,12 +2219,12 @@ section and remains a separate, unpinned concern.
 
 An implementation is **RELAY-conformant** if and only if:
 
-1. **Protocol declaration.** Capabilities document (§12.2) declares a protocol from §3 and a `spec_version`.
+1. **Protocol declaration.** Capabilities document (§12.2) declares a protocol from §3 and a `spec_version`. A null `protocol`/`protocol_int` is a conformance failure unless the capabilities document declares `"multi_protocol": true`.
 2. **Protocol interfaces.** All mandatory interfaces from §8 are implemented with exact method signatures.
 3. **Error sentinels.** All four sentinels in §5.1 are defined; protocol-specific errors wrap them per §5.2.
 4. **Lifecycle invariants.** All ten requirements in §6 are satisfied. Requirement §6.9 (zero-value safety) applies to `relay.Node` and `relay.Caller` adapters only, not to the underlying protocol interface types (`Bus`, `Participant`, etc.).
 5. **Constructor contract.** Each transport sub-package exports `New` per §7; a `mock` sub-package is present.
-6. **Application interface.** The root package exports `Adapt()` per §10.3; the capabilities document declares `"adapt": true`.
+6. **Application interface.** The root package exports `Adapt()` per §10.3; the capabilities document declares `"adapt": true`. `"adapt": false` is a conformance failure unless the capabilities document declares `"multi_protocol": true` — §10.3 scopes `Adapt()` to protocol packages, so a self-declared multi-protocol aggregator has no per-protocol `Adapt()` to export.
 7. **CLI mandatory commands.** `version`, `capabilities`, `status` per §11.1 with JSON schemas matching §12. **Every** implementation MUST provide these commands as a runnable CLI. A C++ (or other) library that does not ship a standalone binary by default MUST still expose them through a CLI target built with `-DRELAY_BUILD_CLI=ON` (or the language's equivalent build option). There is **no waiver**: an implementation that provides no conformance CLI cannot be verified by `relay conform` (§20) and is therefore not RELAY-conformant. *(Prior to v1.11 a C++ library with no CLI target had its CLI requirements assessed as "not applicable". That waiver is removed: every conformant C++ implementation already ships a CLI via the build option, so the accommodation was obsolete and conflicted with the §20 continuous-conformance gates.)*
 8. **Frame constraints.** `ValidateFrame` rejects all frames violating §15 constraints.
 9. **Envelope conversion.** `ToMessage()` and `FromMessage()` are lossless for mandatory fields.
@@ -2219,14 +2247,14 @@ requirement list:
 
 - **Requirement 7** (CLI mandatory commands) is fully verified: all three
   commands run and their JSON output is schema-validated against §12.
-- **Requirement 1** (protocol declaration) is partially verified: `spec_version`
-  presence is always schema-checked; `protocol` is schema-checked when present,
-  but its absence is only a WARN (multi-protocol tooling may legitimately omit
-  it).
-- **Requirement 6** (`Adapt()`/`"adapt": true`) is partially verified: the
-  `capabilities` document's `adapt` field is checked, but `adapt: false` is
-  only a WARN, not a FAIL — `relay conform` does not currently treat exporting
-  `Adapt()` as strictly mandatory.
+- **Requirement 1** (protocol declaration) is fully verified: `spec_version`
+  presence is always schema-checked, and the capabilities document's `protocol`
+  MUST be present unless `"multi_protocol": true` is declared, in which case
+  its absence is legitimate and produces no finding at all.
+- **Requirement 6** (`Adapt()`/`"adapt": true`) is fully verified: the
+  `capabilities` document's `adapt` field MUST be `true` unless
+  `"multi_protocol": true` is declared, in which case `adapt: false` is
+  legitimate and produces no finding at all.
 - **Requirement 12** (`SpecVersion` constant) is shape-checked only: the
   `spec_version` field's presence and string format are validated, but whether
   it genuinely equals the implementation's compiled-in constant cannot be
@@ -2268,12 +2296,12 @@ into one place:
 
 | # | Requirement | Verified by | Coverage |
 |---|---|---|---|
-| 1 | Protocol declaration | `relay conform` (capabilities schema check) | Partial — `spec_version` always checked; `protocol` absence is WARN only |
+| 1 | Protocol declaration | `relay conform` (capabilities schema check) | Full — `spec_version` always checked; `protocol` absence FAILs unless `multi_protocol: true` |
 | 2 | Protocol interfaces | Implementation's own test suite | Not observable through the CLI |
 | 3 | Error sentinels | Implementation's own test suite | Not observable through the CLI |
 | 4 | Lifecycle invariants | Implementation's own test suite | Not observable through the CLI |
 | 5 | Constructor contract | Implementation's own test suite | Not observable through the CLI |
-| 6 | Application interface | `relay conform` (capabilities `adapt` field) | Partial — `adapt: false` is WARN, not FAIL |
+| 6 | Application interface | `relay conform` (capabilities `adapt` field) | Full — `adapt: false` FAILs unless `multi_protocol: true` |
 | 7 | CLI mandatory commands | `relay conform` (`version`/`capabilities`/`status` schema validation) | Full |
 | 8 | Frame constraints | Implementation's own test suite | Not observable through the CLI |
 | 9 | Envelope conversion | Implementation's own test suite | Not observable through the CLI |
@@ -2337,7 +2365,7 @@ diffable artifact.
     "manifest_version":  "relay-conform/1",
     "tool":               "go-can",
     "binary_version":     "1.2.3",
-    "spec_version":       "2.4",
+    "spec_version":       "2.5",
     "git_sha":            "a1b2c3d4",
     "capabilities_sha256": "e3b0c44298fc1c14...",
     "requirements": [
@@ -3086,11 +3114,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v2.4**
+Current version: **v2.5**
 
-**Go:** `const SpecVersion = "2.4"` (update in implementations targeting v2.4)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "2.4";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.4";`
+**Go:** `const SpecVersion = "2.5"` (update in implementations targeting v2.5)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "2.5";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.5";`
 
 ---
 
@@ -3310,15 +3338,16 @@ second protocol implementation present.
 
 **9. Wire up CI and check conformance.** `relay conform <binary>` (§17's own
 black-box-coverage discussion) is a **black-box** check: it validates the CLI JSON
-schemas and Conformance Requirement 7 fully, and partially checks Requirements
-1, 6, and 12 — it structurally cannot see Requirements 2-5, 8-11 (the
+schemas and Conformance Requirements 1, 6, and 7 fully, and partially checks
+Requirement 12 — it structurally cannot see Requirements 2-5, 8-11 (the
 interface, sentinel, lifecycle, constructor, and frame-constraint rules from
 steps 2-5 above), which the implementation's own test suite must verify
-instead. §20.1 lists the three CI gates a conformant implementation's default
+instead. §20.1 lists the five CI gates a conformant implementation's default
 branch and every PR MUST run and fail on: `relay conform --strict`, the
 language's full x-FuSa lifecycle (100% requirement traceability, not just an
-ERROR-severity gate), and — once `convert` exists — `relay interop` reporting
-EQUIVALENT for every golden vector. A green run of all three, on a release
+ERROR-severity gate), — once `convert` exists — `relay interop` reporting
+EQUIVALENT for every golden vector, the conformance manifest (§17.2), and the
+vector manifest (§15.8). A green run of all five, on a release
 commit, is what §17's conformance definition and §20's continuous-conformance
 requirement together mean by "conformant": not "was conformant once," but
 "is conformant on every commit that ships."

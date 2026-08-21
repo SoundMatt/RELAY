@@ -1,5 +1,44 @@
 # RELAY Spec Changelog
 
+## v2.5 — 2026-08-21 (MINOR — new optional capabilities field, tightened §17 Requirements 1 and 6)
+
+- **New optional `multi_protocol` capabilities field (§12.2).** Defaults to
+  `false` when absent. A tool that self-declares `multi_protocol: true`
+  legitimately reports a null `protocol`/`protocol_int` and `adapt: false`:
+  §10.3 scopes the `Adapt()` contract to protocol packages, so a
+  multi-protocol aggregator (like RELAY's own reference CLI) has no single
+  protocol to declare or per-protocol adapter to export.
+- **§17 Requirements 1 and 6 tightened from WARN to FAIL.** A null
+  `protocol`/`protocol_int`, or `adapt: false`, on a capabilities document
+  that does not declare `multi_protocol: true` is now a conformance FAIL,
+  closing a real audit-flagged gap (THEME-B, capabilities drifting silently
+  from the shipped binary) — previously both were only WARN, so an
+  implementation using `relay conform` without `--strict` never failed on
+  either. Both requirements move from "Partial" to "Full" black-box coverage
+  in the requirement-to-verifier table.
+- **Scope decision**: the originating issue also proposed verifying every
+  declared `commands` string is actually invocable, and "exercising" every
+  declared `features` string with a CLI probe. Both are explicitly declined
+  in this release: there is no existing, spec-grounded signal distinct from
+  the generic "invalid arguments" exit code (§11.3) to detect an unrecognized
+  command across four languages' worth of implementations, and §12.2 already
+  states `features` are compiled-in and explicitly not runtime-probed. Adding
+  either would mean inventing an unproven new convention under this issue's
+  scope rather than tightening an existing one — deferred to a dedicated
+  follow-up.
+- **Design note**: the naive implementation (blindly turning both WARN cases
+  into FAIL) would have broken RELAY's own reference CLI's passing
+  self-conformance CI job, which is deliberately, legitimately
+  multi-protocol and non-adapting. `multi_protocol` exists specifically to
+  let `relay conform`'s black-box CLI distinguish that legitimate case from
+  a genuine single-protocol implementation bug, which it previously could
+  not do at all.
+- **Reference implementation**: `cmd/relay`'s own `capabilities` output now
+  declares `"multi_protocol": true`; `validateCapabilitiesDoc` in
+  `cmd/relay/conform.go` implements the gated FAIL logic for both fields.
+  New `REQ-RELAY-097`. `SpecVersion` bumped to `2.5`. Closes [NEW-SPEC-3]
+  (partial — commands-invocability and feature-probing deferred).
+
 ## v2.4 — 2026-08-21 (MINOR — new §17 conformance requirement)
 
 - **New §17 Requirement 16 — Vector manifest.** The canonical

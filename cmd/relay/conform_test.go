@@ -88,8 +88,11 @@ func TestValidateVersionDocUnknownLanguage(t *testing.T) {
 
 //fusa:test REQ-RELAY-054
 func TestValidateCapabilitiesDocValid(t *testing.T) {
+	// No protocol declared, so this fixture must self-declare multi_protocol:
+	// true (spec §12.2, §17 Requirement 1) to avoid the new protocol-null FAIL.
 	data := []byte(`{
 		"kind":"capabilities","tool":"go-can","version":"1.0.0","spec_version":"0.2",
+		"multi_protocol":true,
 		"commands":["version","capabilities","status"],
 		"transports":[],"features":[],"interfaces":[],"optional_interfaces":[],
 		"adapt":true
@@ -163,29 +166,70 @@ func TestValidateCapabilitiesDocMissingCommand(t *testing.T) {
 }
 
 //fusa:test REQ-RELAY-054
-func TestValidateCapabilitiesDocAdaptWarn(t *testing.T) {
+//fusa:test REQ-RELAY-097
+func TestValidateCapabilitiesDocAdaptFalseFails(t *testing.T) {
+	// A single-protocol implementation (multi_protocol absent/false) that
+	// exports no Adapt() MUST FAIL (spec §17 Requirement 6), not WARN.
 	data := []byte(`{
-		"kind":"capabilities","tool":"relay","version":"0.1.0","spec_version":"0.2",
+		"kind":"capabilities","tool":"go-can","protocol":"CAN","protocol_int":1,
+		"version":"0.1.0","spec_version":"0.2",
 		"commands":["version","capabilities","status"],
 		"transports":[],"features":[],"interfaces":[],"optional_interfaces":[],
 		"adapt":false
 	}`)
 	fs := validateCapabilitiesDoc(data)
-	hasWarn := false
 	hasFail := false
 	for _, f := range fs {
-		if f.Severity == sevWarn && strings.Contains(f.Message, "adapt") {
-			hasWarn = true
-		}
-		if f.Severity == sevFail {
+		if f.Severity == sevFail && strings.Contains(f.Message, "adapt") {
 			hasFail = true
 		}
 	}
-	if !hasWarn {
-		t.Error("expected WARN for adapt=false, got none")
+	if !hasFail {
+		t.Error("expected FAIL for adapt=false on a single-protocol tool, got none")
 	}
-	if hasFail {
-		t.Errorf("complete adapt=false doc should not FAIL: %+v", fs)
+}
+
+//fusa:test REQ-RELAY-054
+//fusa:test REQ-RELAY-097
+func TestValidateCapabilitiesDocNullProtocolFails(t *testing.T) {
+	// A single-protocol implementation (multi_protocol absent/false) with a
+	// null protocol MUST FAIL (spec §17 Requirement 1), not WARN.
+	data := []byte(`{
+		"kind":"capabilities","tool":"go-can","version":"0.1.0","spec_version":"0.2",
+		"commands":["version","capabilities","status"],
+		"transports":[],"features":[],"interfaces":[],"optional_interfaces":[],
+		"adapt":true
+	}`)
+	fs := validateCapabilitiesDoc(data)
+	hasFail := false
+	for _, f := range fs {
+		if f.Severity == sevFail && strings.Contains(f.Message, "protocol") {
+			hasFail = true
+		}
+	}
+	if !hasFail {
+		t.Error("expected FAIL for null protocol on a single-protocol tool, got none")
+	}
+}
+
+//fusa:test REQ-RELAY-054
+//fusa:test REQ-RELAY-097
+func TestValidateCapabilitiesDocMultiProtocolExempt(t *testing.T) {
+	// multi_protocol:true legitimizes both a null protocol and adapt:false
+	// (spec §12.2, §17 Requirements 1 and 6) — RELAY's own reference CLI's
+	// exact shape. Neither MUST produce a finding at all, not even a WARN.
+	data := []byte(`{
+		"kind":"capabilities","tool":"relay","multi_protocol":true,
+		"version":"0.1.0","spec_version":"0.2",
+		"commands":["version","capabilities","status"],
+		"transports":[],"features":[],"interfaces":[],"optional_interfaces":[],
+		"adapt":false
+	}`)
+	fs := validateCapabilitiesDoc(data)
+	for _, f := range fs {
+		if f.Severity != sevPass {
+			t.Errorf("multi_protocol:true doc must produce no FAIL/WARN for protocol/adapt, got %s %s: %s", f.Severity, f.Req, f.Message)
+		}
 	}
 }
 

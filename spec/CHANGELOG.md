@@ -1,5 +1,36 @@
 # RELAY Spec Changelog
 
+## v2.2.1 — 2026-08-21 (doc addition; no normative change to existing conformant implementations)
+
+- **New §13.8 — README conventions.** §3.5 of the audit's terminology matrix
+  found no two x-Net implementation READMEs use the same section header for
+  describing their RELAY adapter ("RELAY adapter", "RELAY Integration",
+  "RELAY conformance", "RELAY-conformant CLI", "RELAY compliance (vX.Y)", or
+  absent entirely). New requirement: this section MUST be headed exactly
+  `## RELAY conformance`; a version number, if included, belongs in the
+  body, not the heading, so the heading text itself never goes stale.
+- **Quickstart round-trip requirement, same subsection.** Separately, the
+  audit found some ports' documented two-shell CLI quickstart demo cannot
+  actually round-trip a message because the CLI spins up a fresh,
+  non-shared bus per invocation (reported for rust-LIN and go-SOMEIP) — so
+  following the README literally does not work. New requirement: a
+  documented two-shell round-trip demo MUST actually work as written,
+  either because the transport shares persistent state across invocations,
+  or the README MUST NOT claim the round-trip is possible with the
+  mock/virtual transport alone. Closes [REL-SPEC-10].
+- **Not part of the §17 conformance gate**, consistent with every other
+  §13.x naming/documentation convention (repo names, CLI binary names,
+  module names, …): `relay conform`'s black-box CLI never reads README
+  content, so this MUST — like the rest of §13 — sits outside the
+  "RELAY-conformant if and only if" checklist. `SpecVersion` unchanged
+  (`2.2`); no existing conformant implementation is made non-conformant by
+  a text convention `relay conform` was never going to check.
+- **Pairs with [NEW-SPEC-8]** in the same audit batch, which proposes
+  making README examples CI-executed so this specific class of defect
+  (a quickstart that silently doesn't work) can't ship in the first place —
+  not attempted here; this PR only fixes the normative text describing what
+  "works" means.
+
 ## v2.2 — 2026-08-21 (stable)
 
 Spec-version binding — a new normative conformance requirement. Additive

@@ -4,7 +4,7 @@
 **Module:** `github.com/SoundMatt/RELAY`  
 **License:** Mozilla Public License 2.0  
 **Development ASIL:** ISO 26262 ASIL-C  
-**Spec version:** v0.2
+**Spec version:** v2.2
 
 ---
 
@@ -29,7 +29,11 @@ network protocol ecosystem. It provides:
 - Application interfaces `relay.Node` and `relay.Caller`
 - The RELAY specification (`spec/relay-spec.md`) defining what constitutes a
   conformant x-Net implementation
-- The `relay` CLI (`version`, `capabilities`, `status`)
+- The `relay` CLI. Safety-relevant to conformance verification (§3.4):
+  `version`, `capabilities`, `status`, `conform`, `interop`, `compare`,
+  `probe`, `report`, `audit-pack`, `safety-case`. Convenience/dev tooling,
+  not itself part of the conformance-verification path: `convert`,
+  `crossbar`, `trace`, `sbom`, `versions`, `serve`.
 
 RELAY is **not** a network driver and does **not** transmit messages to a bus.
 It defines the contract; x-Net implementations fulfil it.

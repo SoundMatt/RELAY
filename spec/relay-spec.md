@@ -1182,7 +1182,7 @@ failure rather than a skip. Exit: `0` all equivalent, `1` any mismatch/error,
     "protocol":     "CAN",
     "protocol_int": 1,
     "version":      "1.2.3",
-    "spec_version": "0.1",
+    "spec_version": "2.2",
     "language":     "go",
     "runtime":      "go1.25.0"
 }
@@ -1201,7 +1201,7 @@ failure rather than a skip. Exit: `0` all equivalent, `1` any mismatch/error,
     "protocol":            "CAN",
     "protocol_int":        1,
     "version":             "1.2.3",
-    "spec_version":        "0.1",
+    "spec_version":        "2.2",
     "commands":            ["version", "capabilities", "status", "connect", "send", "subscribe"],
     "transports":          ["socketcan", "virtual"],
     "features":            ["fd", "isotp", "j1939"],
@@ -1360,11 +1360,11 @@ LABEL org.opencontainers.image.licenses="MPL-2.0"
 LABEL io.relay.tool="<tool>"
 LABEL io.relay.language="go|cpp|rust|c"
 LABEL io.relay.binary="<binary>"
-LABEL io.relay.spec-version="0.1"
+LABEL io.relay.spec-version="2.2"
 ```
 
 The `io.relay.spec-version` label MUST always match the value of `SpecVersion`
-exported by the package (§17.12 / §19.4). The `"0.1"` shown above is an example;
+exported by the package (§17.12 / §19.4). The `"2.2"` shown above is an example;
 update it on each spec minor release.
 
 The project directory is mounted at `/project` by convention:

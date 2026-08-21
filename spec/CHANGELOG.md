@@ -1,5 +1,44 @@
 # RELAY Spec Changelog
 
+## v2.2.3 — 2026-08-21 (doc addition; no normative change to existing conformant implementations)
+
+- **Fixed stale example literals.** §12.1/§12.2's `spec_version` JSON
+  examples and §13.5's Docker `LABEL io.relay.spec-version` example still
+  showed `"0.1"`, three major and several minor versions behind current —
+  confusing as a worked example even though the surrounding prose already
+  called it out as illustrative. Updated to `"2.2"`.
+- **`docs/tool-safety-manual.md` header and CLI-coverage fix.** The
+  document's own header block still said "Spec version: v0.2"; updated to
+  v2.2. Separately, §2's tool-overview bullet listed only 3 of the CLI's
+  now-16 subcommands (`version`, `capabilities`, `status`) — independently
+  re-verified against `cmd/relay/main.go`'s actual command list before
+  fixing (the audit flagged this claim FILED_UNCERTAIN, not confirmed).
+  New bullet lists all 16, split into the 10 safety-relevant to conformance
+  verification (§3.4) and the 6 that are convenience/dev tooling outside
+  that path.
+- **New `CONTRIBUTING.md`, `SECURITY.md`, `ARCHITECTURE.md`.** None
+  existed despite this repo's own safety documentation making ASIL-C
+  claims elsewhere. `CONTRIBUTING.md` covers the spec-PR-before-implementation
+  workflow (§5.5 and similar), the §19 versioning decision, DCO sign-off,
+  and requirement-tag discipline. `SECURITY.md` points to GitHub private
+  vulnerability reporting — enabled on this repository as part of this
+  change, since a policy pointing at a disabled feature would be exactly
+  the kind of drift this fix is closing. `ARCHITECTURE.md` maps the
+  repository layout and the x-FuSa safety-evidence layer, each claim
+  checked against the actual current tree before writing it down (e.g. the
+  crossbar router's actual section citation, §11.2.1, not guessed).
+- **Deliberately out of scope**: `docs/RCP-ARCHITECTURE.md` and the
+  ROADMAP.md phase-count/`v1.14`/`v2.0` narrative gap are already tracked
+  separately (issue #79); not duplicated here, per this finding's own text.
+  `.fusa-reqs.json`'s exact current `REQ-RELAY-NNN` range (the manual's §7
+  Evidence table cites `001..081`, likely stale given multiple releases
+  since) was not independently re-verified in this pass — flagging rather
+  than silently leaving a claim in place that this PR didn't actually
+  check. Closes [REL-SPEC-11].
+- `SpecVersion` unchanged (`2.2`); every change here is either an example
+  literal, a non-normative reference doc's header, or a new non-normative
+  governance document — nothing in §17's conformance requirements changed.
+
 ## v2.2.2 — 2026-08-21 (doc addition; no normative change to existing conformant implementations)
 
 - **New §17 requirement-to-verifier lookup table.** §17 already narrated,

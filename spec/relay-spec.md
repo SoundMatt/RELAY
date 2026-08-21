@@ -2061,6 +2061,40 @@ constraints) are **source-level Go API contracts that `relay conform` cannot
 observe through a CLI** and MUST be verified by the implementation's own test
 suite instead.
 
+### 17.1 Wire-format regression coverage (recommended)
+
+Ecosystem audits have repeatedly found the same wire-format encoding defect
+independently reintroduced in multiple language ports of the same protocol —
+evidence that, unlike the envelope-conversion coverage `spec/vectors/*.json`
+provides for Requirement 9, no shared regression discipline currently exists
+for protocol wire encoding itself. Per this document's own scope note (§1):
+RELAY does not define wire formats — RCP's binary frame format, SOME/IP
+header layout, CAN bit timing, and similar are each x-Net implementation's
+own concern — so RELAY cannot ship byte-for-byte wire vectors itself without
+exceeding that boundary. It can, however, set an expectation for what "the
+implementation's own test suite," referenced throughout this section, should
+include.
+
+Each implementation's own test suite SHOULD maintain byte-for-byte
+encode/decode regression vectors covering, at minimum, the boundary
+conditions specific to its own protocol's wire format — and SHOULD assert
+the encode and decode directions independently, since a `decode(encode(x))
+== x` round-trip test alone can pass even when both directions share the
+same underlying defect. Illustrative examples, not an exhaustive list: a
+multi-byte length or varint field's maximum-valid and minimum-invalid
+encodings; a checksum or CRC selection rule that differs by frame category
+(`spec/vectors/errors/lin-diagnostic-wrong-checksum.json` is an existing
+example of this specific case, at the envelope-conversion level); a
+bit-packed field's exact order and width; a wire structure containing more
+than one variable-length element back to back. These are exactly the class
+of defect a round-trip-only test will not catch, and exactly the class this
+recommendation exists to close.
+
+This is a SHOULD, not a MUST: `relay conform`'s black-box CLI cannot observe
+an implementation's internal test suite, so there is no mechanism to gate
+conformance on it — the same reason Requirements 2–5 and 8–11 above are
+MUSTs the CLI itself cannot verify.
+
 ---
 
 ## 18. Language Bindings

@@ -1,5 +1,40 @@
 # RELAY Spec Changelog
 
+## v2.0.10 — 2026-08-20 (doc addition; no normative change to existing conformant implementations)
+
+- **New §17.1 — Wire-format regression coverage (recommended)**: the
+  finding's own recommendation — that RELAY ship byte-for-byte wire-encoding
+  conformance vectors in `spec/vectors/` for recurring bug classes (MQTT
+  varint boundaries, LIN diagnostic checksum selection, RCP register-map/PWM
+  field width, J1939 PGN layout, SOME/IP-SD option runs) — conflicts with
+  this document's own §1 scope note: "RELAY does **not** define... [w]ire
+  formats... RCP's binary frame format, SOME/IP header layout, CAN bit
+  timing, etc. are defined in each x-Net implementation." `spec/vectors/`
+  already covers Requirement 9 (envelope conversion) at the canonical-type
+  level; wire-byte encoding is a level below that boundary, and two of the
+  finding's five named examples (J1939 PGN layout, SOME/IP-SD option-run
+  structure) aren't even normatively defined by this spec's own text (§1;
+  §12's feature-flag treatment of J1939 as a CAN capability, not a protocol
+  with its own wire-format section) for RELAY to author conformance
+  vectors against in the first place — the finding's other three examples
+  (MQTT varint, LIN checksum selection, RCP register-map/PWM/ISELED fields)
+  are real, well-evidenced gaps, but still sit below the wire-format
+  boundary §1 draws.
+- The actual gap the finding's own evidence supports — no shared regression
+  discipline exists against a well-evidenced recurring bug class, encode/decode
+  asymmetry hidden by round-trip-only tests — is real and addressed within
+  RELAY's actual boundary: new §17.1 recommends (SHOULD, not MUST — `relay
+  conform`'s black-box CLI has no mechanism to observe or gate on an
+  implementation's internal test suite, the same reason Requirements 2–5 and
+  8–11 are MUSTs the CLI itself cannot verify) that each implementation's own
+  test suite maintain byte-for-byte encode/decode regression vectors for its
+  own protocol's wire-format boundary conditions, asserting both directions
+  independently rather than only `decode(encode(x)) == x`. Closes
+  [REL-SPEC-2].
+- `SpecVersion` unchanged (`2.0`); this is a SHOULD-level recommendation with
+  no `relay conform` gate, so no existing conformant implementation is made
+  non-conformant by it either way.
+
 ## v2.0.9 — 2026-08-20 (doc addition; no normative change to existing conformant implementations)
 
 - **New `docs/KNOWN_GAPS.md`; stop embedding sibling-repo bug notes in

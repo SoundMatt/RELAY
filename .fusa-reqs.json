@@ -951,6 +951,16 @@
       "criticality": "low",
       "verification": "test",
       "asil": "QM"
+    },
+    {
+      "id": "REQ-RELAY-101",
+      "title": "Persisted, regression-gated interop matrix (relay-interop-matrix/1)",
+      "text": "relay interop's JSON output is a versioned relay-interop-matrix/1 artifact: kind, matrix_version, reference, an explicit participants[] list, the per-vector per-participant equivalence matrix, and result. relay interop --baseline FILE MUST compare a fresh run against a previously-committed relay-interop-matrix/1 document and report a regression for every (vector, participant) cell that was EQUIVALENT in the baseline but is not in the fresh run; a cell that was never EQUIVALENT to begin with MUST NOT be reported as a regression. Each participant is compared only against the shared in-process reference (not pairwise against every other participant): byte-equality is transitive, so per-participant equivalence to the same reference already establishes cross-implementation equivalence.",
+      "category": "functional",
+      "criticality": "medium",
+      "verification": "test",
+      "safety_goal": "SG-006",
+      "asil": "ASIL-B"
     }
   ]
 }

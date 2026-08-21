@@ -577,7 +577,7 @@ type MasterBus interface {
 func ValidateFrame(f Frame) error
 func ProtectID(id uint8) uint8
 func VerifyPID(pid uint8) (uint8, error)
-func CalcChecksum(pid uint8, data []byte, ct ChecksumType) uint8
+func CalcChecksum(pid uint8, data []byte, ct LINChecksumType) uint8
 ```
 
 Note: same slice-not-variadic pattern as CAN (§8.1) for the same reason.
@@ -1476,10 +1476,49 @@ packaging aside). Modules with no entry here are unconstrained.
 | `guid` / `locator` | RTPS entity GUID and network-locator types | DDS |
 | `wildcard` | topic wildcard matching | DDS |
 
+`virtual` is a reserved word in both C++ and Rust, making the literal name
+unusable as a module/namespace identifier in either language. An
+implementation in a language where the listed name collides with a language
+keyword MUST use the closest available escape instead of inventing an
+unrelated name — `virt` for `virtual` — so the substitution stays
+recognizable across languages rather than diverging per port.
+
 **13.7.3 RELAY types.** Until the language binding is published (`relay-rs`
 §18.3, `relay.hpp` §18.2), an implementation MUST bundle a local copy of the
 RELAY core types in a single module named `relay`; once the binding is
 published it MUST depend on the binding rather than the local copy.
+
+**13.7.4 Standard type-name registry.** Extending 13.7.2's pattern to
+*exported types*, not just module names: if an implementation exports a
+type covering one of the following concerns, it MUST use the listed name
+per language (idiomatic casing aside — see §15.2's `QoS`/`GUID` precedent
+for cross-language acronym casing, which the `PGN` row below follows).
+Concepts with no entry here are unconstrained; `SubscriberConfig`/
+`SubscriberOption` are governed separately by §14.1, not repeated here.
+
+| Concept | Go | C++ | Rust | Applies to |
+|---|---|---|---|---|
+| LIN checksum algorithm selector | `LINChecksumType` (§15.3) | `ChecksumType` (§18.2) | `LinChecksumType` (§18.3) | LIN |
+| ISO-TP point-to-point connection | `Conn` | `Conn` | `Conn` | CAN (`isotp` module) |
+| J1939 bus / frame / PGN / priority | `Bus` / `Frame` / `PGN` / `Priority` | `Bus` / `Frame` / `PGN` / `Priority` | `Bus` / `Frame` / `PGN` / `Priority` | CAN (`j1939` module) |
+| In-process virtual bus type | `Bus` | `Bus` | `Bus` | bus protocols (`virtual`/`virt` module, §13.7.2) |
+
+For the ISO-TP, J1939, and virtual-bus rows, the owning module (`isotp`,
+`j1939`, `virtual`/`virt`) already supplies the concern-specific prefix per
+§13.7.2 — the type itself stays unprefixed (`isotp.Conn`, `j1939.Frame`,
+`virtual.Bus`), matching how `regmap.GeneralBlock` or `avtp.Header` would
+read under the same principle. This deliberately overrides a
+language-idiomatic prefix a port might otherwise reach for (e.g. Rust's
+`J1939Frame`, `IsoTpConn`) for the same cross-language-comparability reason
+§13.7's own opening paragraph gives for canonical names generally.
+
+The RC Server general register block (RC1/RC2, TC18 §12.x) is deliberately
+**not** included here: unlike the four rows above, its current per-port
+divergence includes a genuine wire-shape difference, not just a naming
+one (a single `u32` protocol-version field in some ports vs. a split
+major/minor `u8`+`u8` pair in others) — reconciling it means picking a wire
+representation, which is `docs/RCP-ARCHITECTURE.md`'s own scope, not a
+naming-only registry like this one.
 
 ### 13.8 README conventions
 

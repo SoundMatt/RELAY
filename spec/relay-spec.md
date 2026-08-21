@@ -1455,8 +1455,10 @@ LABEL io.relay.spec-version="2.7"
 ```
 
 The `io.relay.spec-version` label MUST always match the value of `SpecVersion`
-exported by the package (§17.12 / §19.4). The `"2.7"` shown above is an example;
-update it on each spec minor release.
+exported by the package (§17.12 / §19.4). The `"2.7"` shown above is an
+example; per §19.5, this document's own copy of it is checked by this
+repository's CI against `spec/version.json` on every commit, the same way
+Requirement 14 requires of a conformant implementation.
 
 The project directory is mounted at `/project` by convention:
 
@@ -3184,6 +3186,30 @@ Current version: **v2.7**
 **Go:** `const SpecVersion = "2.7"` (update in implementations targeting v2.7)
 **C++:** `constexpr std::string_view kRelaySpecVersion = "2.7";`  
 **Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.7";`
+
+### 19.5 This document's own version literals
+
+Requirement 14 (§17) obligates an *implementation's* declared `spec_version`
+to trace back to `spec/version.json` rather than a hand-copied literal kept
+in sync by memory. This document is not exempt from the same discipline:
+every version literal appearing in this specification's own text — the
+`"spec_version"` value in each JSON example (§12.1, §12.2, §12.4, §17.2,
+§20.6), the `LABEL io.relay.spec-version` value in §13.5's Docker example,
+and this section's own "Current version" line and Go/C++/Rust snippets
+above — MUST match `spec/version.json` at every commit. A stale example is
+not merely cosmetic: it is this document teaching implementers the exact
+hand-copied-literal drift Requirement 14 exists to prevent.
+
+This repository's own CI MUST fail the build when any of the above diverges
+from `spec/version.json`, the same way Requirement 14 requires of a
+conformant implementation's CI. This is a discipline on the RELAY
+specification repository itself, not a new `relay conform` check: `relay
+conform` verifies binaries, not the spec document that defines it, so this
+sits alongside Requirements 13/14 (§17) as verified by the repository's own
+CI/test suite rather than by `relay conform`'s black-box interface. (The
+`spec/vectors/` distribution's own `vectors_version` illustration in §15.8
+is a deliberate exception: it demonstrates the vector-pinning mechanism
+itself and is not required to track the current spec version — see §15.8.)
 
 ---
 

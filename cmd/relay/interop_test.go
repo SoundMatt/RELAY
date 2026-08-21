@@ -313,6 +313,44 @@ func TestInteropRegressionsHelper(t *testing.T) {
 	}
 }
 
+//fusa:test REQ-RELAY-101
+func TestInteropBaselineInvalidJSON(t *testing.T) {
+	bad := filepath.Join(t.TempDir(), "bad.json")
+	if err := os.WriteFile(bad, []byte("not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bin := buildTestBinary(t)
+	var out, errb bytes.Buffer
+	err := runInterop(&out, &errb, []string{"--protocol", "CAN", "--baseline", bad, bin})
+	var code exitCode
+	if !errors.As(err, &code) || int(code) != 2 {
+		t.Errorf("malformed --baseline JSON must exit 2, got %v", err)
+	}
+	if !strings.Contains(errb.String(), "not a relay-interop-matrix/1 document") {
+		t.Errorf("expected a parse-error message, got %q", errb.String())
+	}
+}
+
+//fusa:test REQ-RELAY-101
+func TestRenderInteropRegressions(t *testing.T) {
+	doc := interopDoc{
+		Kind: "relay-interop-matrix", MatrixVersion: "relay-interop-matrix/1",
+		Reference: "relay (reference)", Participants: []string{"go-can"},
+		Result:      "FAIL",
+		Vectors:     []interopVectorResult{{Vector: "v1", Protocol: "CAN", Cells: []interopCell{{Participant: "go-can", OK: true, Equivalent: false}}}},
+		Regressions: []string{"v1: go-can regressed from EQUIVALENT (payload differs)"},
+	}
+	for _, format := range []string{"text", "markdown"} {
+		var out bytes.Buffer
+		if err := renderInterop(&out, doc, format); err != nil {
+			t.Fatalf("renderInterop(%s): %v", format, err)
+		}
+		if !strings.Contains(out.String(), "v1: go-can regressed from EQUIVALENT") {
+			t.Errorf("%s output missing regression line:\n%s", format, out.String())
+		}
+	}
+}
+
 //fusa:test REQ-RELAY-083
 func TestInteropBrokenConvertFails(t *testing.T) {
 	// A spoke that ADVERTISES convert but whose convert errors is a conformance

@@ -153,11 +153,3 @@ func TestVerifyVectorManifestDetectsHashMismatch(t *testing.T) {
 		t.Errorf("corrupting %q's declared hash should surface exactly one finding for it, got %v", target, findings)
 	}
 }
-
-func strings_repeat0(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = '0'
-	}
-	return string(b)
-}

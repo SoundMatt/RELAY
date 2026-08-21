@@ -1,4 +1,4 @@
-# RELAY Specification — v2.1
+# RELAY Specification — v2.2
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -2047,6 +2047,7 @@ An implementation is **RELAY-conformant** if and only if:
     - SOMEIP: `ProtocolVersion` MUST be validated as 0x01 on send and receive.
 12. **SpecVersion constant.** Package exports `SpecVersion` equal to the spec version being targeted. The authoritative current value is defined in §19.4 (`spec/version.json`).
 13. **Capabilities generation.** The capabilities document's `commands`, `transports`, `features`, `interfaces`, and `optional_interfaces` fields are generated from the same source-of-truth that gates compilation, per §12.2, not hand-maintained independently of it.
+14. **Spec-version binding.** The `spec_version` value the CLI prints (§12.1, §12.2) MUST NOT be a hand-copied literal kept in sync by memory alone. A Go implementation that depends on `github.com/SoundMatt/RELAY` MUST bind its declared value directly to `relay.SpecVersion` (e.g. `const SpecVersion = relay.SpecVersion`), so a dependency bump alone keeps it current. An implementation in any other language, or a Go implementation that does not depend on the RELAY module, MUST have a CI step that fails the build when its declared `spec_version` diverges from the authoritative `spec/version.json` (§19.4) at the RELAY revision it targets.
 
 `relay conform <binary>` is a **black-box CLI tool**: it can only observe what
 the built binary's `version`/`capabilities`/`status` commands print, not the
@@ -2078,7 +2079,13 @@ gap for a different reason: it's a build-process discipline, not an API
 contract, and `relay conform` has no way to distinguish a mechanically
 generated `capabilities` document from a hand-maintained one that merely
 happens to be shape-valid — it too MUST be verified by the implementation's
-own test suite instead.
+own test suite instead. Requirement 14 (spec-version binding) is the same
+category again: a CI run observed from outside the binary looks identical
+whether `spec_version` is bound to `relay.SpecVersion`, checked against
+`spec/version.json` by a script, or simply typed once and forgotten —
+`relay conform` can only shape-check the printed string (per Requirement 12
+above), never how it was produced, so this too is verified by the
+implementation's own CI, not `relay conform`.
 
 ### 17.1 Wire-format regression coverage (recommended)
 
@@ -2820,11 +2827,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v2.1**
+Current version: **v2.2**
 
-**Go:** `const SpecVersion = "2.1"` (update in implementations targeting v2.1)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "2.1";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.1";`
+**Go:** `const SpecVersion = "2.2"` (update in implementations targeting v2.2)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "2.2";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.2";`
 
 ---
 

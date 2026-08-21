@@ -1,5 +1,51 @@
 # RELAY Spec Changelog
 
+## v2.1 — 2026-08-20 (stable)
+
+Capabilities generation — a new normative conformance requirement, not just
+editorial. Additive (MINOR).
+
+- **New §17 Requirement 13 / §12.2 addition — capabilities generation.**
+  Ecosystem audits found at least six ports' `capabilities` documents had
+  drifted from what their binaries actually ship (THEME-B) — the class of
+  bug §12.2's existing "set at build time" language described but never
+  actually prevented, since nothing required the value to be *generated*
+  from that build-time source rather than hand-copied from it once and left
+  to rot. New requirement: the `commands`, `transports`, `features`,
+  `interfaces`, and `optional_interfaces` fields MUST be generated from (or
+  otherwise kept in lock-step with) the same source-of-truth that gates
+  compilation — build tags, a CMake target list, Cargo feature flags, C
+  preprocessor macros, or the implementation's equivalent — not
+  hand-maintained independently of it. Like Requirements 2–5 and 8–11,
+  `relay conform`'s black-box CLI cannot observe *how* a document was
+  produced, only that it's shape-valid, so this MUST is verified by the
+  implementation's own build process and test suite. Closes [REL-SPEC-3].
+- **Deliberately narrower than the finding's full recommendation.** The
+  finding also asked for a mandated CI self-check (every dispatched
+  subcommand/feature present in `capabilities` and vice versa) and a
+  reference generator in the RELAY CLI. The CI self-check is [NEW-SPEC-3]'s
+  own scope (tightening `relay conform`'s existing `adapt: false` WARN to a
+  FAIL is the same class of change, tracked there rather than duplicated
+  here). A single reference generator isn't achievable in the Go-only
+  `relay` CLI for a genuinely cross-language requirement — Go build tags,
+  CMake target lists, Cargo features, and C preprocessor macros are four
+  different mechanisms with no common generator to write once; each
+  language ecosystem needs its own pattern, which is a larger, separate
+  undertaking than this spec-guidance PR.
+- **Why this is MINOR, not a patch-level doc addition** (unlike the
+  preceding v2.0.x series): this is a genuine new MUST-level conformance
+  requirement on already-shipped implementations, several of which are
+  already known (per the finding) to hand-maintain their capabilities list.
+  Per §19.3, `relay conform` continues to accept implementations declaring
+  `spec_version: "2.0"` under the pre-existing 12-requirement rule — no
+  currently-conformant implementation is retroactively broken. Only
+  implementations that update their declared `spec_version` to `"2.1"` take
+  on Requirement 13.
+- `SpecVersion = "2.1"` (`version.go`, `spec/version.json`,
+  `version_test.go`); `cmd/relay`'s `toolVersion` bumped `2.0.4` → `2.1.0`
+  to stay in sync per its own drift-guard test
+  (`TestToolVersionTracksSpecVersion`).
+
 ## v2.0.10 — 2026-08-20 (doc addition; no normative change to existing conformant implementations)
 
 - **New §17.1 — Wire-format regression coverage (recommended)**: the

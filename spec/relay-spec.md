@@ -1,4 +1,4 @@
-# RELAY Specification — v2.8
+# RELAY Specification — v2.9
 
 **Real-time Embedded Link Abstraction Yoke**
 
@@ -1233,13 +1233,14 @@ failure rather than a skip. Exit: `0` all equivalent, `1` any mismatch/error,
 
 `<binary> version --format json`:
 
+<!-- doctest:version -->
 ```json
 {
     "tool":         "go-can",
     "protocol":     "CAN",
     "protocol_int": 1,
     "version":      "1.2.3",
-    "spec_version": "2.8",
+    "spec_version": "2.9",
     "language":     "go",
     "runtime":      "go1.25.0",
     "commit":       "a1b2c3d4"
@@ -1257,6 +1258,7 @@ conformance failure, but §17.2's conformance manifest cannot populate its own
 
 `<binary> capabilities`:
 
+<!-- doctest:capabilities -->
 ```json
 {
     "kind":                "capabilities",
@@ -1264,7 +1266,7 @@ conformance failure, but §17.2's conformance manifest cannot populate its own
     "protocol":            "CAN",
     "protocol_int":        1,
     "version":             "1.2.3",
-    "spec_version":        "2.8",
+    "spec_version":        "2.9",
     "commands":            ["version", "capabilities", "status", "connect", "send", "subscribe"],
     "transports":          ["socketcan", "virtual"],
     "features":            ["fd", "isotp", "j1939"],
@@ -1286,6 +1288,7 @@ single-protocol implementation (the default, `multi_protocol` absent or `false`)
 both remain governed by §17 Requirements 1 and 6 as MUSTs. Example, RELAY's own
 CLI:
 
+<!-- doctest:capabilities -->
 ```json
 {
     "kind":                "capabilities",
@@ -1294,7 +1297,7 @@ CLI:
     "protocol_int":        null,
     "multi_protocol":      true,
     "version":             "2.5.0",
-    "spec_version":        "2.8",
+    "spec_version":        "2.9",
     "commands":            ["version", "capabilities", "status", "conform", "convert", "..."],
     "transports":          [],
     "features":            [],
@@ -1336,6 +1339,7 @@ category as the source-level requirements in §17.
 
 `<binary> status --format json`:
 
+<!-- doctest:status -->
 ```json
 {
     "protocol":  "CAN",
@@ -1363,7 +1367,7 @@ $ go-can version --format json
     "protocol":     "CAN",
     "protocol_int": 1,
     "version":      "1.2.3",
-    "spec_version": "2.8",
+    "spec_version": "2.9",
     "language":     "go",
     "runtime":      "go1.25.0"
 }
@@ -1375,7 +1379,7 @@ $ go-can capabilities
     "protocol":            "CAN",
     "protocol_int":        1,
     "version":             "1.2.3",
-    "spec_version":        "2.8",
+    "spec_version":        "2.9",
     "commands":            ["version", "capabilities", "status", "connect", "send", "subscribe"],
     "transports":          ["socketcan", "virtual"],
     "features":            ["fd", "isotp", "j1939"],
@@ -1451,11 +1455,11 @@ LABEL org.opencontainers.image.licenses="MPL-2.0"
 LABEL io.relay.tool="<tool>"
 LABEL io.relay.language="go|cpp|rust|c"
 LABEL io.relay.binary="<binary>"
-LABEL io.relay.spec-version="2.8"
+LABEL io.relay.spec-version="2.9"
 ```
 
 The `io.relay.spec-version` label MUST always match the value of `SpecVersion`
-exported by the package (§17.12 / §19.4). The `"2.8"` shown above is an
+exported by the package (§17.12 / §19.4). The `"2.9"` shown above is an
 example; per §19.5, this document's own copy of it is checked by this
 repository's CI against `spec/version.json` on every commit, the same way
 Requirement 14 requires of a conformant implementation.
@@ -1632,6 +1636,13 @@ MUST share persistent state across separate invocations (e.g. a
 long-running virtual-bus process, or a real transport like `socketcan`), or
 the README MUST NOT claim a two-shell round-trip is possible with the
 mock/virtual transport alone.
+
+Per §17 Requirement 19 and §20.7: this MUST be continuously proven, not
+merely true when someone last checked. An implementation's CI MUST
+machine-extract and execute every fenced example in the README's `## RELAY
+conformance` section that documents an actual, literal command (not
+illustrative pseudocode or a usage-syntax summary), failing the build if
+any diverges from what actually runs.
 
 ---
 
@@ -2218,14 +2229,15 @@ or Requirement 9's envelope-conversion verification embeds an identical
 copy, not a private variant. `spec/vectors/vectors_manifest.json` pins that
 distribution:
 
+<!-- doctest:vectors-manifest -->
 ```json
 {
     "kind":             "relay-vectors-manifest",
     "manifest_version": "relay-vectors/1",
     "vectors_version":  "2.4",
     "vectors": [
-        {"name": "can-standard-frame",                  "sha256": "816b402d..."},
-        {"name": "errors/lin-diagnostic-wrong-checksum", "sha256": "36666ad1..."}
+        {"name": "can-standard-frame",                  "sha256": "816b402dca5070ec011863b8d8eb3b97abbf2ea8cf264706113e06fcceb4fe27"},
+        {"name": "errors/lin-diagnostic-wrong-checksum", "sha256": "36666ad1c49a89ce2b8fbc34475bfe3d5482d232b7b4b315ccb6248b7a05f776"}
     ]
 }
 ```
@@ -2300,6 +2312,7 @@ An implementation is **RELAY-conformant** if and only if:
 16. **Vector manifest.** The canonical `spec/vectors/` distribution (§15.8) is pinned by `spec/vectors/vectors_manifest.json`. A conformant implementation that embeds a local copy of these vectors MUST embed the exact pinned set, and MUST have a CI step that fails when its embedded copy's SHA-256 diverges from the published manifest for the `vectors_version` it targets.
 17. **No retired capabilities past removal.** Per §3.2, a capabilities document (§12.2) whose declared `spec_version` is at or past a `spec/version.json` `retired[]` entry's `removal` version MUST NOT list that entry's `name` in `features` or `commands`.
 18. **Persisted, regression-gated interop matrix.** Per §20.1 item 3, `relay interop --format json` output (a `relay-interop-matrix/1` document, spec §20.1) MUST be committed by the implementation's CI, covering every published sibling implementation of its protocol it can invoke. CI MUST regenerate it and, using `relay interop --baseline <committed-copy>`, fail the build if any cell that was `EQUIVALENT` in the committed copy is not `EQUIVALENT` in the fresh run — a cell that was never `EQUIVALENT` to begin with is not itself a gate failure under this requirement (the ordinary Requirement-7-adjacent "any current mismatch fails" gate already covers that case independently).
+19. **Continuous example verification.** Per §20.7, every fenced code/CLI example this specification document marks normative (`<!-- doctest:KIND -->`, §20.7), and every literal, executable command in an implementation's README `## RELAY conformance` section (§13.8), MUST be machine-extracted and executed (or, for JSON documents, schema-validated) in CI. A failing example MUST fail the build.
 
 `relay conform <binary>` is a **black-box CLI tool**: it can only observe what
 the built binary's `version`/`capabilities`/`status` commands print, not the
@@ -2362,6 +2375,12 @@ to. No source-level or CI-process knowledge is needed. Requirement 18
 sibling-comparison matrix was regenerated, committed, and checked for
 regressions on this PR is entirely a CI-process fact about a different
 command's invocation, verified by the implementation's own CI instead.
+Requirement 19 (continuous example verification) is likewise not
+`relay conform`'s to observe: whether a README's or this document's own
+examples were actually extracted and run is a fact about a CI job's own
+process, not something a black-box invocation of the binary under test
+can see — verified by the implementation's own CI (and, for this document
+itself, by RELAY's own CI, per §20.7).
 
 **Requirement-to-verifier lookup table**, collecting the narrative above
 into one place:
@@ -2386,6 +2405,7 @@ into one place:
 | 16 | Vector manifest | Implementation's own CI | Not observable through the CLI |
 | 17 | No retired capabilities past removal | `relay conform` (version + capabilities cross-check against embedded `spec/version.json`) | Full |
 | 18 | Persisted, regression-gated interop matrix | Implementation's own CI (`relay interop --baseline`) | Not observable through the CLI |
+| 19 | Continuous example verification | Implementation's own CI (README); RELAY's own CI (this document, §20.7) | Not observable through the CLI |
 
 ### 17.1 Wire-format regression coverage (recommended)
 
@@ -2433,15 +2453,16 @@ diffable artifact.
 
 `relay conform --manifest <binary>` emits a `relay-conform/1` document:
 
+<!-- doctest:manifest -->
 ```json
 {
     "kind":              "relay-conform-manifest",
     "manifest_version":  "relay-conform/1",
     "tool":               "go-can",
     "binary_version":     "1.2.3",
-    "spec_version":       "2.8",
+    "spec_version":       "2.9",
     "git_sha":            "a1b2c3d4",
-    "capabilities_sha256": "e3b0c44298fc1c14...",
+    "capabilities_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "requirements": [
         {"id": 1,  "status": "PASS",           "verifier": "relay conform"},
         {"id": 2,  "status": "NOT_OBSERVABLE",  "verifier": "implementation test suite"},
@@ -2458,7 +2479,7 @@ SHA-256 of the raw `capabilities` document bytes as returned by the binary,
 letting a diff catch any change to the capabilities document — mechanically
 regenerated or not — without re-parsing it.
 
-`requirements` MUST contain exactly one entry per §17 requirement (1–18,
+`requirements` MUST contain exactly one entry per §17 requirement (1–19,
 extended as this document's own requirement list grows). Each entry's
 `status` is one of:
 
@@ -3188,11 +3209,11 @@ clarifications and fixes in PATCH releases.
 
 `spec/version.json` is authoritative. The spec document title is informational.
 
-Current version: **v2.8**
+Current version: **v2.9**
 
-**Go:** `const SpecVersion = "2.8"` (update in implementations targeting v2.8)
-**C++:** `constexpr std::string_view kRelaySpecVersion = "2.8";`  
-**Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.8";`
+**Go:** `const SpecVersion = "2.9"` (update in implementations targeting v2.9)
+**C++:** `constexpr std::string_view kRelaySpecVersion = "2.9";`  
+**Rust:** `pub const RELAY_SPEC_VERSION: &str = "2.9";`
 
 ### 19.5 This document's own version literals
 
@@ -3314,15 +3335,16 @@ implementation MAY publish to close that gap — a
 manifest, the §15.8 vector manifest's `vectors_version`, and the targeted
 `spec_version`, shaped as an [in-toto](https://in-toto.io/) Statement:
 
+<!-- doctest:attestation -->
 ```json
 {
     "_type":        "https://in-toto.io/Statement/v1",
     "predicateType": "https://relay.dev/attestation/relay-conform/1",
     "subject": [
-        {"name": "go-can", "digest": {"sha256": "9f86d081884c7d65..."}}
+        {"name": "go-can", "digest": {"sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"}}
     ],
     "predicate": {
-        "spec_version":            "2.8",
+        "spec_version":            "2.9",
         "vectors_version":         "2.4",
         "conformance_manifest":    { "...": "the full §17.2 relay-conform/1 document" },
         "safety_evidence_summary": null,
@@ -3368,6 +3390,58 @@ This is a SHOULD, not a MUST, for the same reason as §17.1: there is no
 CI gate for it yet, and RELAY's own reference tooling emits the predicate
 unsigned (`relay conform --attestation <binary>`) without publishing or
 signing it.
+
+### 20.7 Continuous example verification
+
+§13.8 already requires a README's documented CLI round-trip to actually
+work; that alone doesn't stop it from silently rotting after the check was
+last done by hand. §19.5 fixed the identical problem for this document's
+own version literals (found rotted, in the wild, as the "0.1" example
+literals fixed in v2.2.3). Per §17 Requirement 19, both gaps close the
+same way: **no example ships unverified**, in either direction.
+
+**This document's own examples.** A fenced ` ```json ` block immediately
+preceded by an HTML comment `<!-- doctest:KIND -->` on its own line is a
+normative example this repository's own CI MUST extract and validate —
+not merely eyeball — on every change. `KIND` selects the check:
+
+| `KIND` | Validated against |
+|---|---|
+| `version` | §12.1 version-document rules (schema + null-`protocol` handling) |
+| `capabilities` | §12.2 capabilities-document rules (schema + `multi_protocol` logic) |
+| `status` | §12.3 status-document schema |
+| `manifest` | `relay-conform-manifest` schema (§17.2) |
+| `attestation` | `relay-conform-attestation` schema (§20.6) |
+| `vectors-manifest` | `vectors-manifest` schema (§15.8) |
+
+Each marked example MUST be run through the *same* validator RELAY's own
+reference tooling applies to a real binary's output — not a hand-rolled,
+looser check invented for the doctest alone — so passing this gate means
+the example is exactly as valid as a real conformant response would be.
+A build MUST fail if a marker's example violates its validator, or if the
+marker convention itself falls out of sync with the document (a `KIND`
+with zero examples found).
+
+**Implementation READMEs.** Per §13.8's existing MUST, a README's `##
+RELAY conformance` section MUST document a working round-trip. This
+section additionally requires it stay continuously proven: CI MUST
+machine-extract and execute every fenced example in that section that
+documents a literal, executable command — not illustrative pseudocode
+(a code sketch using undefined variables to show API shape) or a bare
+usage-syntax summary (`Usage: <tool> <command> [flags]`), neither of
+which is something "executing" even means. A failing example MUST fail
+the build.
+
+**Deliberately out of scope for this section.** Two classes of example are
+explicitly *not* required to be executed, because doing so would mean
+mandating infrastructure this document does not otherwise require:
+commands that fetch over the network at CI time (`go get`/`go install`
+against a live module proxy) or that require a published container image
+this repository doesn't build (a `docker run ghcr.io/...` example) are
+exempt — a hermetic, network-free extraction harness for those is a
+reasonable future addition, not assumed here. An implementation MAY still
+choose to execute them (e.g. against a local build instead of the network),
+but this section does not require it.
 
 ---
 

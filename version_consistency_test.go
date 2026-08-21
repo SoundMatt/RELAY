@@ -104,3 +104,29 @@ func TestSpecDocumentVersionLiteralsMatchVersionJSON(t *testing.T) {
 		}
 	}
 }
+
+// TestReadmeVersionMatchesVersionJSON extends §19.5's discipline to
+// README.md's own "Current: **vX.Y (stable)**" line — found stale at "v2.0"
+// (six MINOR releases behind) while building the §20.7 doctest mechanism,
+// itself an instance of the exact unchecked-example drift both sections
+// exist to close. README.md is not part of the specification document
+// §19.5 already covers, so it needed its own anchor here rather than
+// silently riding along.
+//
+//fusa:test REQ-RELAY-102
+func TestReadmeVersionMatchesVersionJSON(t *testing.T) {
+	want := versionJSONVersion(t)
+
+	readmeRaw, err := Evidence("readme")
+	if err != nil {
+		t.Fatalf("Evidence(readme): %v", err)
+	}
+	re := regexp.MustCompile(`Current: \*\*v([0-9]+\.[0-9]+) \(stable\)\*\*`)
+	m := re.FindStringSubmatch(string(readmeRaw))
+	if m == nil {
+		t.Fatal(`README.md: "Current: **vX.Y (stable)**" line not found — reworded? update this test's regex`)
+	}
+	if m[1] != want {
+		t.Errorf("README.md Current version = %q, want %q (spec/version.json)", m[1], want)
+	}
+}

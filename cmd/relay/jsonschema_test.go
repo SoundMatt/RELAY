@@ -90,6 +90,30 @@ func TestSchemaMinMax(t *testing.T) {
 }
 
 //fusa:test REQ-RELAY-058
+func TestSchemaPattern(t *testing.T) {
+	// SHA-256 hex, the pattern every schema in spec/schemas/ that declares a
+	// digest field uses. Found genuinely unenforced (silently ignored) while
+	// building the §20.7 doctest mechanism: a document with a truncated or
+	// non-hex hash passed schema validation with zero violations before this.
+	schema := `{"type":"string","pattern":"^[0-9a-f]{64}$"}`
+	if v := validateSchema([]byte(schema), "816b402dca5070ec011863b8d8eb3b97abbf2ea8cf264706113e06fcceb4fe27"); len(v) != 0 {
+		t.Errorf("a genuine 64-char lowercase hex string should satisfy the pattern, got %v", v)
+	}
+	if v := validateSchema([]byte(schema), "816b402d..."); len(v) == 0 {
+		t.Error("a truncated hash with a literal ellipsis should violate the pattern")
+	}
+	if v := validateSchema([]byte(schema), "816B402DCA5070EC011863B8D8EB3B97ABBF2EA8CF264706113E06FCCEB4FE27"); len(v) == 0 {
+		t.Error("uppercase hex should violate a lowercase-only pattern")
+	}
+	// An invalid regex must be reported as a violation, not silently ignored
+	// or panic — a malformed schema is a real (if different) defect.
+	bad := `{"type":"string","pattern":"("}`
+	if v := validateSchema([]byte(bad), "anything"); len(v) == 0 {
+		t.Error("an uncompilable pattern should itself be reported as a violation")
+	}
+}
+
+//fusa:test REQ-RELAY-058
 func TestSchemaArrayItemsAndContains(t *testing.T) {
 	schema := `{"type":"array","items":{"type":"string"},"contains":{"const":"version"}}`
 	if v := mustValidate(t, schema, `["version","status"]`); len(v) != 0 {

@@ -336,6 +336,7 @@ func buildManifest(binary string) conformManifest {
 		{16, statusNotObservable, verifierCI},
 		{17, req17, verifierRelayConform},
 		{18, statusNotObservable, verifierCI},
+		{19, statusNotObservable, verifierCI},
 	}
 
 	m.Overall = statusPass

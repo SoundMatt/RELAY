@@ -19,6 +19,7 @@ func TestEvidenceNames(t *testing.T) {
 		"version": true, "tool-safety-manual": true,
 		"formal-model": true, "formal-model-doc": true,
 		"asil-d-uplift": true, "specification": true,
+		"readme": true,
 	}
 	if len(names) != len(want) {
 		t.Fatalf("EvidenceNames = %v, want %d entries", names, len(want))

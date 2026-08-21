@@ -1,5 +1,67 @@
 # RELAY Spec Changelog
 
+## v2.9 — 2026-08-21 (MINOR — continuous example verification, §17 Requirement 19)
+
+- **New §20.7 "Continuous example verification"** and **new §17
+  Requirement 19**. §13.8 already required a README's documented CLI
+  round-trip to work; §19.5 already required this document's own
+  version literals to stay in sync. Neither stopped a *content* example
+  (not just a version number) from silently rotting once nobody was
+  reading closely — exactly the failure mode THEME-J and REL-SPEC-10
+  independently documented. This closes it the same way §19.5 did: no
+  example ships unverified.
+- **`<!-- doctest:KIND -->` marker convention** for this document's own
+  normative JSON examples. `KIND` ∈ `{version, capabilities, status,
+  manifest, attestation, vectors-manifest}` selects which validator a
+  marked example is run through — the *same* validator `relay conform`
+  applies to a real binary's output, not a separate, looser check
+  invented for the doctest alone. Applied to all 7 existing normative
+  examples (§12.1, §12.2 ×2, §12.3, §15.8, §17.2, §20.6).
+- **README `## RELAY conformance` sections** must now have every
+  literal, executable command example machine-extracted and executed
+  in CI (§13.8 extended). Network-fetching commands (`go get`/`go
+  install`) and commands needing a published container image are
+  explicitly out of scope — mandating a hermetic runner for those isn't
+  this section's job.
+- **Real bugs found while building this, fixed along the way**:
+  - Three of this document's own examples (§15.8's two vector hashes,
+    §17.2's `capabilities_sha256`, §20.6's subject digest) used
+    truncated placeholder hex (`"816b402d..."`) instead of a real
+    64-character SHA-256. Replaced with genuine values — two are the
+    *actual* hashes of the referenced golden vectors; the other two are
+    real SHA-256 outputs (of `""` and `"test"` respectively), chosen so
+    the "before" value was already a recognizable prefix of the "after"
+    one.
+  - **RELAY's own JSON Schema validator never implemented the
+    `pattern` keyword at all** — silently ignored, per its own
+    documented keyword list. Every schema in `spec/schemas/` that
+    constrains a SHA-256 field with `"pattern": "^[0-9a-f]{64}$"` was
+    unenforced: `relay conform` would have accepted a malformed hash in
+    any capabilities/manifest/attestation/vectors-manifest document
+    without a single finding. Found because the truncated placeholder
+    examples above initially validated cleanly — a false pass this
+    doctest mechanism was specifically built to prevent. Fixed with a
+    `regexp`-based `pattern` check in `validateSchema`; new
+    `TestSchemaPattern` unit test; mutation-tested (confirmed the fix
+    catches both the truncated hash and case-sensitivity violations,
+    and that an uncompilable pattern is itself reported rather than
+    silently ignored or panicking).
+  - **README.md's own "Current" version line was six MINOR releases
+    stale** (`v2.0`, while `spec/version.json` was already at `v2.8`) —
+    the exact class of drift §19.5 exists to prevent, just in a file
+    §19.5 doesn't cover. Fixed to the version this release ships, and
+    `TestReadmeVersionMatchesVersionJSON` extends the §19.5 mechanism
+    (new `REQ-RELAY-102`, `README.md` now embedded evidence) so it
+    can't silently recur.
+- **Reference implementation**: `extractDoctestExamples`
+  (`cmd/relay/doctest.go`), `TestSpecDoctestExamplesValidate`
+  (`cmd/relay/doctest_test.go`). Mutation-tested: corrupted a hash
+  pattern and a required `commands` entry in two separate examples,
+  confirmed both were caught with a precise violation message, restored
+  and reconfirmed green.
+- `SpecVersion` bumped `2.8` → `2.9` (MINOR, new §17 requirement).
+  Closes [NEW-SPEC-8].
+
 ## v2.8 — 2026-08-21 (MINOR — persisted, regression-gated interop matrix, §17 Requirement 18)
 
 - **New §17 Requirement 18 — persisted, regression-gated interop matrix.**

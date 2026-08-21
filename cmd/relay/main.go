@@ -18,7 +18,7 @@ import (
 	relay "github.com/SoundMatt/RELAY/v2"
 )
 
-const toolVersion = "2.4.0"
+const toolVersion = "2.5.0"
 
 func main() {
 	if err := run(os.Stdout, os.Stderr, os.Args[1:]); err != nil {
@@ -141,13 +141,15 @@ func runVersion(w io.Writer, args []string) error {
 
 // runCapabilities implements `relay capabilities`.
 // RELAY is a multi-protocol spec and tooling layer, not a protocol implementation,
-// so protocol and protocol_int are omitted and adapt is false.
+// so protocol and protocol_int are omitted, adapt is false, and multi_protocol
+// is declared true — legitimizing both per spec §12.2 / §17 Requirements 1 and 6.
 //
 //fusa:req REQ-RELAY-029
 func runCapabilities(w io.Writer, _ []string) error {
 	doc := struct {
 		Kind               string   `json:"kind"`
 		Tool               string   `json:"tool"`
+		MultiProtocol      bool     `json:"multi_protocol"`
 		Version            string   `json:"version"`
 		SpecVersion        string   `json:"spec_version"`
 		Commands           []string `json:"commands"`
@@ -159,6 +161,7 @@ func runCapabilities(w io.Writer, _ []string) error {
 	}{
 		Kind:               "capabilities",
 		Tool:               "relay",
+		MultiProtocol:      true,
 		Version:            toolVersion,
 		SpecVersion:        relay.SpecVersion,
 		Commands:           []string{"version", "capabilities", "status", "conform", "convert", "interop", "crossbar", "probe", "trace", "report", "sbom", "safety-case", "audit-pack", "compare", "versions", "serve"},

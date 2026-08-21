@@ -912,6 +912,16 @@
       "verification": "test",
       "safety_goal": "SG-006",
       "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-RELAY-097",
+      "title": "multi_protocol capabilities field tightens Requirements 1 and 6",
+      "text": "The capabilities document (spec \u00a712.2) MAY declare an OPTIONAL boolean multi_protocol field, defaulting to false when absent. relay conform MUST FAIL a capabilities document whose protocol is null unless multi_protocol is true (spec \u00a717 Requirement 1), and MUST FAIL a capabilities document whose adapt is false unless multi_protocol is true (spec \u00a717 Requirement 6) \u2014 replacing the prior WARN-only treatment of both cases. A capabilities document with multi_protocol:true MUST NOT produce any finding for either a null protocol or adapt:false.",
+      "category": "functional",
+      "criticality": "medium",
+      "verification": "test",
+      "safety_goal": "SG-006",
+      "asil": "ASIL-B"
     }
   ]
 }

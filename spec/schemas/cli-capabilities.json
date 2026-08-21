@@ -23,6 +23,10 @@
             "minimum": 0,
             "description": "Protocol integer constant matching relay.Protocol. Present for single-protocol implementations; null or omitted for multi-protocol tooling (spec §12.2)."
         },
+        "multi_protocol": {
+            "type": "boolean",
+            "description": "OPTIONAL, defaults to false when absent. True self-declares that this binary is inherently multi-protocol tooling (not a single-protocol implementation), legitimizing a null protocol/protocol_int and adapt:false without either being a conformance FAIL (spec §12.2, §17 Requirements 1 and 6)."
+        },
         "version": {
             "type": "string",
             "description": "Semantic version of the binary."

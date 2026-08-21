@@ -264,7 +264,10 @@ func buildManifest(binary string) conformManifest {
 	}
 
 	req1 := statusPass
-	if hasFail(vFindings) {
+	// Requirement 1 (protocol declaration) spans both documents: spec_version
+	// shape (version doc) and the capabilities doc's own protocol-null check
+	// (§12.2, gated on multi_protocol — see validateCapabilitiesDoc).
+	if hasFail(vFindings) || hasFailWithReq(cFindings, "§12.2") {
 		req1 = statusFail
 	}
 	req6 := statusPass
@@ -312,6 +315,17 @@ func buildManifest(binary string) conformManifest {
 func hasFail(fs []conformFinding) bool {
 	for _, f := range fs {
 		if f.Severity == sevFail {
+			return true
+		}
+	}
+	return false
+}
+
+// hasFailWithReq reports whether any finding in fs is FAIL-severity and cites
+// req (spec section) exactly.
+func hasFailWithReq(fs []conformFinding, req string) bool {
+	for _, f := range fs {
+		if f.Severity == sevFail && f.Req == req {
 			return true
 		}
 	}
@@ -388,6 +402,7 @@ func validateVersionDoc(data []byte) []conformFinding {
 //
 //fusa:req REQ-RELAY-054
 //fusa:req REQ-RELAY-048
+//fusa:req REQ-RELAY-097
 func validateCapabilitiesDoc(data []byte) []conformFinding {
 	doc, fs := schemaCheck("cli-capabilities", "§12.2", data)
 	if doc == nil {
@@ -410,9 +425,26 @@ func validateCapabilitiesDoc(data []byte) []conformFinding {
 		}
 	}
 
-	// adapt=false is valid (no Adapt() exported) but worth flagging (§10.3).
+	// multi_protocol (§12.2, §17 Requirements 1 and 6) self-declares that this
+	// binary is inherently multi-protocol tooling, not a single-protocol
+	// implementation. Absent/false is the default (single-protocol).
+	multiProtocol, _ := doc["multi_protocol"].(bool)
+
+	// A null protocol/protocol_int is only legitimate for a self-declared
+	// multi-protocol tool (§10.3, §17 Requirement 1); otherwise it's a real gap.
+	if !multiProtocol && doc["protocol"] == nil {
+		fs = append(fs, fail("§12.2", "capabilities doc: protocol is null but multi_protocol is not true"))
+	}
+
+	// adapt=false is only legitimate for a self-declared multi-protocol tool —
+	// §10.3 scopes Adapt() to protocol packages, so a multi-protocol aggregator
+	// has no per-protocol Adapt() to export (§17 Requirement 6).
 	if adapt, ok := doc["adapt"].(bool); ok && !adapt {
-		fs = append(fs, warn("§17.6", "capabilities doc: adapt=false (Adapt() not exported)"))
+		if multiProtocol {
+			// Legitimate: no per-protocol Adapt() applies to this tool.
+		} else {
+			fs = append(fs, fail("§17.6", "capabilities doc: adapt=false (Adapt() not exported) but multi_protocol is not true"))
+		}
 	}
 
 	return fs
